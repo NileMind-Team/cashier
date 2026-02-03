@@ -31,6 +31,8 @@ export default function Home() {
   const [selectedTable, setSelectedTable] = useState(null);
   const [showTableInfo, setShowTableInfo] = useState(false);
   const [tableStatus, setTableStatus] = useState("available");
+  const [editingNoteProductId, setEditingNoteProductId] = useState(null);
+  const [tempNote, setTempNote] = useState("");
 
   const halls = [
     { id: 1, name: "الصالة الرئيسية", color: "#3B82F6" },
@@ -603,7 +605,7 @@ export default function Home() {
         ),
       );
     } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
+      setCart([...cart, { ...product, quantity: 1, note: "" }]);
     }
 
     toast.success(`تم إضافة ${product.name} إلى الفاتورة`);
@@ -635,6 +637,35 @@ export default function Home() {
     }
 
     setCart(cart.filter((item) => item.id !== id));
+  };
+
+  // دالة لإضافة أو تعديل ملاحظة على المنتج
+  const handleAddNote = (id, note) => {
+    if (bills[currentBillIndex]?.completed) {
+      toast.error("لا يمكن تعديل فاتورة مكتملة");
+      return;
+    }
+
+    setCart(
+      cart.map((item) => (item.id === id ? { ...item, note: note } : item)),
+    );
+    setEditingNoteProductId(null);
+    setTempNote("");
+
+    if (note.trim()) {
+      toast.info("تم حفظ الملاحظة");
+    }
+  };
+
+  // دالة لبدء تعديل الملاحظة
+  const startEditingNote = (id, currentNote) => {
+    if (bills[currentBillIndex]?.completed) {
+      toast.error("لا يمكن تعديل فاتورة مكتملة");
+      return;
+    }
+
+    setEditingNoteProductId(id);
+    setTempNote(currentNote || "");
   };
 
   const goToNextBill = () => {
@@ -906,6 +937,17 @@ export default function Home() {
       ? `\n      الطاولة: ${selectedTable.number} (${selectedHall.name})`
       : "";
 
+    // إضافة الملاحظات في نص الفاتورة
+    const cartItemsText = cart
+      .map((item) => {
+        let itemText = `• ${item.name} × ${item.quantity} = ${item.price * item.quantity} ج.م`;
+        if (item.note && item.note.trim()) {
+          itemText += `\n  (ملاحظة: ${item.note})`;
+        }
+        return itemText;
+      })
+      .join("\n");
+
     const receiptText = `
       فاتورة رقم #${currentBillIndex + 1}
       ${new Date().toLocaleString()}
@@ -913,7 +955,7 @@ export default function Home() {
       العميل: ${customerName || "غير محدد"}
       الهاتف: ${customerPhone || "غير محدد"}
       ==============================
-      ${cart.map((item) => `• ${item.name} × ${item.quantity} = ${item.price * item.quantity} ج.م`).join("\n")}
+      ${cartItemsText}
       ==============================
       المجموع الفرعي: ${subtotal.toFixed(2)} ج.م
       الضريبة (${tax}%): ${totalTax.toFixed(2)} ج.م
@@ -997,6 +1039,17 @@ export default function Home() {
       ? `\n      الطاولة: ${selectedTable.number} (${selectedHall.name})`
       : "";
 
+    // إضافة الملاحظات في نص الفاتورة المعاد طباعتها
+    const cartItemsText = cart
+      .map((item) => {
+        let itemText = `• ${item.name} × ${item.quantity} = ${item.price * item.quantity} ج.م`;
+        if (item.note && item.note.trim()) {
+          itemText += `\n  (ملاحظة: ${item.note})`;
+        }
+        return itemText;
+      })
+      .join("\n");
+
     const receiptText = `
       فاتورة رقم #${billNumber} ${isCompleted ? "(مكتملة)" : "(معلقة)"}
       ${bills[currentBillIndex]?.completedDate || new Date().toLocaleString()}
@@ -1004,7 +1057,7 @@ export default function Home() {
       العميل: ${customerName || "غير محدد"}
       الهاتف: ${customerPhone || "غير محدد"}
       ==============================
-      ${cart.map((item) => `• ${item.name} × ${item.quantity} = ${item.price * item.quantity} ج.م`).join("\n")}
+      ${cartItemsText}
       ==============================
       المجموع الفرعي: ${subtotal.toFixed(2)} ج.م
       الضريبة (${tax}%): ${totalTax.toFixed(2)} ج.م
@@ -1039,9 +1092,16 @@ export default function Home() {
               key={index}
               className="flex justify-between py-1 border-b border-gray-100"
             >
-              <span className="truncate max-w-[120px]">
-                {item.name} × {item.quantity}
-              </span>
+              <div className="flex-1">
+                <span className="truncate max-w-[120px] block">
+                  {item.name} × {item.quantity}
+                </span>
+                {item.note && item.note.trim() && (
+                  <span className="text-[10px] text-gray-500 block truncate max-w-[120px]">
+                    ملاحظة: {item.note}
+                  </span>
+                )}
+              </div>
               <span className="whitespace-nowrap">
                 {item.price * item.quantity} ج.م
               </span>
@@ -1577,71 +1637,213 @@ export default function Home() {
                     <p className="text-xs mt-1">قم بإضافة منتجات من القائمة</p>
                   </div>
                 ) : (
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {cart.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between p-1.5 bg-gray-50 rounded-lg text-xs"
+                        className="bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md"
                       >
-                        <div className="flex items-center flex-1 min-w-0">
-                          <div className="w-10 h-10 rounded-lg overflow-hidden ml-1.5 flex-shrink-0">
-                            <img
-                              src={item.image}
-                              alt={item.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium truncate">
-                              {item.name}
-                            </h4>
-                            <p className="text-gray-500 text-[10px]">
-                              {item.price} ج.م
-                            </p>
-                          </div>
-                        </div>
+                        <div className="p-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start flex-1 min-w-0">
+                              <div className="w-14 h-14 rounded-xl overflow-hidden ml-2 flex-shrink-0 border border-gray-300">
+                                <img
+                                  src={item.image}
+                                  alt={item.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <h4 className="font-bold text-sm text-gray-800 truncate">
+                                      {item.name}
+                                    </h4>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {item.price} ج.م للوحدة
+                                    </p>
+                                  </div>
+                                  <div className="text-left ml-2">
+                                    <p
+                                      className="font-bold text-sm"
+                                      style={{ color: "#193F94" }}
+                                    >
+                                      {item.price * item.quantity} ج.م
+                                    </p>
+                                    <p className="text-[10px] text-gray-500">
+                                      {item.quantity} × {item.price}
+                                    </p>
+                                  </div>
+                                </div>
 
-                        <div className="flex items-center">
-                          <div className="flex items-center mr-1.5">
-                            <button
-                              onClick={() => removeFromCart(item.id)}
-                              disabled={bills[currentBillIndex]?.completed}
-                              className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] ${
-                                bills[currentBillIndex]?.completed
-                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                  : "bg-gray-200 hover:bg-gray-300"
-                              }`}
-                            >
-                              -
-                            </button>
-                            <span className="mx-1 font-bold text-xs">
-                              {item.quantity}
-                            </span>
-                            <button
-                              onClick={() => addToCart(item)}
-                              disabled={bills[currentBillIndex]?.completed}
-                              className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] ${
-                                bills[currentBillIndex]?.completed
-                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                  : "bg-gray-200 hover:bg-gray-300"
-                              }`}
-                            >
-                              +
-                            </button>
+                                {editingNoteProductId === item.id ? (
+                                  <div className="mt-2">
+                                    <textarea
+                                      value={tempNote}
+                                      onChange={(e) =>
+                                        setTempNote(e.target.value)
+                                      }
+                                      placeholder="اكتب ملاحظة لهذا المنتج..."
+                                      className="w-full px-2 py-1.5 text-xs border border-blue-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                                      rows="2"
+                                      autoFocus
+                                    />
+                                    <div className="flex justify-end space-x-1 rtl:space-x-reverse mt-1">
+                                      <button
+                                        onClick={() => {
+                                          setEditingNoteProductId(null);
+                                          setTempNote("");
+                                        }}
+                                        className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                                      >
+                                        إلغاء
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleAddNote(item.id, tempNote)
+                                        }
+                                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                      >
+                                        حفظ
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="mt-2 flex justify-between items-center">
+                                    <div className="flex-1">
+                                      {item.note && item.note.trim() ? (
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                                          <div className="flex items-start">
+                                            <svg
+                                              className="w-3 h-3 text-blue-500 mt-0.5 ml-1 flex-shrink-0"
+                                              fill="currentColor"
+                                              viewBox="0 0 20 20"
+                                            >
+                                              <path
+                                                fillRule="evenodd"
+                                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                                clipRule="evenodd"
+                                              />
+                                            </svg>
+                                            <p className="text-xs text-blue-800 flex-1">
+                                              {item.note}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          onClick={() =>
+                                            startEditingNote(item.id, item.note)
+                                          }
+                                          disabled={
+                                            bills[currentBillIndex]?.completed
+                                          }
+                                          className={`flex items-center text-xs ${
+                                            bills[currentBillIndex]?.completed
+                                              ? "text-gray-400 cursor-not-allowed"
+                                              : "text-gray-600 hover:text-blue-600"
+                                          }`}
+                                        >
+                                          <svg
+                                            className="w-3 h-3 ml-1"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                            />
+                                          </svg>
+                                          إضافة ملاحظة
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="text-left min-w-[60px]">
-                            <p className="font-bold">
-                              {item.price * item.quantity} ج.م
-                            </p>
-                            {!bills[currentBillIndex]?.completed && (
+                          <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
+                            <div className="flex items-center">
                               <button
-                                onClick={() => deleteFromCart(item.id)}
-                                className="text-red-500 hover:text-red-700 text-[10px] mt-0.5"
+                                onClick={() => removeFromCart(item.id)}
+                                disabled={bills[currentBillIndex]?.completed}
+                                className={`w-7 h-7 flex items-center justify-center rounded-full text-sm ${
+                                  bills[currentBillIndex]?.completed
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                                }`}
                               >
-                                حذف
+                                -
                               </button>
-                            )}
+                              <span className="mx-2 font-bold text-sm min-w-[24px] text-center">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() => addToCart(item)}
+                                disabled={bills[currentBillIndex]?.completed}
+                                className={`w-7 h-7 flex items-center justify-center rounded-full text-sm ${
+                                  bills[currentBillIndex]?.completed
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                                }`}
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                              {!bills[currentBillIndex]?.completed &&
+                                item.note &&
+                                item.note.trim() && (
+                                  <button
+                                    onClick={() =>
+                                      startEditingNote(item.id, item.note)
+                                    }
+                                    className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded-lg transition-colors flex items-center border border-blue-200"
+                                  >
+                                    <svg
+                                      className="w-3 h-3 ml-1"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                      />
+                                    </svg>
+                                    تعديل
+                                  </button>
+                                )}
+                              {!bills[currentBillIndex]?.completed && (
+                                <button
+                                  onClick={() => deleteFromCart(item.id)}
+                                  className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-lg transition-colors flex items-center border border-red-200"
+                                >
+                                  <svg
+                                    className="w-3 h-3 ml-1"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+                                  حذف
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
