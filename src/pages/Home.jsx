@@ -2,6 +2,234 @@ import { useState, useEffect, useMemo } from "react";
 import { toast } from "react-toastify";
 import Navbar from "../components/layout/Navbar.jsx";
 
+const products = [
+  {
+    id: 1,
+    name: "قهوة تركية",
+    price: 15,
+    image:
+      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 1,
+    subCategoryId: 1,
+  },
+  {
+    id: 2,
+    name: "شاي أخضر",
+    price: 10,
+    image:
+      "https://images.unsplash.com/photo-1561047029-3000c68339ca?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 1,
+    subCategoryId: 1,
+  },
+  {
+    id: 3,
+    name: "عصير برتقال",
+    price: 12,
+    image:
+      "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 1,
+    subCategoryId: 3,
+  },
+  {
+    id: 4,
+    name: "كابتشينو",
+    price: 18,
+    image:
+      "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 1,
+    subCategoryId: 1,
+  },
+  {
+    id: 5,
+    name: "إسبريسو",
+    price: 12,
+    image:
+      "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 1,
+    subCategoryId: 1,
+  },
+  {
+    id: 6,
+    name: "ساندويتش جبنة",
+    price: 25,
+    image:
+      "https://images.unsplash.com/photo-1481070555726-e2fe8357725c?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 2,
+    subCategoryId: 4,
+  },
+  {
+    id: 7,
+    name: "ساندويتش دجاج",
+    price: 30,
+    image:
+      "https://images.unsplash.com/photo-1606755962773-d324e0a13086?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 2,
+    subCategoryId: 4,
+  },
+  {
+    id: 8,
+    name: "ساندويتش لحم",
+    price: 35,
+    image:
+      "https://images.unsplash.com/photo-1550317138-10000687a72b?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 2,
+    subCategoryId: 4,
+  },
+  {
+    id: 9,
+    name: "كرواسون",
+    price: 8,
+    image:
+      "https://images.unsplash.com/photo-1550317138-10000687a72b?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 3,
+    subCategoryId: 7,
+  },
+  {
+    id: 10,
+    name: "دونات",
+    price: 10,
+    image:
+      "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 3,
+    subCategoryId: 7,
+  },
+  {
+    id: 11,
+    name: "تشيز كيك",
+    price: 20,
+    image:
+      "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 3,
+    subCategoryId: 7,
+  },
+  {
+    id: 12,
+    name: "كيك شوكولاتة",
+    price: 22,
+    image:
+      "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 3,
+    subCategoryId: 7,
+  },
+  {
+    id: 13,
+    name: "مياه معدنية",
+    price: 5,
+    image:
+      "https://images.unsplash.com/photo-1523362628745-0c100150b504?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 5,
+    subCategoryId: 13,
+  },
+  {
+    id: 14,
+    name: "مشروب غازي",
+    price: 7,
+    image:
+      "https://images.unsplash.com/photo-1561758033-7e924f619b47?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 5,
+    subCategoryId: 12,
+  },
+  {
+    id: 15,
+    name: "عصير مانجو",
+    price: 15,
+    image:
+      "https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 1,
+    subCategoryId: 3,
+  },
+  {
+    id: 16,
+    name: "سلطة خضار",
+    price: 22,
+    image:
+      "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 2,
+    subCategoryId: 6,
+  },
+  {
+    id: 17,
+    name: "بطاطس مقلية",
+    price: 15,
+    image:
+      "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 4,
+    subCategoryId: 10,
+  },
+  {
+    id: 18,
+    name: "بيتزا صغيرة",
+    price: 35,
+    image:
+      "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 2,
+    subCategoryId: 5,
+  },
+  {
+    id: 19,
+    name: "برجر لحم",
+    price: 40,
+    image:
+      "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 2,
+    subCategoryId: 5,
+  },
+  {
+    id: 20,
+    name: "سوشي",
+    price: 45,
+    image:
+      "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 4,
+    subCategoryId: 11,
+  },
+  {
+    id: 21,
+    name: "آيس كريم",
+    price: 12,
+    image:
+      "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 3,
+    subCategoryId: 9,
+  },
+  {
+    id: 22,
+    name: "قهوة مثلجة",
+    price: 20,
+    image:
+      "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 1,
+    subCategoryId: 2,
+  },
+  {
+    id: 23,
+    name: "شاي مثلج",
+    price: 12,
+    image:
+      "https://images.unsplash.com/photo-1597318181409-cf64d0b5d8a2?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 1,
+    subCategoryId: 2,
+  },
+  {
+    id: 24,
+    name: "معكرونة",
+    price: 28,
+    image:
+      "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 2,
+    subCategoryId: 5,
+  },
+  {
+    id: 25,
+    name: "ستيك لحم",
+    price: 65,
+    image:
+      "https://images.unsplash.com/photo-1600891964092-4316c288032e?w=150&h=150&fit=crop&crop=center",
+    mainCategoryId: 2,
+    subCategoryId: 5,
+  },
+];
+
 export default function Home() {
   const [isShiftOpen, setIsShiftOpen] = useState(true);
   const [shiftStartTime] = useState(new Date().toLocaleTimeString("ar-EG"));
@@ -35,6 +263,10 @@ export default function Home() {
   const [tableStatus, setTableStatus] = useState("available");
   const [editingNoteProductId, setEditingNoteProductId] = useState(null);
   const [tempNote, setTempNote] = useState("");
+
+  // إضافة حالة للتبويبات
+  const [selectedMainCategory, setSelectedMainCategory] = useState(null);
+  const [selectedSubCategory, setSelectedSubCategory] = useState(null);
 
   const halls = [
     { id: 1, name: "الصالة الرئيسية", color: "#3B82F6" },
@@ -112,183 +344,85 @@ export default function Home() {
     };
   }, [bills, shiftStartTime]);
 
-  const products = [
-    {
-      id: 1,
-      name: "قهوة تركية",
-      price: 15,
-      image:
-        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 2,
-      name: "شاي أخضر",
-      price: 10,
-      image:
-        "https://images.unsplash.com/photo-1561047029-3000c68339ca?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 3,
-      name: "عصير برتقال",
-      price: 12,
-      image:
-        "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 4,
-      name: "كابتشينو",
-      price: 18,
-      image:
-        "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 5,
-      name: "إسبريسو",
-      price: 12,
-      image:
-        "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 6,
-      name: "ساندويتش جبنة",
-      price: 25,
-      image:
-        "https://images.unsplash.com/photo-1481070555726-e2fe8357725c?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 7,
-      name: "ساندويتش دجاج",
-      price: 30,
-      image:
-        "https://images.unsplash.com/photo-1606755962773-d324e0a13086?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 8,
-      name: "ساندويتش لحم",
-      price: 35,
-      image:
-        "https://images.unsplash.com/photo-1550317138-10000687a72b?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 9,
-      name: "كرواسون",
-      price: 8,
-      image:
-        "https://images.unsplash.com/photo-1550317138-10000687a72b?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 10,
-      name: "دونات",
-      price: 10,
-      image:
-        "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 11,
-      name: "تشيز كيك",
-      price: 20,
-      image:
-        "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 12,
-      name: "كيك شوكولاتة",
-      price: 22,
-      image:
-        "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 13,
-      name: "مياه معدنية",
-      price: 5,
-      image:
-        "https://images.unsplash.com/photo-1523362628745-0c100150b504?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 14,
-      name: "مشروب غازي",
-      price: 7,
-      image:
-        "https://images.unsplash.com/photo-1561758033-7e924f619b47?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 15,
-      name: "عصير مانجو",
-      price: 15,
-      image:
-        "https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 16,
-      name: "سلطة خضار",
-      price: 22,
-      image:
-        "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 17,
-      name: "بطاطس مقلية",
-      price: 15,
-      image:
-        "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 18,
-      name: "بيتزا صغيرة",
-      price: 35,
-      image:
-        "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 19,
-      name: "برجر لحم",
-      price: 40,
-      image:
-        "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 20,
-      name: "سوشي",
-      price: 45,
-      image:
-        "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 21,
-      name: "آيس كريم",
-      price: 12,
-      image:
-        "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 22,
-      name: "قهوة مثلجة",
-      price: 20,
-      image:
-        "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 23,
-      name: "شاي مثلج",
-      price: 12,
-      image:
-        "https://images.unsplash.com/photo-1597318181409-cf64d0b5d8a2?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 24,
-      name: "معكرونة",
-      price: 28,
-      image:
-        "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=150&h=150&fit=crop&crop=center",
-    },
-    {
-      id: 25,
-      name: "ستيك لحم",
-      price: 65,
-      image:
-        "https://images.unsplash.com/photo-1600891964092-4316c288032e?w=150&h=150&fit=crop&crop=center",
-    },
-  ];
+  const categories = {
+    mainCategories: [
+      {
+        id: 1,
+        name: "المشروبات",
+        color: "#3B82F6",
+        subCategories: [
+          { id: 1, name: "المشروبات الساخنة" },
+          { id: 2, name: "المشروبات الباردة" },
+          { id: 3, name: "العصائر" },
+        ],
+      },
+      {
+        id: 2,
+        name: "الوجبات",
+        color: "#10B981",
+        subCategories: [
+          { id: 4, name: "ساندويتشات" },
+          { id: 5, name: "وجبات رئيسية" },
+          { id: 6, name: "سلطات" },
+        ],
+      },
+      {
+        id: 3,
+        name: "الحلويات",
+        color: "#8B5CF6",
+        subCategories: [
+          { id: 7, name: "كيك" },
+          { id: 8, name: "حلويات شرقية" },
+          { id: 9, name: "آيس كريم" },
+        ],
+      },
+      {
+        id: 4,
+        name: "المقبلات",
+        color: "#F59E0B",
+        subCategories: [
+          { id: 10, name: "مقبلات ساخنة" },
+          { id: 11, name: "مقبلات باردة" },
+        ],
+      },
+      {
+        id: 5,
+        name: "المشروبات الغازية",
+        color: "#EF4444",
+        subCategories: [
+          { id: 12, name: "مشروبات غازية" },
+          { id: 13, name: "مياه معبأة" },
+        ],
+      },
+    ],
+  };
+
+  useEffect(() => {
+    if (categories.mainCategories.length > 0) {
+      setSelectedMainCategory(categories.mainCategories[0]);
+      if (categories.mainCategories[0].subCategories.length > 0) {
+        setSelectedSubCategory(categories.mainCategories[0].subCategories[0]);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (selectedMainCategory && selectedMainCategory.subCategories.length > 0) {
+      setSelectedSubCategory(selectedMainCategory.subCategories[0]);
+    }
+  }, [selectedMainCategory]);
+
+  const filteredProducts = useMemo(() => {
+    if (!selectedSubCategory) return [];
+
+    return products.filter(
+      (product) =>
+        product.mainCategoryId === selectedMainCategory?.id &&
+        product.subCategoryId === selectedSubCategory?.id,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMainCategory, selectedSubCategory, products]);
 
   const billTypes = [
     { value: "takeaway", label: "سفري", icon: "" },
@@ -1378,52 +1512,120 @@ export default function Home() {
       <div className="flex-1 container mx-auto px-4 py-4 flex flex-col h-[calc(100vh-80px)]">
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-lg p-6 h-full overflow-hidden flex flex-col">
-              <div className="mb-6">
-                <h2 className="text-xl font-bold" style={{ color: "#193F94" }}>
-                  المنتجات
-                </h2>
-                <p className="text-gray-500">
-                  اختر المنتجات لإضافتها إلى الفاتورة
-                </p>
-              </div>
-
-              <div className="flex-1 overflow-y-auto pr-2">
-                <div className="grid grid-cols-5 gap-2">
-                  {products.map((product) => (
+            <div className="bg-white rounded-2xl shadow-lg p-4 h-full overflow-hidden flex flex-col">
+              <div className="mb-4">
+                <div className="flex space-x-1 rtl:space-x-reverse mb-3 border-b border-gray-200 overflow-x-auto">
+                  {categories.mainCategories.map((category) => (
                     <button
-                      key={product.id}
-                      onClick={() => addToCart(product)}
-                      disabled={bills[currentBillIndex]?.completed}
-                      className={`bg-gray-50 hover:bg-blue-50 rounded-lg p-2 flex items-center transition-all duration-300 transform active:scale-[0.98] border border-gray-200 h-20 ${
-                        bills[currentBillIndex]?.completed
-                          ? "opacity-50 cursor-not-allowed"
-                          : ""
+                      key={category.id}
+                      onClick={() => setSelectedMainCategory(category)}
+                      className={`flex items-center justify-center px-4 py-3 text-sm font-medium transition-all duration-300 whitespace-nowrap border-b-2 min-w-[120px] ${
+                        selectedMainCategory?.id === category.id
+                          ? "border-blue-500 text-blue-700 bg-blue-50 rounded-t-lg"
+                          : "border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                       }`}
+                      style={{
+                        borderBottomColor:
+                          selectedMainCategory?.id === category.id
+                            ? category.color
+                            : "transparent",
+                      }}
                     >
-                      <div className="w-16 h-16 rounded-lg overflow-hidden ml-2 flex-shrink-0">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      </div>
-
-                      <div className="flex-1 text-right">
-                        <h3 className="font-medium text-gray-800 text-xs mb-1 leading-tight">
-                          {product.name}
-                        </h3>
-                        <p
-                          className="text-sm font-bold"
-                          style={{ color: "#193F94" }}
-                        >
-                          {product.price} ج.م
-                        </p>
-                      </div>
+                      <span className="text-center">{category.name}</span>
+                      <div
+                        className={`w-2 h-2 rounded-full mr-2 ${
+                          selectedMainCategory?.id === category.id
+                            ? "opacity-100"
+                            : "opacity-0"
+                        }`}
+                        style={{ backgroundColor: category.color }}
+                      />
                     </button>
                   ))}
                 </div>
+
+                {selectedMainCategory && (
+                  <div className="flex space-x-2 rtl:space-x-reverse mb-4 overflow-x-auto pb-1">
+                    {selectedMainCategory.subCategories.map((subCategory) => (
+                      <button
+                        key={subCategory.id}
+                        onClick={() => setSelectedSubCategory(subCategory)}
+                        className={`flex items-center justify-center px-4 py-2 text-xs font-medium transition-all duration-300 whitespace-nowrap rounded-full border min-w-[100px] ${
+                          selectedSubCategory?.id === subCategory.id
+                            ? "bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 shadow-sm"
+                            : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
+                        }`}
+                      >
+                        <span className="text-center">{subCategory.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mb-3">
+                <div className="flex justify-between items-center">
+                  <h2
+                    className="text-lg font-bold"
+                    style={{ color: "#193F94" }}
+                  >
+                    المنتجات
+                    {selectedSubCategory && (
+                      <span className="text-sm font-normal text-gray-600 mr-2">
+                        - {selectedSubCategory.name}
+                      </span>
+                    )}
+                  </h2>
+                  <p className="text-xs text-gray-500">
+                    {filteredProducts.length} منتج متاح
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto pr-2">
+                {filteredProducts.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-400 py-8">
+                    <div className="text-4xl mb-4">📦</div>
+                    <p className="text-sm">لا توجد منتجات في هذه الفئة</p>
+                    <p className="text-xs mt-1">اختر فئة أخرى لعرض المنتجات</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-5 gap-2">
+                    {filteredProducts.map((product) => (
+                      <button
+                        key={product.id}
+                        onClick={() => addToCart(product)}
+                        disabled={bills[currentBillIndex]?.completed}
+                        className={`bg-gray-50 hover:bg-blue-50 rounded-lg p-2 flex items-center transition-all duration-300 transform active:scale-[0.98] border border-gray-200 h-20 ${
+                          bills[currentBillIndex]?.completed
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }`}
+                      >
+                        <div className="w-16 h-16 rounded-lg overflow-hidden ml-2 flex-shrink-0">
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+
+                        <div className="flex-1 text-right">
+                          <h3 className="font-medium text-gray-800 text-xs mb-1 leading-tight">
+                            {product.name}
+                          </h3>
+                          <p
+                            className="text-sm font-bold"
+                            style={{ color: "#193F94" }}
+                          >
+                            {product.price} ج.م
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1832,14 +2034,13 @@ export default function Home() {
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                    />
-                                  </svg>
+                                    {...{
+                                      strokeLinecap: "round",
+                                      strokeLinejoin: "round",
+                                      strokeWidth: 2,
+                                      d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
+                                    }}
+                                  />
                                   حذف
                                 </button>
                               )}
