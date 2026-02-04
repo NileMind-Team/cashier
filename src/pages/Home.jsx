@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "react-toastify";
+import Navbar from "../components/layout/Navbar.jsx";
 
 export default function Home() {
-  const navigate = useNavigate();
+  const [isShiftOpen, setIsShiftOpen] = useState(true);
+  const [shiftStartTime] = useState(new Date().toLocaleTimeString("ar-EG"));
+
   const [bills, setBills] = useState([
     {
       id: 1,
@@ -66,6 +68,49 @@ export default function Home() {
       { id: 18, number: "ط18", status: "available", currentBillId: null },
     ],
   });
+
+  const shiftSummary = useMemo(() => {
+    const totalBills = bills.length;
+    const completedBills = bills.filter((bill) => bill.completed).length;
+    const pendingBills = totalBills - completedBills;
+
+    let totalSales = 0;
+    let totalTax = 0;
+    let totalDiscount = 0;
+    let netRevenue = 0;
+
+    bills.forEach((bill) => {
+      if (bill.completed) {
+        const subtotal = bill.cart.reduce(
+          (sum, item) => sum + item.price * item.quantity,
+          0,
+        );
+        const billTax = (subtotal * bill.tax) / 100;
+        const billDiscount = (subtotal * bill.discount) / 100;
+        const billTotal =
+          subtotal +
+          billTax -
+          billDiscount +
+          (bill.billType === "delivery" ? bill.deliveryFee : 0);
+
+        totalSales += billTotal;
+        totalTax += billTax;
+        totalDiscount += billDiscount;
+        netRevenue += billTotal;
+      }
+    });
+
+    return {
+      totalBills,
+      completedBills,
+      pendingBills,
+      totalSales,
+      totalTax,
+      totalDiscount,
+      netRevenue,
+      startTime: shiftStartTime,
+    };
+  }, [bills, shiftStartTime]);
 
   const products = [
     {
@@ -281,7 +326,6 @@ export default function Home() {
 
   const handleOpenTableSelection = () => {
     setShowTableSelection(true);
-    // تعيين الصالة الأولى بشكل افتراضي عند فتح نافذة الطاولات
     if (!selectedHall && halls.length > 0) {
       setSelectedHall(halls[0]);
     }
@@ -297,7 +341,6 @@ export default function Home() {
 
     if (type === "dinein") {
       setShowTableSelection(true);
-      // تعيين الصالة الأولى بشكل افتراضي عند اختيار نوع طاولة
       if (!selectedHall && halls.length > 0) {
         setSelectedHall(halls[0]);
       }
@@ -417,7 +460,6 @@ export default function Home() {
     }
   };
 
-  // دالة جديدة: إزالة الطاولة مع المنتجات
   const handleRemoveTable = () => {
     if (!selectedTable || !selectedHall) {
       toast.error("لم يتم اختيار طاولة");
@@ -429,12 +471,10 @@ export default function Home() {
       return;
     }
 
-    // التحقق إذا كانت هناك منتجات في الفاتورة
     const hasProducts = cart.length > 0;
     const productCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
     if (hasProducts) {
-      // عرض تأكيد مع معلومات المنتجات
       toast.info(
         <div className="p-3">
           <p className="font-bold mb-2">هل أنت متأكد من إزالة الطاولة؟</p>
@@ -448,7 +488,6 @@ export default function Home() {
             <button
               onClick={() => {
                 toast.dismiss();
-                // تنفيذ الإزالة
                 updateTableStatus(
                   selectedHall.id,
                   selectedTable.id,
@@ -505,7 +544,6 @@ export default function Home() {
         },
       );
     } else {
-      // إذا لم تكن هناك منتجات، تنفيذ الإزالة مباشرة
       updateTableStatus(selectedHall.id, selectedTable.id, "available", null);
 
       const updatedBills = [...bills];
@@ -639,7 +677,6 @@ export default function Home() {
     setCart(cart.filter((item) => item.id !== id));
   };
 
-  // دالة لإضافة أو تعديل ملاحظة على المنتج
   const handleAddNote = (id, note) => {
     if (bills[currentBillIndex]?.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
@@ -657,7 +694,6 @@ export default function Home() {
     }
   };
 
-  // دالة لبدء تعديل الملاحظة
   const startEditingNote = (id, currentNote) => {
     if (bills[currentBillIndex]?.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
@@ -937,7 +973,6 @@ export default function Home() {
       ? `\n      الطاولة: ${selectedTable.number} (${selectedHall.name})`
       : "";
 
-    // إضافة الملاحظات في نص الفاتورة
     const cartItemsText = cart
       .map((item) => {
         let itemText = `• ${item.name} × ${item.quantity} = ${item.price * item.quantity} ج.م`;
@@ -1039,7 +1074,6 @@ export default function Home() {
       ? `\n      الطاولة: ${selectedTable.number} (${selectedHall.name})`
       : "";
 
-    // إضافة الملاحظات في نص الفاتورة المعاد طباعتها
     const cartItemsText = cart
       .map((item) => {
         let itemText = `• ${item.name} × ${item.quantity} = ${item.price * item.quantity} ج.م`;
@@ -1137,10 +1171,6 @@ export default function Home() {
     );
   };
 
-  const handleLogout = () => {
-    navigate("/");
-  };
-
   const resetCart = () => {
     if (bills[currentBillIndex]?.completed) {
       toast.error("لا يمكن إعادة تعيين فاتورة مكتملة");
@@ -1187,11 +1217,23 @@ export default function Home() {
     }
   };
 
+  const handleShiftClose = () => {
+    setIsShiftOpen(false);
+
+    toast.success("تم إغلاق الوردية بنجاح!");
+  };
+
   return (
     <div
       dir="rtl"
       className="min-h-screen flex flex-col bg-gradient-to-l from-gray-50 to-gray-100 overflow-hidden"
     >
+      <Navbar
+        isShiftOpen={isShiftOpen}
+        onShiftClose={handleShiftClose}
+        shiftSummary={shiftSummary}
+      />
+
       {showTableSelection && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
@@ -1332,48 +1374,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
-      <div className="bg-white shadow-md">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center mr-3">
-                <span className="text-white font-bold">$</span>
-              </div>
-              <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
-                نظام الكاشير
-              </h1>
-            </div>
-
-            <div className="flex items-center space-x-4 rtl:space-x-reverse">
-              <div className="text-right">
-                <p className="font-medium">
-                  {new Date().toLocaleDateString("ar-EG")}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {new Date().toLocaleTimeString("ar-EG")}
-                </p>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 rounded-lg font-medium border transition-all"
-                style={{ borderColor: "#193F94", color: "#193F94" }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = "#193F94";
-                  e.target.style.color = "white";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = "transparent";
-                  e.target.style.color = "#193F94";
-                }}
-              >
-                خروج
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div className="flex-1 container mx-auto px-4 py-4 flex flex-col h-[calc(100vh-80px)]">
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
