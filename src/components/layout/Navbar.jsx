@@ -141,9 +141,19 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
     navigate("/users");
   };
 
+  const handleCategoriesNavigation = () => {
+    navigate("/categories");
+  };
+
+  const handleProductsManagementNavigation = () => {
+    navigate("/products-management");
+  };
+
   const isReportsActive = location.pathname.startsWith("/reports");
-  const isHomeActive = location.pathname === "/";
   const isUsersActive = location.pathname === "/users";
+  const isCategoriesActive = location.pathname === "/categories";
+  const isProductsManagementActive =
+    location.pathname === "/products-management";
 
   return (
     <div className="bg-white shadow-md relative">
@@ -171,19 +181,18 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
             </div>
           </div>
 
-          <div className="flex items-center space-x-4 rtl:space-x-reverse">
-            {/* زر الرئيسية */}
+          <div className="flex items-center space-x-3 rtl:space-x-reverse">
             <button
-              onClick={() => navigate("/")}
-              className={`px-3 py-2 rounded-lg font-medium transition-all flex items-center text-sm ${
-                isHomeActive
-                  ? "bg-blue-900 text-white"
-                  : "text-gray-700 hover:bg-gray-100"
+              onClick={handleCategoriesNavigation}
+              className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center text-sm ${
+                isCategoriesActive
+                  ? "bg-blue-900 text-white border-blue-900"
+                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 ml-1"
+                className="h-5 w-5 ml-2"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -192,23 +201,48 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                  d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
                 />
               </svg>
-              الرئيسية
+              إدارة الفئات
             </button>
 
             <button
-              onClick={handleUsersNavigation}
-              className={`px-3 py-2 rounded-lg font-medium transition-all flex items-center text-sm ${
-                isUsersActive
-                  ? "bg-blue-900 text-white"
-                  : "text-gray-700 hover:bg-gray-100"
+              onClick={handleProductsManagementNavigation}
+              className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center text-sm ${
+                isProductsManagementActive
+                  ? "bg-blue-900 text-white border-blue-900"
+                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 ml-1"
+                className="h-5 w-5 ml-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                />
+              </svg>
+              إدارة المنتجات
+            </button>
+
+            <button
+              onClick={handleUsersNavigation}
+              className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center text-sm ${
+                isUsersActive
+                  ? "bg-blue-900 text-white border-blue-900"
+                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+              }`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 ml-2"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -228,7 +262,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                 onClick={() => setShowReportsDropdown(!showReportsDropdown)}
                 aria-expanded={showReportsDropdown}
                 aria-haspopup="true"
-                className={`px-4 py-2 rounded-lg font-medium border transition-all flex items-center ${
+                className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center ${
                   isReportsActive
                     ? "bg-blue-900 text-white border-blue-900"
                     : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
@@ -267,22 +301,9 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                 </svg>
               </button>
 
-              {/* قائمة التقارير المنسدلة */}
               {showReportsDropdown && (
                 <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-fadeIn">
                   <div className="p-2">
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <h3
-                        className="font-bold text-gray-800 text-sm"
-                        style={{ color: "#193F94" }}
-                      >
-                        تقارير النظام
-                      </h3>
-                      <p className="text-xs text-gray-500 mt-1">
-                        اختر التقرير المطلوب
-                      </p>
-                    </div>
-
                     <div className="space-y-1 mt-2">
                       <button
                         onClick={() => handleReportNavigation("shifts")}
@@ -316,9 +337,6 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير الورديات</p>
-                          <p className="text-xs text-gray-500">
-                            عرض تفاصيل الورديات المغلقة
-                          </p>
                         </div>
                       </button>
 
@@ -354,9 +372,6 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير المبيعات</p>
-                          <p className="text-xs text-gray-500">
-                            تحليل المبيعات حسب الفترة
-                          </p>
                         </div>
                       </button>
 
@@ -392,9 +407,6 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير المنتجات</p>
-                          <p className="text-xs text-gray-500">
-                            المنتجات الأكثر والأقل مبيعاً
-                          </p>
                         </div>
                       </button>
 
@@ -430,9 +442,6 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير العملاء</p>
-                          <p className="text-xs text-gray-500">
-                            تحليل سلوك العملاء
-                          </p>
                         </div>
                       </button>
 
@@ -469,10 +478,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                           </svg>
                         </div>
                         <div className="flex-1 text-right">
-                          <p className="font-medium">طرق الدفع</p>
-                          <p className="text-xs text-gray-500">
-                            تحليل المبيعات حسب وسائل الدفع
-                          </p>
+                          <p className="font-medium">تقارير طرق الدفع</p>
                         </div>
                       </button>
 
@@ -507,14 +513,10 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                           </svg>
                         </div>
                         <div className="flex-1 text-right">
-                          <p className="font-medium">الفواتير المعلقة</p>
-                          <p className="text-xs text-gray-500">
-                            عرض الفواتير غير المكتملة
-                          </p>
+                          <p className="font-medium">تقارير الفواتير المعلقة</p>
                         </div>
                       </button>
 
-                      {/* إضافة تقرير المرتجعات */}
                       <button
                         onClick={() => handleReportNavigation("returns")}
                         className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
@@ -547,9 +549,6 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير المرتجعات</p>
-                          <p className="text-xs text-gray-500">
-                            عرض الفواتير والمنتجات المرتجعة
-                          </p>
                         </div>
                       </button>
                     </div>
@@ -561,7 +560,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
             {isShiftOpen && (
               <button
                 onClick={handleCloseShift}
-                className="px-4 py-2 rounded-lg font-medium border transition-all flex items-center"
+                className="h-11 px-4 rounded-lg font-medium border transition-all flex items-center"
                 style={{ borderColor: "#F59E0B", color: "#F59E0B" }}
                 onMouseEnter={(e) => {
                   e.target.style.backgroundColor = "#F59E0B";
