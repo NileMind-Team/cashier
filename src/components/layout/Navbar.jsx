@@ -66,6 +66,11 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                 </div>
                 
                 <div class="flex justify-between items-center border-b pb-1">
+                  <span class="text-gray-700">الفواتير المرتجعة:</span>
+                  <span class="font-bold text-red-600">${shiftSummary?.returnedBills || 0}</span>
+                </div>
+                
+                <div class="flex justify-between items-center border-b pb-1">
                   <span class="text-gray-700">إجمالي المبيعات:</span>
                   <span class="font-bold" style="color: #193F94">${shiftSummary?.totalSales?.toFixed(2) || "0.00"} ج.م</span>
                 </div>
@@ -127,6 +132,8 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
       navigate("/reports/payment-methods");
     } else if (reportType === "pending-bills") {
       navigate("/reports/pending-bills");
+    } else if (reportType === "returns") {
+      navigate("/reports/returns");
     }
   };
 
@@ -474,6 +481,45 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                           <p className="font-medium">الفواتير المعلقة</p>
                           <p className="text-xs text-gray-500">
                             عرض الفواتير غير المكتملة
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* إضافة تقرير المرتجعات */}
+                      <button
+                        onClick={() => handleReportNavigation("returns")}
+                        className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
+                          location.pathname === "/reports/returns"
+                            ? "bg-blue-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 ${
+                            location.pathname === "/reports/returns"
+                              ? "bg-blue-100"
+                              : "bg-gray-100"
+                          }`}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 text-blue-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"
+                            />
+                          </svg>
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium">تقارير المرتجعات</p>
+                          <p className="text-xs text-gray-500">
+                            عرض الفواتير والمنتجات المرتجعة
                           </p>
                         </div>
                       </button>
