@@ -5,6 +5,7 @@ import ShiftReports from "../pages/ShiftReports";
 import SalesReport from "../pages/SalesReport";
 import ProductsReports from "../pages/ProductReport";
 import CustomersReport from "../pages/CustomersReport";
+import PaymentMethodsReport from "../pages/PaymentMethodsReport";
 
 export default function AppRoutes() {
   return (
@@ -15,6 +16,10 @@ export default function AppRoutes() {
       <Route path="/reports/sales" element={<SalesReport />} />
       <Route path="/reports/products" element={<ProductsReports />} />
       <Route path="/reports/customers" element={<CustomersReport />} />
+      <Route
+        path="/reports/payment-methods"
+        element={<PaymentMethodsReport />}
+      />
     </Routes>
   );
 }

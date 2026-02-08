@@ -10,17 +10,16 @@ export default function ShiftReports() {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // بيانات تجريبية للورديات
   useEffect(() => {
     const mockShifts = [
       {
         id: "shift_001",
-        startTime: "2024-01-15 08:00",
-        endTime: "2024-01-15 16:00",
+        startTime: "2026-01-15 08:00",
+        endTime: "2026-01-15 16:00",
         totalBills: 45,
         completedBills: 42,
         pendingBills: 3,
-        returnedBills: 1, // فواتير مرتجعة
+        returnedBills: 1,
         totalSales: 12560.75,
         totalTax: 1758.51,
         totalDiscount: 628.04,
@@ -33,8 +32,8 @@ export default function ShiftReports() {
       },
       {
         id: "shift_002",
-        startTime: "2024-01-14 08:00",
-        endTime: "2024-01-14 16:00",
+        startTime: "2026-01-14 08:00",
+        endTime: "2026-01-14 16:00",
         totalBills: 38,
         completedBills: 36,
         pendingBills: 2,
@@ -51,8 +50,8 @@ export default function ShiftReports() {
       },
       {
         id: "shift_003",
-        startTime: "2024-01-13 08:00",
-        endTime: "2024-01-13 16:00",
+        startTime: "2026-01-13 08:00",
+        endTime: "2026-01-13 16:00",
         totalBills: 52,
         completedBills: 50,
         pendingBills: 2,
@@ -162,7 +161,6 @@ export default function ShiftReports() {
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* اللوحة الجانبية للفلترة */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg p-5 sticky top-6">
               <h3
@@ -231,7 +229,6 @@ export default function ShiftReports() {
             </div>
           </div>
 
-          {/* منطقة عرض التقرير */}
           <div className="lg:col-span-3">
             {reportData ? (
               <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -257,7 +254,6 @@ export default function ShiftReports() {
                   </div>
                 </div>
 
-                {/* بطاقات الإحصائيات الرئيسية */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
                     <div className="flex items-center justify-between">
@@ -337,7 +333,6 @@ export default function ShiftReports() {
                   </div>
                 </div>
 
-                {/* تفاصيل المبيعات حسب طريقة الدفع */}
                 <div className="mb-6">
                   <h3
                     className="text-lg font-bold mb-4"
@@ -399,7 +394,6 @@ export default function ShiftReports() {
                   </div>
                 </div>
 
-                {/* ملخص الضرائب والخصومات */}
                 <div className="bg-gradient-to-r from-gray-50 to-white rounded-xl p-5 border border-gray-200">
                   <h4
                     className="font-bold mb-3 text-gray-800"

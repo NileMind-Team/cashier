@@ -1,12 +1,25 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showReportsDropdown, setShowReportsDropdown] = useState(false);
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowReportsDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleCloseShift = () => {
     Swal.fire({
@@ -110,6 +123,8 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
       navigate("/reports/products");
     } else if (reportType === "customers") {
       navigate("/reports/customers");
+    } else if (reportType === "payment-methods") {
+      navigate("/reports/payment-methods");
     }
   };
 
@@ -344,6 +359,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                           </p>
                         </div>
                       </button>
+
                       <button
                         onClick={() => handleReportNavigation("customers")}
                         className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
@@ -378,6 +394,47 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                           <p className="font-medium">تقارير العملاء</p>
                           <p className="text-xs text-gray-500">
                             تحليل سلوك العملاء
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* تقرير طرق الدفع الجديد */}
+                      <button
+                        onClick={() =>
+                          handleReportNavigation("payment-methods")
+                        }
+                        className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
+                          location.pathname === "/reports/payment-methods"
+                            ? "bg-blue-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 ${
+                            location.pathname === "/reports/payment-methods"
+                              ? "bg-blue-100"
+                              : "bg-gray-100"
+                          }`}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 text-blue-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                            />
+                          </svg>
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium">طرق الدفع</p>
+                          <p className="text-xs text-gray-500">
+                            تحليل المبيعات حسب وسائل الدفع
                           </p>
                         </div>
                       </button>
@@ -422,21 +479,3 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
     </div>
   );
 }
-
-const style = document.createElement("style");
-style.textContent = `
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  .animate-fadeIn {
-    animation: fadeIn 0.2s ease-out;
-  }
-`;
-document.head.appendChild(style);

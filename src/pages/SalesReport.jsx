@@ -14,8 +14,8 @@ export default function SalesReports() {
   const salesData = [
     {
       id: "sale_001",
-      billNumber: "F-2024-001",
-      date: "2024-01-15 14:30",
+      billNumber: "F-2026-001",
+      date: "2026-01-15 14:30",
       customerName: "أحمد محمد",
       billType: "dinein",
       tableNumber: "ط5",
@@ -33,8 +33,8 @@ export default function SalesReports() {
     },
     {
       id: "sale_002",
-      billNumber: "F-2024-002",
-      date: "2024-01-15 15:15",
+      billNumber: "F-2026-002",
+      date: "2026-01-15 15:15",
       customerName: "سارة علي",
       billType: "takeaway",
       tableNumber: null,
@@ -53,8 +53,8 @@ export default function SalesReports() {
     },
     {
       id: "sale_003",
-      billNumber: "F-2024-003",
-      date: "2024-01-15 16:45",
+      billNumber: "F-2026-003",
+      date: "2026-01-15 16:45",
       customerName: "محمد خالد",
       billType: "delivery",
       tableNumber: null,
@@ -72,8 +72,8 @@ export default function SalesReports() {
     },
     {
       id: "sale_004",
-      billNumber: "F-2024-004",
-      date: "2024-01-14 10:20",
+      billNumber: "F-2026-004",
+      date: "2026-01-14 10:20",
       customerName: "فاطمة أحمد",
       billType: "dinein",
       tableNumber: "ط2",
@@ -91,8 +91,8 @@ export default function SalesReports() {
     },
     {
       id: "sale_005",
-      billNumber: "F-2024-005",
-      date: "2024-01-14 12:45",
+      billNumber: "F-2026-005",
+      date: "2026-01-14 12:45",
       customerName: "علي حسن",
       billType: "takeaway",
       tableNumber: null,
@@ -110,8 +110,8 @@ export default function SalesReports() {
     },
     {
       id: "sale_006",
-      billNumber: "F-2024-006",
-      date: "2024-01-13 19:30",
+      billNumber: "F-2026-006",
+      date: "2026-01-13 19:30",
       customerName: "ريم سعد",
       billType: "delivery",
       tableNumber: null,
@@ -130,8 +130,8 @@ export default function SalesReports() {
     },
     {
       id: "sale_007",
-      billNumber: "F-2024-007",
-      date: "2024-01-13 20:15",
+      billNumber: "F-2026-007",
+      date: "2026-01-13 20:15",
       customerName: "خالد عمر",
       billType: "dinein",
       tableNumber: "ط8",
@@ -149,8 +149,8 @@ export default function SalesReports() {
     },
     {
       id: "sale_008",
-      billNumber: "F-2024-008",
-      date: "2024-01-12 11:30",
+      billNumber: "F-2026-008",
+      date: "2026-01-12 11:30",
       customerName: "نورا سليم",
       billType: "takeaway",
       tableNumber: null,
@@ -168,8 +168,8 @@ export default function SalesReports() {
     },
     {
       id: "sale_009",
-      billNumber: "F-2024-009",
-      date: "2024-01-16 09:15",
+      billNumber: "F-2026-009",
+      date: "2026-01-16 09:15",
       customerName: "سامي رامي",
       billType: "dinein",
       tableNumber: "ط3",
@@ -187,8 +187,8 @@ export default function SalesReports() {
     },
     {
       id: "sale_010",
-      billNumber: "F-2024-010",
-      date: "2024-01-16 13:45",
+      billNumber: "F-2026-010",
+      date: "2026-01-16 13:45",
       customerName: "ليلى محمود",
       billType: "delivery",
       tableNumber: null,
@@ -428,7 +428,6 @@ export default function SalesReports() {
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* اللوحة الجانبية للفلترة - حقلين منفصلين */}
           <div className="lg:col-span-1 print:hidden">
             <div className="bg-white rounded-2xl shadow-lg p-5 sticky top-6">
               <h3
@@ -440,7 +439,6 @@ export default function SalesReports() {
 
               <div className="space-y-4">
 
-                {/* حقل التاريخ من */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     التاريخ من
@@ -454,7 +452,6 @@ export default function SalesReports() {
                   />
                 </div>
 
-                {/* حقل التاريخ إلى */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     التاريخ إلى
@@ -496,11 +493,9 @@ export default function SalesReports() {
             </div>
           </div>
 
-          {/* منطقة عرض التقرير */}
           <div className="lg:col-span-3">
             {reportData ? (
               <div className="bg-white rounded-2xl shadow-lg p-6 print:shadow-none">
-                {/* رأس التقرير */}
                 <div className="flex justify-between items-start mb-6 print:flex-col print:items-start">
                   <div>
                     <h2
@@ -538,7 +533,6 @@ export default function SalesReports() {
                   </div>
                 </div>
 
-                {/* بطاقات الإحصائيات الرئيسية */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 print:grid-cols-2">
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
                     <div className="flex items-center justify-between">
@@ -628,7 +622,6 @@ export default function SalesReports() {
                   </div>
                 </div>
 
-                {/* المبيعات اليومية */}
                 {reportData.dailySales.length > 0 && (
                   <div className="mb-6">
                     <h3
@@ -697,7 +690,6 @@ export default function SalesReports() {
                   </div>
                 )}
 
-                {/* جدول الفواتير التفصيلي */}
                 <div className="mb-6">
                   <div className="flex justify-between items-center mb-4">
                     <h3
@@ -947,7 +939,6 @@ export default function SalesReports() {
                   </div>
                 </div>
 
-                {/* ملخص النتائج */}
                 <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-200">
                   <h4
                     className="font-bold mb-4 text-gray-800"

@@ -21,7 +21,7 @@ export default function ProductsReports() {
         cost: 5,
         quantitySold: 156,
         totalRevenue: 2340,
-        date: "2024-01-15",
+        date: "2026-01-15",
         profit: 1560,
       },
       {
@@ -32,7 +32,7 @@ export default function ProductsReports() {
         cost: 6,
         quantitySold: 128,
         totalRevenue: 2304,
-        date: "2024-01-15",
+        date: "2026-01-15",
         profit: 1536,
       },
       {
@@ -43,7 +43,7 @@ export default function ProductsReports() {
         cost: 4,
         quantitySold: 95,
         totalRevenue: 1140,
-        date: "2024-01-15",
+        date: "2026-01-15",
         profit: 760,
       },
       {
@@ -54,7 +54,7 @@ export default function ProductsReports() {
         cost: 3,
         quantitySold: 142,
         totalRevenue: 1420,
-        date: "2024-01-14",
+        date: "2026-01-14",
         profit: 994,
       },
       {
@@ -65,7 +65,7 @@ export default function ProductsReports() {
         cost: 3,
         quantitySold: 89,
         totalRevenue: 712,
-        date: "2024-01-14",
+        date: "2026-01-14",
         profit: 445,
       },
       {
@@ -76,7 +76,7 @@ export default function ProductsReports() {
         cost: 8,
         quantitySold: 67,
         totalRevenue: 1340,
-        date: "2024-01-14",
+        date: "2026-01-14",
         profit: 804,
       },
       {
@@ -87,7 +87,7 @@ export default function ProductsReports() {
         cost: 4,
         quantitySold: 112,
         totalRevenue: 1120,
-        date: "2024-01-13",
+        date: "2026-01-13",
         profit: 672,
       },
       {
@@ -98,7 +98,7 @@ export default function ProductsReports() {
         cost: 15,
         quantitySold: 54,
         totalRevenue: 1890,
-        date: "2024-01-13",
+        date: "2026-01-13",
         profit: 1080,
       },
       {
@@ -109,7 +109,7 @@ export default function ProductsReports() {
         cost: 18,
         quantitySold: 48,
         totalRevenue: 1920,
-        date: "2024-01-13",
+        date: "2026-01-13",
         profit: 1056,
       },
       {
@@ -120,7 +120,7 @@ export default function ProductsReports() {
         cost: 4,
         quantitySold: 135,
         totalRevenue: 1620,
-        date: "2024-01-16",
+        date: "2026-01-16",
         profit: 1080,
       },
       {
@@ -131,7 +131,7 @@ export default function ProductsReports() {
         cost: 5,
         quantitySold: 98,
         totalRevenue: 1470,
-        date: "2024-01-16",
+        date: "2026-01-16",
         profit: 980,
       },
       {
@@ -142,7 +142,7 @@ export default function ProductsReports() {
         cost: 2,
         quantitySold: 176,
         totalRevenue: 1232,
-        date: "2024-01-16",
+        date: "2026-01-16",
         profit: 880,
       },
       {
@@ -153,7 +153,7 @@ export default function ProductsReports() {
         cost: 5,
         quantitySold: 103,
         totalRevenue: 1236,
-        date: "2024-01-12",
+        date: "2026-01-12",
         profit: 721,
       },
       {
@@ -164,7 +164,7 @@ export default function ProductsReports() {
         cost: 20,
         quantitySold: 32,
         totalRevenue: 1440,
-        date: "2024-01-12",
+        date: "2026-01-12",
         profit: 800,
       },
       {
@@ -175,7 +175,7 @@ export default function ProductsReports() {
         cost: 9,
         quantitySold: 76,
         totalRevenue: 1672,
-        date: "2024-01-12",
+        date: "2026-01-12",
         profit: 988,
       },
       {
@@ -186,7 +186,7 @@ export default function ProductsReports() {
         cost: 7,
         quantitySold: 84,
         totalRevenue: 1680,
-        date: "2024-01-11",
+        date: "2026-01-11",
         profit: 1092,
       },
       {
@@ -197,7 +197,7 @@ export default function ProductsReports() {
         cost: 9,
         quantitySold: 58,
         totalRevenue: 1276,
-        date: "2024-01-11",
+        date: "2026-01-11",
         profit: 754,
       },
       {
@@ -208,7 +208,7 @@ export default function ProductsReports() {
         cost: 10,
         quantitySold: 72,
         totalRevenue: 1800,
-        date: "2024-01-11",
+        date: "2026-01-11",
         profit: 1080,
       },
       {
@@ -219,7 +219,7 @@ export default function ProductsReports() {
         cost: 12,
         quantitySold: 46,
         totalRevenue: 1288,
-        date: "2024-01-10",
+        date: "2026-01-10",
         profit: 736,
       },
       {
@@ -230,7 +230,7 @@ export default function ProductsReports() {
         cost: 30,
         quantitySold: 29,
         totalRevenue: 1885,
-        date: "2024-01-10",
+        date: "2026-01-10",
         profit: 1015,
       },
     ],
@@ -466,7 +466,6 @@ export default function ProductsReports() {
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* اللوحة الجانبية للفلترة */}
           <div className="lg:col-span-1 print:hidden">
             <div className="bg-white rounded-2xl shadow-lg p-5 sticky top-6">
               <h3
@@ -477,7 +476,6 @@ export default function ProductsReports() {
               </h3>
 
               <div className="space-y-4">
-                {/* حقل التاريخ من */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     التاريخ من
@@ -491,7 +489,6 @@ export default function ProductsReports() {
                   />
                 </div>
 
-                {/* حقل التاريخ إلى */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     التاريخ إلى
@@ -505,7 +502,6 @@ export default function ProductsReports() {
                   />
                 </div>
 
-                {/* اختيار طريقة الفرز */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     الفرز حسب
@@ -588,7 +584,6 @@ export default function ProductsReports() {
                   </div>
                 </div>
 
-                {/* بطاقات الإحصائيات الرئيسية */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 print:grid-cols-2">
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
                     <div className="flex items-center justify-between">
@@ -675,7 +670,6 @@ export default function ProductsReports() {
                   </div>
                 </div>
 
-                {/* توزيع المنتجات حسب الفئة */}
                 {Object.keys(reportData.stats.categoryBreakdown).length > 0 && (
                   <div className="mb-6">
                     <h3
@@ -757,7 +751,6 @@ export default function ProductsReports() {
                   </div>
                 )}
 
-                {/* جدول المنتجات التفصيلي */}
                 <div className="mb-6">
                   <div className="flex justify-between items-center mb-4">
                     <h3
@@ -971,7 +964,6 @@ export default function ProductsReports() {
                   </div>
                 </div>
 
-                {/* ملخص النتائج */}
                 <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-200">
                   <h4
                     className="font-bold mb-4 text-gray-800"

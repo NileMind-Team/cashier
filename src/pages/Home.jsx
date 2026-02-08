@@ -243,8 +243,8 @@ export default function Home() {
       discount: 0,
       deliveryFee: 25,
       completed: false,
-      isReturned: false, // إضافة حالة الارتجاع
-      returnReason: "", // سبب الارتجاع
+      isReturned: false,
+      returnReason: "",
       billType: "takeaway",
       customerName: "",
       customerPhone: "",
@@ -273,8 +273,6 @@ export default function Home() {
   const [tempGeneralNote, setTempGeneralNote] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
-
-  // إضافة حالة للتبويبات
   const [selectedMainCategory, setSelectedMainCategory] = useState(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState(null);
 
@@ -311,7 +309,6 @@ export default function Home() {
     ],
   });
 
-  // تعريف طرق الدفع
   const paymentMethods = [
     { id: "cash", name: "كاش", icon: "💰", color: "#10B981" },
     { id: "visa", name: "فيزا", icon: "💳", color: "#3B82F6" },
@@ -322,7 +319,7 @@ export default function Home() {
     const totalBills = bills.length;
     const completedBills = bills.filter((bill) => bill.completed).length;
     const pendingBills = totalBills - completedBills;
-    const returnedBills = bills.filter((bill) => bill.isReturned).length; // الفواتير المرتجعة
+    const returnedBills = bills.filter((bill) => bill.isReturned).length;
 
     let totalSales = 0;
     let totalTax = 0;
@@ -874,7 +871,6 @@ export default function Home() {
     setTempNote(currentNote || "");
   };
 
-  // دالة لبدء تحرير الملاحظة العامة
   const startEditingGeneralNote = () => {
     if (bills[currentBillIndex]?.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
@@ -885,7 +881,6 @@ export default function Home() {
     setTempGeneralNote(generalNote || "");
   };
 
-  // دالة لحفظ الملاحظة العامة
   const handleSaveGeneralNote = () => {
     if (bills[currentBillIndex]?.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
@@ -900,13 +895,11 @@ export default function Home() {
     }
   };
 
-  // دالة لإلغاء تحرير الملاحظة العامة
   const handleCancelGeneralNote = () => {
     setIsEditingGeneralNote(false);
     setTempGeneralNote("");
   };
 
-  // دالة لفتح نافذة اختيار طريقة الدفع
   const openPaymentModal = () => {
     if (cart.length === 0) {
       toast.error("الفاتورة فارغة");
@@ -922,13 +915,11 @@ export default function Home() {
     setShowPaymentModal(true);
   };
 
-  // دالة لإغلاق نافذة اختيار طريقة الدفع
   const closePaymentModal = () => {
     setShowPaymentModal(false);
     setSelectedPaymentMethod(null);
   };
 
-  // دالة لإتمام البيع بعد اختيار طريقة الدفع
   const handleCompletePayment = () => {
     if (!selectedPaymentMethod) {
       toast.error("يرجى اختيار طريقة الدفع");
@@ -1332,7 +1323,6 @@ export default function Home() {
     openPaymentModal();
   };
 
-  // دالة لتنفيذ عملية الارتجاع
   const handleReturnBill = async () => {
     const currentBill = bills[currentBillIndex];
 
@@ -1346,7 +1336,6 @@ export default function Home() {
       return;
     }
 
-    // استخدام SweetAlert2 لإدخال سبب الارتجاع
     const { value: returnReason, isConfirmed } = await Swal.fire({
       title: "إرجاع الفاتورة",
       html: `
@@ -1381,7 +1370,6 @@ export default function Home() {
       return;
     }
 
-    // عرض تأكيد نهائي قبل تنفيذ الارتجاع
     const confirmation = await Swal.fire({
       title: "هل أنت متأكد؟",
       text: "سيتم تحويل الفاتورة إلى فاتورة مرتجعة ولن يمكن التراجع عن هذا الإجراء.",
@@ -1398,7 +1386,6 @@ export default function Home() {
       return;
     }
 
-    // تنفيذ عملية الارتجاع
     const updatedBills = [...bills];
     updatedBills[currentBillIndex] = {
       ...currentBill,
@@ -1408,13 +1395,11 @@ export default function Home() {
     };
     setBills(updatedBills);
 
-    // إذا كانت الفاتورة مرتبطة بطاولة، نجعل الطاولة متاحة
     if (currentBill.tableInfo && selectedHall && selectedTable) {
       updateTableStatus(selectedHall.id, selectedTable.id, "available", null);
       setTableStatus("available");
     }
 
-    // عرض رسالة نجاح
     Swal.fire({
       title: "تم الإرجاع بنجاح!",
       html: `
@@ -1785,7 +1770,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* نافذة اختيار طريقة الدفع */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
@@ -2201,7 +2185,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* ملاحظة عامة على الفاتورة */}
                 <div className="mb-3">
                   {isEditingGeneralNote ? (
                     <div>
@@ -2600,7 +2583,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* تم تعديل هذا الجزء لتنسيق الأزرار السفلية */}
             <div className="flex gap-3">
               <button
                 onClick={resetCart}
@@ -2627,7 +2609,6 @@ export default function Home() {
                 إعادة تعيين
               </button>
 
-              {/* زر إرجاع الفاتورة - يظهر فقط للفواتير المكتملة وغير المرتجعة */}
               {bills[currentBillIndex]?.completed &&
               !bills[currentBillIndex]?.isReturned ? (
                 <button

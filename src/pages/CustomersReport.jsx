@@ -24,33 +24,33 @@ export default function CustomersReports() {
         name: "أحمد محمد",
         phone: "01012345678",
         email: "ahmed@example.com",
-        joinDate: "2023-11-15",
+        joinDate: "2026-11-15",
         totalSpent: 25640.75,
         totalBills: 42,
         pendingAmount: 1250.5,
         bills: [
-          { id: "bill_001", date: "2024-01-15", amount: 163.5, status: "paid" },
+          { id: "bill_001", date: "2026-01-15", amount: 163.5, status: "paid" },
           {
             id: "bill_002",
-            date: "2024-01-14",
+            date: "2026-01-14",
             amount: 285.75,
             status: "paid",
           },
           {
             id: "bill_003",
-            date: "2024-01-10",
+            date: "2026-01-10",
             amount: 452.0,
             status: "pending",
           },
           {
             id: "bill_004",
-            date: "2024-01-05",
+            date: "2026-01-05",
             amount: 320.25,
             status: "paid",
           },
           {
             id: "bill_005",
-            date: "2023-12-28",
+            date: "2026-12-28",
             amount: 1250.5,
             status: "pending",
           },
@@ -61,20 +61,20 @@ export default function CustomersReports() {
         name: "سارة علي",
         phone: "01123456789",
         email: "sara@example.com",
-        joinDate: "2023-10-20",
+        joinDate: "2026-10-20",
         totalSpent: 18950.25,
         totalBills: 36,
         pendingAmount: 0,
         bills: [
-          { id: "bill_006", date: "2024-01-16", amount: 92.65, status: "paid" },
-          { id: "bill_007", date: "2024-01-12", amount: 185.3, status: "paid" },
+          { id: "bill_006", date: "2026-01-16", amount: 92.65, status: "paid" },
+          { id: "bill_007", date: "2026-01-12", amount: 185.3, status: "paid" },
           {
             id: "bill_008",
-            date: "2024-01-08",
+            date: "2026-01-08",
             amount: 320.75,
             status: "paid",
           },
-          { id: "bill_009", date: "2023-12-15", amount: 452.8, status: "paid" },
+          { id: "bill_009", date: "2026-12-15", amount: 452.8, status: "paid" },
         ],
       },
       {
@@ -82,22 +82,22 @@ export default function CustomersReports() {
         name: "محمد خالد",
         phone: "01234567890",
         email: "mohamed@example.com",
-        joinDate: "2023-12-05",
+        joinDate: "2026-12-05",
         totalSpent: 15478.54,
         totalBills: 29,
         pendingAmount: 850.25,
         bills: [
-          { id: "bill_010", date: "2024-01-15", amount: 155.8, status: "paid" },
+          { id: "bill_010", date: "2026-01-15", amount: 155.8, status: "paid" },
           {
             id: "bill_011",
-            date: "2024-01-13",
+            date: "2026-01-13",
             amount: 850.25,
             status: "pending",
           },
-          { id: "bill_012", date: "2024-01-07", amount: 285.6, status: "paid" },
+          { id: "bill_012", date: "2026-01-07", amount: 285.6, status: "paid" },
           {
             id: "bill_013",
-            date: "2023-12-25",
+            date: "2026-12-25",
             amount: 325.75,
             status: "paid",
           },
@@ -108,26 +108,26 @@ export default function CustomersReports() {
         name: "فاطمة أحمد",
         phone: "01098765432",
         email: "fatma@example.com",
-        joinDate: "2023-09-12",
+        joinDate: "2026-09-12",
         totalSpent: 32015.8,
         totalBills: 58,
         pendingAmount: 2100.75,
         bills: [
-          { id: "bill_014", date: "2024-01-14", amount: 70.85, status: "paid" },
+          { id: "bill_014", date: "2026-01-14", amount: 70.85, status: "paid" },
           {
             id: "bill_015",
-            date: "2024-01-11",
+            date: "2026-01-11",
             amount: 2100.75,
             status: "pending",
           },
           {
             id: "bill_016",
-            date: "2024-01-05",
+            date: "2026-01-05",
             amount: 185.25,
             status: "paid",
           },
-          { id: "bill_017", date: "2023-12-20", amount: 452.9, status: "paid" },
-          { id: "bill_018", date: "2023-12-10", amount: 325.6, status: "paid" },
+          { id: "bill_017", date: "2026-12-20", amount: 452.9, status: "paid" },
+          { id: "bill_018", date: "2026-12-10", amount: 325.6, status: "paid" },
         ],
       },
       {
@@ -135,27 +135,27 @@ export default function CustomersReports() {
         name: "علي حسن",
         phone: "01187654321",
         email: "ali@example.com",
-        joinDate: "2023-08-30",
+        joinDate: "2026-08-30",
         totalSpent: 15420.35,
         totalBills: 31,
         pendingAmount: 625.0,
         bills: [
-          { id: "bill_019", date: "2024-01-14", amount: 228.9, status: "paid" },
+          { id: "bill_019", date: "2026-01-14", amount: 228.9, status: "paid" },
           {
             id: "bill_020",
-            date: "2024-01-10",
+            date: "2026-01-10",
             amount: 625.0,
             status: "pending",
           },
           {
             id: "bill_021",
-            date: "2024-01-03",
+            date: "2026-01-03",
             amount: 185.45,
             status: "paid",
           },
           {
             id: "bill_022",
-            date: "2023-12-22",
+            date: "2026-12-22",
             amount: 320.15,
             status: "paid",
           },
@@ -166,19 +166,19 @@ export default function CustomersReports() {
         name: "ريم سعد",
         phone: "01276543210",
         email: "reem@example.com",
-        joinDate: "2023-11-25",
+        joinDate: "2026-11-25",
         totalSpent: 10235.4,
         totalBills: 24,
         pendingAmount: 0,
         bills: [
-          { id: "bill_023", date: "2024-01-13", amount: 221.2, status: "paid" },
+          { id: "bill_023", date: "2026-01-13", amount: 221.2, status: "paid" },
           {
             id: "bill_024",
-            date: "2024-01-09",
+            date: "2026-01-09",
             amount: 185.75,
             status: "paid",
           },
-          { id: "bill_025", date: "2024-01-02", amount: 125.3, status: "paid" },
+          { id: "bill_025", date: "2026-01-02", amount: 125.3, status: "paid" },
         ],
       },
       {
@@ -186,25 +186,25 @@ export default function CustomersReports() {
         name: "خالد عمر",
         phone: "01065432109",
         email: "khaled@example.com",
-        joinDate: "2023-10-15",
+        joinDate: "2026-10-15",
         totalSpent: 18765.85,
         totalBills: 38,
         pendingAmount: 1550.0,
         bills: [
           {
             id: "bill_026",
-            date: "2024-01-13",
+            date: "2026-01-13",
             amount: 103.55,
             status: "paid",
           },
           {
             id: "bill_027",
-            date: "2024-01-08",
+            date: "2026-01-08",
             amount: 1550.0,
             status: "pending",
           },
-          { id: "bill_028", date: "2024-01-04", amount: 285.3, status: "paid" },
-          { id: "bill_029", date: "2023-12-18", amount: 452.5, status: "paid" },
+          { id: "bill_028", date: "2026-01-04", amount: 285.3, status: "paid" },
+          { id: "bill_029", date: "2026-12-18", amount: 452.5, status: "paid" },
         ],
       },
       {
@@ -212,21 +212,21 @@ export default function CustomersReports() {
         name: "نورا سليم",
         phone: "01154321098",
         email: "nora@example.com",
-        joinDate: "2023-12-18",
+        joinDate: "2026-12-18",
         totalSpent: 8750.6,
         totalBills: 19,
         pendingAmount: 325.75,
         bills: [
-          { id: "bill_030", date: "2024-01-12", amount: 152.6, status: "paid" },
+          { id: "bill_030", date: "2026-01-12", amount: 152.6, status: "paid" },
           {
             id: "bill_031",
-            date: "2024-01-07",
+            date: "2026-01-07",
             amount: 325.75,
             status: "pending",
           },
           {
             id: "bill_032",
-            date: "2024-01-01",
+            date: "2026-01-01",
             amount: 185.25,
             status: "paid",
           },
@@ -237,21 +237,21 @@ export default function CustomersReports() {
         name: "سامي رامي",
         phone: "01243210987",
         email: "sami@example.com",
-        joinDate: "2024-01-05",
+        joinDate: "2026-01-05",
         totalSpent: 5175.8,
         totalBills: 12,
         pendingAmount: 850.0,
         bills: [
-          { id: "bill_033", date: "2024-01-16", amount: 81.75, status: "paid" },
+          { id: "bill_033", date: "2026-01-16", amount: 81.75, status: "paid" },
           {
             id: "bill_034",
-            date: "2024-01-14",
+            date: "2026-01-14",
             amount: 850.0,
             status: "pending",
           },
           {
             id: "bill_035",
-            date: "2024-01-09",
+            date: "2026-01-09",
             amount: 125.05,
             status: "paid",
           },
@@ -262,27 +262,27 @@ export default function CustomersReports() {
         name: "ليلى محمود",
         phone: "01032109876",
         email: "layla@example.com",
-        joinDate: "2023-09-28",
+        joinDate: "2026-09-28",
         totalSpent: 24150.35,
         totalBills: 46,
         pendingAmount: 0,
         bills: [
           {
             id: "bill_036",
-            date: "2024-01-16",
+            date: "2026-01-16",
             amount: 237.55,
             status: "paid",
           },
-          { id: "bill_037", date: "2024-01-13", amount: 185.8, status: "paid" },
+          { id: "bill_037", date: "2026-01-13", amount: 185.8, status: "paid" },
           {
             id: "bill_038",
-            date: "2024-01-08",
+            date: "2026-01-08",
             amount: 325.25,
             status: "paid",
           },
           {
             id: "bill_039",
-            date: "2023-12-28",
+            date: "2026-12-28",
             amount: 452.75,
             status: "paid",
           },
@@ -659,7 +659,6 @@ export default function CustomersReports() {
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* اللوحة الجانبية للفلترة */}
           <div className="lg:col-span-1 print:hidden">
             <div className="bg-white rounded-2xl shadow-lg p-5 sticky top-6">
               <h3
@@ -670,7 +669,6 @@ export default function CustomersReports() {
               </h3>
 
               <div className="space-y-4">
-                {/* بحث برقم التليفون */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <span className="flex items-center">
@@ -735,7 +733,6 @@ export default function CustomersReports() {
                   )}
                 </div>
 
-                {/* اختيار العميل */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     اختيار العميل
@@ -765,7 +762,6 @@ export default function CustomersReports() {
                   )}
                 </div>
 
-                {/* حقل التاريخ من */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     التاريخ من
@@ -779,7 +775,6 @@ export default function CustomersReports() {
                   />
                 </div>
 
-                {/* حقل التاريخ إلى */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     التاريخ إلى
@@ -884,7 +879,6 @@ export default function CustomersReports() {
                   </div>
                 </div>
 
-                {/* بطاقات الإحصائيات الرئيسية */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 print:grid-cols-2">
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
                     <div className="flex items-center justify-between">
@@ -978,7 +972,6 @@ export default function CustomersReports() {
                   </div>
                 </div>
 
-                {/* عرض تفاصيل العميل المحدد مع الفواتير */}
                 {selectedCustomer !== "all" &&
                   reportData.customers.length > 0 && (
                     <div className="mb-6">
@@ -1093,7 +1086,6 @@ export default function CustomersReports() {
                           </div>
                         </div>
 
-                        {/* قائمة فواتير العميل */}
                         {reportData.customers[0].filteredBills.length > 0 && (
                           <div className="mt-4">
                             <h4 className="font-bold mb-3 text-gray-800">
@@ -1191,7 +1183,6 @@ export default function CustomersReports() {
                     </div>
                   )}
 
-                {/* جدول العملاء (عند اختيار "جميع العملاء") */}
                 {selectedCustomer === "all" && (
                   <div className="mb-6">
                     <div className="flex justify-between items-center mb-4">
@@ -1343,7 +1334,7 @@ export default function CustomersReports() {
                                 <button
                                   onClick={() => {
                                     setSelectedCustomer(customer.id);
-                                    setPhoneSearch(customer.phone); // تعيين رقم التليفون في البحث
+                                    setPhoneSearch(customer.phone);
                                     setTimeout(() => generateReport(), 100);
                                   }}
                                   className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
@@ -1382,7 +1373,6 @@ export default function CustomersReports() {
                   </div>
                 )}
 
-                {/* ملخص النتائج */}
                 <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-200">
                   <h4
                     className="font-bold mb-4 text-gray-800"
