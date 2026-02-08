@@ -11,7 +11,6 @@ export default function SalesReports() {
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
 
-  // بيانات تجريبية للتقارير
   const salesData = [
     {
       id: "sale_001",
@@ -254,17 +253,15 @@ export default function SalesReports() {
     setLoading(true);
 
     setTimeout(() => {
-      // فلترة البيانات حسب التاريخ
       const start = new Date(startDate);
       const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999); // لتضمين كامل يوم النهاية
+      end.setHours(23, 59, 59, 999);
 
       const filteredData = salesData.filter((sale) => {
         const saleDate = new Date(sale.date);
         return saleDate >= start && saleDate <= end;
       });
 
-      // ترتيب البيانات
       const sortedData = [...filteredData].sort((a, b) => {
         const aValue = sortBy === "date" ? new Date(a.date) : a[sortBy];
         const bValue = sortBy === "date" ? new Date(b.date) : b[sortBy];
@@ -276,7 +273,6 @@ export default function SalesReports() {
         }
       });
 
-      // حساب الإحصائيات
       const stats = {
         totalSales: sortedData.reduce((sum, sale) => sum + sale.total, 0),
         totalBills: sortedData.length,
@@ -319,7 +315,6 @@ export default function SalesReports() {
         }, {}),
       };
 
-      // تحويل dailySales إلى مصفوفة للعرض
       const dailySalesArray = Object.values(stats.dailySales).sort(
         (a, b) => new Date(a.date) - new Date(b.date),
       );
@@ -379,75 +374,6 @@ export default function SalesReports() {
       setSortBy(column);
       setSortOrder("desc");
     }
-  };
-
-  const exportToCSV = () => {
-    if (!reportData || reportData.sales.length === 0) {
-      toast.error("لا توجد بيانات للتصدير");
-      return;
-    }
-
-    const headers = [
-      "رقم الفاتورة",
-      "التاريخ",
-      "العميل",
-      "نوع الفاتورة",
-      "طريقة الدفع",
-      "المجموع الفرعي",
-      "الضريبة",
-      "الخصم",
-      "رسوم التوصيل",
-      "الإجمالي",
-    ];
-    const csvContent = [
-      headers.join(","),
-      ...reportData.sales.map((sale) =>
-        [
-          sale.billNumber,
-          sale.date,
-          sale.customerName,
-          getBillTypeLabel(sale.billType).label,
-          getPaymentMethodLabel(sale.paymentMethod).label,
-          sale.subtotal,
-          sale.tax,
-          sale.discount,
-          sale.deliveryFee,
-          sale.total,
-        ].join(","),
-      ),
-    ].join("\n");
-
-    const blob = new Blob(["\ufeff" + csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `sales_report_${startDate}_to_${endDate}.csv`,
-    );
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast.success("تم تصدير البيانات بنجاح");
-  };
-
-  const printReport = () => {
-    window.print();
-  };
-
-  const handleQuickDateFilter = (days) => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-
-    setStartDate(start.toISOString().split("T")[0]);
-    setEndDate(end.toISOString().split("T")[0]);
-
-    toast.info(`تم تعيين الفترة لآخر ${days} يوم`);
   };
 
   return (
@@ -513,53 +439,6 @@ export default function SalesReports() {
               </h3>
 
               <div className="space-y-4">
-                {/* خيارات سريعة */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    خيارات سريعة
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => handleQuickDateFilter(7)}
-                      className="py-2 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs transition-colors"
-                    >
-                      آخر 7 أيام
-                    </button>
-                    <button
-                      onClick={() => handleQuickDateFilter(30)}
-                      className="py-2 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs transition-colors"
-                    >
-                      آخر 30 يوم
-                    </button>
-                    <button
-                      onClick={() => {
-                        const today = new Date().toISOString().split("T")[0];
-                        setStartDate(today);
-                        setEndDate(today);
-                        toast.info("تم تعيين الفترة ليوم اليوم");
-                      }}
-                      className="py-2 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs transition-colors"
-                    >
-                      اليوم فقط
-                    </button>
-                    <button
-                      onClick={() => {
-                        const today = new Date();
-                        const firstDay = new Date(
-                          today.getFullYear(),
-                          today.getMonth(),
-                          1,
-                        );
-                        setStartDate(firstDay.toISOString().split("T")[0]);
-                        setEndDate(today.toISOString().split("T")[0]);
-                        toast.info("تم تعيين الفترة لهذا الشهر");
-                      }}
-                      className="py-2 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs transition-colors"
-                    >
-                      هذا الشهر
-                    </button>
-                  </div>
-                </div>
 
                 {/* حقل التاريخ من */}
                 <div>
@@ -573,11 +452,6 @@ export default function SalesReports() {
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
                     max={endDate || undefined}
                   />
-                  {startDate && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formatArabicDate(startDate)}
-                    </p>
-                  )}
                 </div>
 
                 {/* حقل التاريخ إلى */}
@@ -592,11 +466,6 @@ export default function SalesReports() {
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
                     min={startDate || undefined}
                   />
-                  {endDate && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formatArabicDate(endDate)}
-                    </p>
-                  )}
                 </div>
 
                 <div className="pt-4">
@@ -622,69 +491,6 @@ export default function SalesReports() {
                       "عرض التقرير"
                     )}
                   </button>
-
-                  {reportData && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={exportToCSV}
-                        className="py-2 px-3 rounded-lg font-medium border transition-all text-sm flex items-center justify-center"
-                        style={{ borderColor: "#10B981", color: "#10B981" }}
-                        onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = "#10B981";
-                          e.target.style.color = "white";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.backgroundColor = "transparent";
-                          e.target.style.color = "#10B981";
-                        }}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 ml-1"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                        تصدير Excel
-                      </button>
-                      <button
-                        onClick={printReport}
-                        className="py-2 px-3 rounded-lg font-medium border transition-all text-sm flex items-center justify-center"
-                        style={{ borderColor: "#F59E0B", color: "#F59E0B" }}
-                        onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = "#F59E0B";
-                          e.target.style.color = "white";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.backgroundColor = "transparent";
-                          e.target.style.color = "#F59E0B";
-                        }}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 ml-1"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                          />
-                        </svg>
-                        طباعة
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>

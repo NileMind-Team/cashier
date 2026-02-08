@@ -102,7 +102,6 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
   const handleReportNavigation = (reportType) => {
     setShowReportsDropdown(false);
 
-    // تحديد المسار حسب نوع التقرير
     if (reportType === "shifts") {
       navigate("/reports/shifts");
     } else if (reportType === "sales") {
@@ -111,8 +110,6 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
       navigate("/reports/products");
     } else if (reportType === "customers") {
       navigate("/reports/customers");
-    } else if (reportType === "summary") {
-      navigate("/reports/summary");
     }
   };
 
@@ -347,7 +344,6 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                           </p>
                         </div>
                       </button>
-
                       <button
                         onClick={() => handleReportNavigation("customers")}
                         className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
@@ -382,44 +378,6 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                           <p className="font-medium">تقارير العملاء</p>
                           <p className="text-xs text-gray-500">
                             تحليل سلوك العملاء
-                          </p>
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => handleReportNavigation("summary")}
-                        className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
-                          location.pathname === "/reports/summary"
-                            ? "bg-blue-50 text-blue-700"
-                            : "text-gray-700 hover:bg-gray-50"
-                        }`}
-                      >
-                        <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 ${
-                            location.pathname === "/reports/summary"
-                              ? "bg-blue-100"
-                              : "bg-gray-100"
-                          }`}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 text-blue-600"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                            />
-                          </svg>
-                        </div>
-                        <div className="flex-1 text-right">
-                          <p className="font-medium">ملخص الإحصائيات</p>
-                          <p className="text-xs text-gray-500">
-                            نظرة شاملة على أداء المطعم
                           </p>
                         </div>
                       </button>
@@ -465,7 +423,6 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
   );
 }
 
-// إضافة animation لـ CSS
 const style = document.createElement("style");
 style.textContent = `
   @keyframes fadeIn {
