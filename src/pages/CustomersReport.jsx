@@ -824,7 +824,6 @@ export default function CustomersReports() {
                       "عرض التقرير"
                     )}
                   </button>
-
                 </div>
               </div>
             </div>

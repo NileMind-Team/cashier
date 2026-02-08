@@ -125,6 +125,8 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
       navigate("/reports/customers");
     } else if (reportType === "payment-methods") {
       navigate("/reports/payment-methods");
+    } else if (reportType === "pending-bills") {
+      navigate("/reports/pending-bills");
     }
   };
 
@@ -398,7 +400,6 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                         </div>
                       </button>
 
-                      {/* تقرير طرق الدفع الجديد */}
                       <button
                         onClick={() =>
                           handleReportNavigation("payment-methods")
@@ -435,6 +436,44 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                           <p className="font-medium">طرق الدفع</p>
                           <p className="text-xs text-gray-500">
                             تحليل المبيعات حسب وسائل الدفع
+                          </p>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => handleReportNavigation("pending-bills")}
+                        className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
+                          location.pathname === "/reports/pending-bills"
+                            ? "bg-blue-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 ${
+                            location.pathname === "/reports/pending-bills"
+                              ? "bg-blue-100"
+                              : "bg-gray-100"
+                          }`}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 text-blue-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium">الفواتير المعلقة</p>
+                          <p className="text-xs text-gray-500">
+                            عرض الفواتير غير المكتملة
                           </p>
                         </div>
                       </button>

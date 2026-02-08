@@ -6,6 +6,7 @@ import SalesReport from "../pages/SalesReport";
 import ProductsReports from "../pages/ProductReport";
 import CustomersReport from "../pages/CustomersReport";
 import PaymentMethodsReport from "../pages/PaymentMethodsReport";
+import PendingBillsReport from "../pages/PendingBillsReport";
 
 export default function AppRoutes() {
   return (
@@ -20,6 +21,7 @@ export default function AppRoutes() {
         path="/reports/payment-methods"
         element={<PaymentMethodsReport />}
       />
+      <Route path="/reports/pending-bills" element={<PendingBillsReport />} />
     </Routes>
   );
 }
