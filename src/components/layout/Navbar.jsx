@@ -137,8 +137,13 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
     }
   };
 
+  const handleUsersNavigation = () => {
+    navigate("/users");
+  };
+
   const isReportsActive = location.pathname.startsWith("/reports");
   const isHomeActive = location.pathname === "/";
+  const isUsersActive = location.pathname === "/users";
 
   return (
     <div className="bg-white shadow-md relative">
@@ -193,7 +198,31 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
               الرئيسية
             </button>
 
-            {/* زر التقارير مع الدروب داون */}
+            <button
+              onClick={handleUsersNavigation}
+              className={`px-3 py-2 rounded-lg font-medium transition-all flex items-center text-sm ${
+                isUsersActive
+                  ? "bg-blue-900 text-white"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 ml-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5 0h-6m3.5 0a3.5 3.5 0 11-7 0 3.5 3.5 0 017 0z"
+                />
+              </svg>
+              إدارة المستخدمين
+            </button>
+
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowReportsDropdown(!showReportsDropdown)}
