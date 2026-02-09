@@ -153,12 +153,18 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
     navigate("/customers");
   };
 
+  // إضافة دالة التنقل لصفحة شركات التوصيل
+  const handleShippingCompaniesNavigation = () => {
+    navigate("/shipping-companies");
+  };
+
   const isReportsActive = location.pathname.startsWith("/reports");
   const isUsersActive = location.pathname === "/users";
   const isCategoriesActive = location.pathname === "/categories";
   const isProductsManagementActive =
     location.pathname === "/products-management";
   const isCustomersActive = location.pathname === "/customers";
+  const isShippingCompaniesActive = location.pathname === "/shipping-companies";
 
   return (
     <div className="bg-white shadow-md relative">
@@ -260,6 +266,32 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                 />
               </svg>
               إدارة العملاء
+            </button>
+
+            {/* إضافة زر إدارة شركات التوصيل */}
+            <button
+              onClick={handleShippingCompaniesNavigation}
+              className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center text-sm ${
+                isShippingCompaniesActive
+                  ? "bg-blue-900 text-white border-blue-900"
+                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+              }`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 ml-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM12 8h4l2 5h2a2 2 0 012 2v3a2 2 0 01-2 2h-2.5M7 14h.01M9.5 19H7a2 2 0 01-2-2v-3a2 2 0 012-2h2.5"
+                />
+              </svg>
+              شركات التوصيل
             </button>
 
             <button

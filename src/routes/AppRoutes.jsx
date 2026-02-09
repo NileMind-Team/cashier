@@ -12,6 +12,7 @@ import UsersManagement from "../pages/UsersManagement";
 import ProductsManagement from "../pages/ProductsManagement";
 import CategoriesManagement from "../pages/CategoriesManagement";
 import CustomersManagement from "../pages/CustomersManagement";
+import ShippingCompaniesManagement from "../pages/ShippingCompaniesManagement";
 
 export default function AppRoutes() {
   return (
@@ -32,6 +33,10 @@ export default function AppRoutes() {
       <Route path="/products-management" element={<ProductsManagement />} />
       <Route path="/categories" element={<CategoriesManagement />} />
       <Route path="/customers" element={<CustomersManagement />} />
+      <Route
+        path="/shipping-companies"
+        element={<ShippingCompaniesManagement />}
+      />
     </Routes>
   );
 }
