@@ -11,6 +11,7 @@ import ReturnsReport from "../pages/ReturnsReport";
 import UsersManagement from "../pages/UsersManagement";
 import ProductsManagement from "../pages/ProductsManagement";
 import CategoriesManagement from "../pages/CategoriesManagement";
+import CustomersManagement from "../pages/CustomersManagement";
 
 export default function AppRoutes() {
   return (
@@ -28,8 +29,9 @@ export default function AppRoutes() {
       <Route path="/reports/pending-bills" element={<PendingBillsReport />} />
       <Route path="/reports/returns" element={<ReturnsReport />} />
       <Route path="/users" element={<UsersManagement />} />
-      <Route path="//products-management" element={<ProductsManagement />} />
+      <Route path="/products-management" element={<ProductsManagement />} />
       <Route path="/categories" element={<CategoriesManagement />} />
+      <Route path="/customers" element={<CustomersManagement />} />
     </Routes>
   );
 }
