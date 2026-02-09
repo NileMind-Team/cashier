@@ -1,6 +1,29 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import { useState, useRef, useEffect } from "react";
+import {
+  FaCashRegister,
+  FaCalendarDay,
+  FaCircle,
+  FaClock,
+} from "react-icons/fa6";
+import {
+  FaChartBar,
+  FaChevronDown,
+  FaChartLine,
+  FaUserFriends,
+  FaMoneyCheck,
+  FaExclamationCircle,
+  FaUndo,
+  FaBoxes,
+  FaTruck,
+  FaCreditCard,
+  FaUserCog,
+  FaStopCircle,
+  FaLayerGroup,
+  FaBoxOpen,
+  FaUser,
+} from "react-icons/fa";
 
 export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
   const navigate = useNavigate();
@@ -176,7 +199,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
         <div className="flex justify-between items-center">
           <div className="flex items-center">
             <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center mr-3">
-              <span className="text-white font-bold">$</span>
+              <FaCashRegister className="text-white text-xl" />
             </div>
             <div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
@@ -185,11 +208,12 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
               <div className="flex items-center mt-1">
                 {isShiftOpen && (
                   <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium border border-green-200 flex items-center">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full ml-1 animate-pulse"></div>
+                    <FaCircle className="w-2 h-2 text-green-500 ml-1 animate-pulse" />
                     الوردية مفتوحة
                   </span>
                 )}
                 <span className="text-xs text-gray-500 mr-2">
+                  <FaCalendarDay className="inline ml-1" />
                   {new Date().toLocaleDateString("ar-EG")}
                 </span>
               </div>
@@ -205,20 +229,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
-                />
-              </svg>
+              <FaLayerGroup className="h-5 w-5 ml-2" />
               إدارة الفئات
             </button>
 
@@ -230,20 +241,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                />
-              </svg>
+              <FaBoxOpen className="h-5 w-5 ml-2" />
               إدارة المنتجات
             </button>
 
@@ -255,20 +253,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
+              <FaUser className="h-5 w-5 ml-2" />
               إدارة العملاء
             </button>
 
@@ -280,20 +265,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM12 8h4l2 5h2a2 2 0 012 2v3a2 2 0 01-2 2h-2.5M7 14h.01M9.5 19H7a2 2 0 01-2-2v-3a2 2 0 012-2h2.5"
-                />
-              </svg>
+              <FaTruck className="h-5 w-5 ml-2" />
               شركات التوصيل
             </button>
 
@@ -305,20 +277,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                />
-              </svg>
+              <FaCreditCard className="h-5 w-5 ml-2" />
               طرق الدفع
             </button>
 
@@ -330,20 +289,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5 0h-6m3.5 0a3.5 3.5 0 11-7 0 3.5 3.5 0 017 0z"
-                />
-              </svg>
+              <FaUserCog className="h-5 w-5 ml-2" />
               إدارة الموظفين
             </button>
 
@@ -358,37 +304,13 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                     : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
                 } ${showReportsDropdown ? "bg-blue-900 text-white" : ""}`}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 ml-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
+                <FaChartBar className="h-5 w-5 ml-2" />
                 التقارير
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
+                <FaChevronDown
                   className={`h-4 w-4 mr-2 transition-transform duration-200 ${
                     showReportsDropdown ? "rotate-180" : ""
                   }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                />
               </button>
 
               {showReportsDropdown && (
@@ -410,20 +332,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                               : "bg-gray-100"
                           }`}
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 text-blue-600"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
+                          <FaClock className="h-4 w-4 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير الورديات</p>
@@ -445,20 +354,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                               : "bg-gray-100"
                           }`}
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 text-blue-600"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                            />
-                          </svg>
+                          <FaChartLine className="h-4 w-4 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير المبيعات</p>
@@ -480,20 +376,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                               : "bg-gray-100"
                           }`}
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 text-blue-600"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                            />
-                          </svg>
+                          <FaBoxes className="h-4 w-4 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير المنتجات</p>
@@ -515,20 +398,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                               : "bg-gray-100"
                           }`}
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 text-blue-600"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5 0h-6m3.5 0a3.5 3.5 0 11-7 0 3.5 3.5 0 017 0z"
-                            />
-                          </svg>
+                          <FaUserFriends className="h-4 w-4 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير العملاء</p>
@@ -552,20 +422,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                               : "bg-gray-100"
                           }`}
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 text-blue-600"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                            />
-                          </svg>
+                          <FaMoneyCheck className="h-4 w-4 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير طرق الدفع</p>
@@ -587,20 +444,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                               : "bg-gray-100"
                           }`}
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 text-blue-600"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
+                          <FaExclamationCircle className="h-4 w-4 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير الفواتير المعلقة</p>
@@ -622,20 +466,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                               : "bg-gray-100"
                           }`}
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 text-blue-600"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"
-                            />
-                          </svg>
+                          <FaUndo className="h-4 w-4 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير المرتجعات</p>
@@ -661,18 +492,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                   e.target.style.color = "#F59E0B";
                 }}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 ml-2"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                <FaStopCircle className="h-5 w-5 ml-2" />
                 إغلاق الوردية
               </button>
             )}
