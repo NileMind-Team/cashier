@@ -13,6 +13,7 @@ import ProductsManagement from "../pages/ProductsManagement";
 import CategoriesManagement from "../pages/CategoriesManagement";
 import CustomersManagement from "../pages/CustomersManagement";
 import ShippingCompaniesManagement from "../pages/ShippingCompaniesManagement";
+import PaymentMethodsManagement from "../pages/PaymentMethodsManagement";
 
 export default function AppRoutes() {
   return (
@@ -37,6 +38,7 @@ export default function AppRoutes() {
         path="/shipping-companies"
         element={<ShippingCompaniesManagement />}
       />
+      <Route path="/payment-methods" element={<PaymentMethodsManagement />} />
     </Routes>
   );
 }

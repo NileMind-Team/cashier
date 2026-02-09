@@ -153,9 +153,12 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
     navigate("/customers");
   };
 
-  // إضافة دالة التنقل لصفحة شركات التوصيل
   const handleShippingCompaniesNavigation = () => {
     navigate("/shipping-companies");
+  };
+
+  const handlePaymentMethodsNavigation = () => {
+    navigate("/payment-methods");
   };
 
   const isReportsActive = location.pathname.startsWith("/reports");
@@ -165,6 +168,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
     location.pathname === "/products-management";
   const isCustomersActive = location.pathname === "/customers";
   const isShippingCompaniesActive = location.pathname === "/shipping-companies";
+  const isPaymentMethodsActive = location.pathname === "/payment-methods";
 
   return (
     <div className="bg-white shadow-md relative">
@@ -268,7 +272,6 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
               إدارة العملاء
             </button>
 
-            {/* إضافة زر إدارة شركات التوصيل */}
             <button
               onClick={handleShippingCompaniesNavigation}
               className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center text-sm ${
@@ -292,6 +295,31 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                 />
               </svg>
               شركات التوصيل
+            </button>
+
+            <button
+              onClick={handlePaymentMethodsNavigation}
+              className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center text-sm ${
+                isPaymentMethodsActive
+                  ? "bg-blue-900 text-white border-blue-900"
+                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+              }`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 ml-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                />
+              </svg>
+              طرق الدفع
             </button>
 
             <button

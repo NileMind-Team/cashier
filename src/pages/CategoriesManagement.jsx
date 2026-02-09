@@ -14,7 +14,6 @@ export default function CategoriesManagement() {
   const [editingSubCategory, setEditingSubCategory] = useState(null);
   const [selectedMainCategory, setSelectedMainCategory] = useState(null);
 
-  // دالة لتوليد لون عشوائي
   const generateRandomColor = () => {
     const colors = [
       "#3B82F6",
