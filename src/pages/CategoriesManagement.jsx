@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
+import axiosInstance from "../api/axiosInstance";
 
 export default function CategoriesManagement() {
   const navigate = useNavigate();
@@ -14,79 +15,64 @@ export default function CategoriesManagement() {
   const [editingSubCategory, setEditingSubCategory] = useState(null);
   const [selectedMainCategory, setSelectedMainCategory] = useState(null);
 
-  const generateRandomColor = () => {
-    const colors = [
-      "#3B82F6",
-      "#10B981",
-      "#8B5CF6",
-      "#F59E0B",
-      "#EF4444",
-      "#EC4899",
-      "#14B8A6",
-      "#6366F1",
-      "#0EA5E9",
-      "#84CC16",
-      "#F97316",
-      "#8B5CF6",
-      "#EC4899",
-      "#06B6D4",
-      "#22C55E",
-      "#A855F7",
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
-  };
-
-  const initialMainCategories = [
-    { id: 1, name: "المشروبات", color: generateRandomColor(), isActive: true },
-    { id: 2, name: "الوجبات", color: generateRandomColor(), isActive: true },
-    { id: 3, name: "الحلويات", color: generateRandomColor(), isActive: true },
-    { id: 4, name: "المقبلات", color: generateRandomColor(), isActive: true },
-    {
-      id: 5,
-      name: "المشروبات الغازية",
-      color: generateRandomColor(),
-      isActive: true,
-    },
-  ];
-
-  const initialSubCategories = [
-    { id: 1, name: "المشروبات الساخنة", mainCategoryId: 1, isActive: true },
-    { id: 2, name: "المشروبات الباردة", mainCategoryId: 1, isActive: true },
-    { id: 3, name: "العصائر", mainCategoryId: 1, isActive: true },
-    { id: 4, name: "ساندويتشات", mainCategoryId: 2, isActive: true },
-    { id: 5, name: "وجبات رئيسية", mainCategoryId: 2, isActive: true },
-    { id: 6, name: "سلطات", mainCategoryId: 2, isActive: true },
-    { id: 7, name: "كيك", mainCategoryId: 3, isActive: true },
-    { id: 8, name: "حلويات شرقية", mainCategoryId: 3, isActive: true },
-    { id: 9, name: "آيس كريم", mainCategoryId: 3, isActive: true },
-    { id: 10, name: "مقبلات ساخنة", mainCategoryId: 4, isActive: true },
-    { id: 11, name: "مقبلات باردة", mainCategoryId: 4, isActive: true },
-    { id: 12, name: "مشروبات غازية", mainCategoryId: 5, isActive: true },
-    { id: 13, name: "مياه معبأة", mainCategoryId: 5, isActive: true },
-  ];
-
   const [mainCategoryForm, setMainCategoryForm] = useState({
     name: "",
     isActive: true,
+    percentageDiscount: 0,
   });
 
   const [subCategoryForm, setSubCategoryForm] = useState({
     name: "",
     mainCategoryId: "",
     isActive: true,
+    percentageDiscount: 0,
+    printIP: "",
   });
 
-  useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setMainCategories(initialMainCategories);
-      setSubCategories(initialSubCategories);
-      if (initialMainCategories.length > 0) {
-        setSelectedMainCategory(initialMainCategories[0]);
+  const fetchMainCategories = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get(
+        "/api/MainCategories/GetAllMainCategories",
+      );
+
+      if (response.status === 200 && response.data) {
+        setMainCategories(response.data);
+
+        if (response.data.length > 0) {
+          setSelectedMainCategory(response.data[0]);
+        }
+      } else {
+        toast.error("فشل في جلب الفئات الرئيسية");
       }
+    } catch (error) {
+      console.error("خطأ في جلب الفئات الرئيسية:", error);
+      toast.error("حدث خطأ في جلب الفئات الرئيسية");
+    } finally {
       setLoading(false);
-    }, 500);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }
+  };
+
+  const fetchSubCategories = async () => {
+    try {
+      const response = await axiosInstance.get(
+        "/api/SubCategories/GetAllSubCategories",
+      );
+
+      if (response.status === 200 && response.data) {
+        setSubCategories(response.data);
+      } else {
+        toast.error("فشل في جلب الفئات الفرعية");
+      }
+    } catch (error) {
+      console.error("خطأ في جلب الفئات الفرعية:", error);
+      toast.error("حدث خطأ في جلب الفئات الفرعية");
+    }
+  };
+
+  useEffect(() => {
+    fetchMainCategories();
+    fetchSubCategories();
   }, []);
 
   const handleAddMainCategory = () => {
@@ -95,6 +81,7 @@ export default function CategoriesManagement() {
     setMainCategoryForm({
       name: "",
       isActive: true,
+      percentageDiscount: 0,
     });
   };
 
@@ -104,6 +91,7 @@ export default function CategoriesManagement() {
     setMainCategoryForm({
       name: category.name,
       isActive: category.isActive,
+      percentageDiscount: category.percentageDiscount || 0,
     });
   };
 
@@ -116,8 +104,10 @@ export default function CategoriesManagement() {
     setEditingSubCategory(null);
     setSubCategoryForm({
       name: "",
-      mainCategoryId: selectedMainCategory?.id || mainCategories[0].id,
+      mainCategoryId: selectedMainCategory?.id || mainCategories[0]?.id || "",
       isActive: true,
+      percentageDiscount: 0,
+      printIP: "",
     });
   };
 
@@ -128,6 +118,8 @@ export default function CategoriesManagement() {
       name: subCategory.name,
       mainCategoryId: subCategory.mainCategoryId,
       isActive: subCategory.isActive,
+      percentageDiscount: subCategory.percentageDiscount || 0,
+      printIP: subCategory.printIP || "",
     });
   };
 
@@ -135,7 +127,12 @@ export default function CategoriesManagement() {
     const { name, value, type, checked } = e.target;
     setMainCategoryForm((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : name === "percentageDiscount"
+            ? parseFloat(value) || 0
+            : value,
     }));
   };
 
@@ -143,11 +140,16 @@ export default function CategoriesManagement() {
     const { name, value, type, checked } = e.target;
     setSubCategoryForm((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : name === "percentageDiscount" || name === "mainCategoryId"
+            ? parseInt(value) || 0
+            : value,
     }));
   };
 
-  const handleSubmitMainCategory = (e) => {
+  const handleSubmitMainCategory = async (e) => {
     e.preventDefault();
 
     if (!mainCategoryForm.name.trim()) {
@@ -155,34 +157,51 @@ export default function CategoriesManagement() {
       return;
     }
 
-    if (editingMainCategory) {
-      const updatedCategories = mainCategories.map((cat) =>
-        cat.id === editingMainCategory.id
-          ? {
-              ...cat,
-              name: mainCategoryForm.name,
-              isActive: mainCategoryForm.isActive,
-            }
-          : cat,
-      );
-      setMainCategories(updatedCategories);
-      toast.success("تم تحديث الفئة الرئيسية بنجاح");
-    } else {
-      const newCategory = {
-        id: mainCategories.length + 1,
-        name: mainCategoryForm.name,
-        color: generateRandomColor(),
-        isActive: mainCategoryForm.isActive,
-      };
-      setMainCategories([...mainCategories, newCategory]);
-      toast.success("تم إضافة الفئة الرئيسية بنجاح");
-    }
+    try {
+      if (editingMainCategory) {
+        const response = await axiosInstance.put(
+          `/api/MainCategories/UpdateMainCategory/${editingMainCategory.id}`,
+          {
+            name: mainCategoryForm.name,
+            isActive: mainCategoryForm.isActive,
+          },
+        );
 
-    setShowMainCategoryModal(false);
-    setEditingMainCategory(null);
+        if (response.status === 200 && response.data.isSuccess) {
+          await fetchMainCategories();
+          toast.success("تم تحديث الفئة الرئيسية بنجاح");
+        } else {
+          toast.error(
+            response.data.error?.description || "فشل في تحديث الفئة الرئيسية",
+          );
+        }
+      } else {
+        const response = await axiosInstance.post("/api/MainCategories/Add", {
+          name: mainCategoryForm.name,
+          iconName: null,
+          isActive: mainCategoryForm.isActive,
+          percentageDiscount: mainCategoryForm.percentageDiscount,
+        });
+
+        if (response.status === 200 && response.data.isSuccess) {
+          await fetchMainCategories();
+          toast.success("تم إضافة الفئة الرئيسية بنجاح");
+        } else {
+          toast.error(
+            response.data.error?.description || "فشل في إضافة الفئة الرئيسية",
+          );
+        }
+      }
+
+      setShowMainCategoryModal(false);
+      setEditingMainCategory(null);
+    } catch (error) {
+      console.error("خطأ في حفظ الفئة الرئيسية:", error);
+      toast.error("حدث خطأ في حفظ الفئة الرئيسية");
+    }
   };
 
-  const handleSubmitSubCategory = (e) => {
+  const handleSubmitSubCategory = async (e) => {
     e.preventDefault();
 
     if (!subCategoryForm.name.trim()) {
@@ -195,32 +214,49 @@ export default function CategoriesManagement() {
       return;
     }
 
-    if (editingSubCategory) {
-      const updatedSubCategories = subCategories.map((subCat) =>
-        subCat.id === editingSubCategory.id
-          ? {
-              ...subCat,
-              name: subCategoryForm.name,
-              mainCategoryId: parseInt(subCategoryForm.mainCategoryId),
-              isActive: subCategoryForm.isActive,
-            }
-          : subCat,
-      );
-      setSubCategories(updatedSubCategories);
-      toast.success("تم تحديث الفئة الفرعية بنجاح");
-    } else {
-      const newSubCategory = {
-        id: subCategories.length + 1,
-        name: subCategoryForm.name,
-        mainCategoryId: parseInt(subCategoryForm.mainCategoryId),
-        isActive: subCategoryForm.isActive,
-      };
-      setSubCategories([...subCategories, newSubCategory]);
-      toast.success("تم إضافة الفئة الفرعية بنجاح");
-    }
+    try {
+      if (editingSubCategory) {
+        const response = await axiosInstance.put(
+          `/api/SubCategories/UpdateSubCategory/${editingSubCategory.id}`,
+          {
+            name: subCategoryForm.name,
+            isActive: subCategoryForm.isActive,
+          },
+        );
 
-    setShowSubCategoryModal(false);
-    setEditingSubCategory(null);
+        if (response.status === 200 && response.data.isSuccess) {
+          await fetchSubCategories();
+          toast.success("تم تحديث الفئة الفرعية بنجاح");
+        } else {
+          toast.error(
+            response.data.error?.description || "فشل في تحديث الفئة الفرعية",
+          );
+        }
+      } else {
+        const response = await axiosInstance.post("/api/SubCategories/Add", {
+          name: subCategoryForm.name,
+          mainCategoryId: subCategoryForm.mainCategoryId,
+          isActive: subCategoryForm.isActive,
+          percentageDiscount: subCategoryForm.percentageDiscount,
+          printIP: subCategoryForm.printIP || "",
+        });
+
+        if (response.status === 200 && response.data.isSuccess) {
+          await fetchSubCategories();
+          toast.success("تم إضافة الفئة الفرعية بنجاح");
+        } else {
+          toast.error(
+            response.data.error?.description || "فشل في إضافة الفئة الفرعية",
+          );
+        }
+      }
+
+      setShowSubCategoryModal(false);
+      setEditingSubCategory(null);
+    } catch (error) {
+      console.error("خطأ في حفظ الفئة الفرعية:", error);
+      toast.error("حدث خطأ في حفظ الفئة الفرعية");
+    }
   };
 
   const handleDeleteMainCategory = async (categoryId) => {
@@ -246,8 +282,21 @@ export default function CategoriesManagement() {
     });
 
     if (result.isConfirmed) {
-      setMainCategories(mainCategories.filter((cat) => cat.id !== categoryId));
-      toast.success("تم حذف الفئة الرئيسية بنجاح");
+      try {
+        const response = await axiosInstance.delete(
+          `/api/MainCategories/Delete/${categoryId}`,
+        );
+
+        if (response.status === 200 || response.status === 204) {
+          await fetchMainCategories();
+          toast.success("تم حذف الفئة الرئيسية بنجاح");
+        } else {
+          toast.error("فشل في حذف الفئة الرئيسية");
+        }
+      } catch (error) {
+        console.error("خطأ في حذف الفئة الرئيسية:", error);
+        toast.error("حدث خطأ في حذف الفئة الرئيسية");
+      }
     }
   };
 
@@ -265,27 +314,103 @@ export default function CategoriesManagement() {
     });
 
     if (result.isConfirmed) {
-      setSubCategories(subCategories.filter((sub) => sub.id !== subCategoryId));
-      toast.success("تم حذف الفئة الفرعية بنجاح");
+      try {
+        const response = await axiosInstance.delete(
+          `/api/SubCategories/Delete/${subCategoryId}`,
+        );
+
+        if (response.status === 200 || response.status === 204) {
+          await fetchSubCategories();
+          toast.success("تم حذف الفئة الفرعية بنجاح");
+        } else {
+          toast.error("فشل في حذف الفئة الفرعية");
+        }
+      } catch (error) {
+        console.error("خطأ في حذف الفئة الفرعية:", error);
+        toast.error("حدث خطأ في حذف الفئة الفرعية");
+      }
     }
   };
 
-  const handleToggleMainCategoryStatus = (categoryId) => {
-    setMainCategories(
-      mainCategories.map((cat) =>
-        cat.id === categoryId ? { ...cat, isActive: !cat.isActive } : cat,
-      ),
-    );
-    toast.success("تم تغيير حالة الفئة بنجاح");
+  const handleToggleMainCategoryStatus = async (categoryId) => {
+    const category = mainCategories.find((cat) => cat.id === categoryId);
+    const action = category.isActive ? "تعطيل" : "تفعيل";
+
+    const result = await Swal.fire({
+      title: `هل أنت متأكد من ${action} هذه الفئة؟`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: category.isActive ? "#f59e0b" : "#10b981",
+      cancelButtonColor: "#6B7280",
+      confirmButtonText: `نعم، ${action}`,
+      cancelButtonText: "إلغاء",
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await axiosInstance.put(
+          `/api/MainCategories/UpdateMainCategory/${categoryId}`,
+          {
+            name: category.name,
+            isActive: !category.isActive,
+          },
+        );
+
+        if (response.status === 200 && response.data.isSuccess) {
+          await fetchMainCategories();
+          toast.success(`تم ${action} الفئة بنجاح`);
+        } else {
+          toast.error(
+            response.data.error?.description || `فشل في ${action} الفئة`,
+          );
+        }
+      } catch (error) {
+        console.error(`خطأ في ${action} الفئة:`, error);
+        toast.error(`حدث خطأ في ${action} الفئة`);
+      }
+    }
   };
 
-  const handleToggleSubCategoryStatus = (subCategoryId) => {
-    setSubCategories(
-      subCategories.map((sub) =>
-        sub.id === subCategoryId ? { ...sub, isActive: !sub.isActive } : sub,
-      ),
-    );
-    toast.success("تم تغيير حالة الفئة الفرعية بنجاح");
+  const handleToggleSubCategoryStatus = async (subCategoryId) => {
+    const subCategory = subCategories.find((sub) => sub.id === subCategoryId);
+    const action = subCategory.isActive ? "تعطيل" : "تفعيل";
+
+    const result = await Swal.fire({
+      title: `هل أنت متأكد من ${action} هذه الفئة الفرعية؟`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: subCategory.isActive ? "#f59e0b" : "#10b981",
+      cancelButtonColor: "#6B7280",
+      confirmButtonText: `نعم، ${action}`,
+      cancelButtonText: "إلغاء",
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await axiosInstance.put(
+          `/api/SubCategories/UpdateSubCategory/${subCategoryId}`,
+          {
+            name: subCategory.name,
+            isActive: !subCategory.isActive,
+          },
+        );
+
+        if (response.status === 200 && response.data.isSuccess) {
+          await fetchSubCategories();
+          toast.success(`تم ${action} الفئة الفرعية بنجاح`);
+        } else {
+          toast.error(
+            response.data.error?.description ||
+              `فشل في ${action} الفئة الفرعية`,
+          );
+        }
+      } catch (error) {
+        console.error(`خطأ في ${action} الفئة الفرعية:`, error);
+        toast.error(`حدث خطأ في ${action} الفئة الفرعية`);
+      }
+    }
   };
 
   const getSubCategoriesForMainCategory = (mainCategoryId) => {
@@ -419,19 +544,19 @@ export default function CategoriesManagement() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center ml-3"
-                          style={{ backgroundColor: category.color }}
-                        >
-                          <span className="text-white font-bold">
-                            {category.name.charAt(0)}
-                          </span>
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center ml-3 bg-blue-100 text-blue-700 font-bold text-lg">
+                          {category.name.charAt(0)}
                         </div>
                         <div>
                           <div className="font-bold text-gray-900">
                             {category.name}
                           </div>
                           <div className="text-xs text-gray-500">
+                            {category.percentageDiscount > 0 && (
+                              <span className="text-green-600">
+                                خصم {category.percentageDiscount}% •
+                              </span>
+                            )}{" "}
                             {
                               getSubCategoriesForMainCategory(category.id)
                                 .length
@@ -553,10 +678,9 @@ export default function CategoriesManagement() {
                 </p>
                 {selectedMainCategory && (
                   <div className="mt-2 flex items-center">
-                    <div
-                      className="w-3 h-3 rounded-full ml-2"
-                      style={{ backgroundColor: selectedMainCategory.color }}
-                    ></div>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center ml-2 bg-blue-100 text-blue-700 text-sm font-bold">
+                      {selectedMainCategory.name.charAt(0)}
+                    </div>
                     <span className="text-sm text-gray-700">
                       {selectedMainCategory.name}
                     </span>
@@ -623,125 +747,141 @@ export default function CategoriesManagement() {
                     <div className="space-y-3">
                       {getSubCategoriesForMainCategory(
                         selectedMainCategory.id,
-                      ).map((subCategory) => (
-                        <div
-                          key={subCategory.id}
-                          className="p-4 rounded-xl border border-gray-200 hover:border-gray-300 transition-all"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <div
-                                className="w-10 h-10 rounded-lg flex items-center justify-center ml-3 bg-gray-100"
-                                style={{
-                                  borderLeft: `4px solid ${selectedMainCategory.color}`,
-                                }}
-                              >
-                                <span className="text-gray-700 font-bold">
-                                  {subCategory.name.charAt(0)}
-                                </span>
-                              </div>
-                              <div>
-                                <div className="font-bold text-gray-900">
-                                  {subCategory.name}
+                      ).map((subCategory) => {
+                        const mainCat = mainCategories.find(
+                          (cat) => cat.id === subCategory.mainCategoryId,
+                        );
+                        return (
+                          <div
+                            key={subCategory.id}
+                            className="p-4 rounded-xl border border-gray-200 hover:border-gray-300 transition-all"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center ml-3 bg-gray-100 border-l-4 border-blue-500">
+                                  <span className="text-gray-700 font-bold">
+                                    {subCategory.name.charAt(0)}
+                                  </span>
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  تابعة لـ {selectedMainCategory.name}
+                                <div>
+                                  <div className="font-bold text-gray-900">
+                                    {subCategory.name}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    تابعة لـ{" "}
+                                    {mainCat?.name ||
+                                      subCategory.mainCategoryName}
+                                    {subCategory.printIP && (
+                                      <span className="text-blue-600">
+                                        {" "}
+                                        • IP: {subCategory.printIP}
+                                      </span>
+                                    )}
+                                    {subCategory.percentageDiscount > 0 && (
+                                      <span className="text-green-600">
+                                        {" "}
+                                        • خصم {subCategory.percentageDiscount}%
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                                <div
+                                  className={`px-2 py-1 rounded text-xs ${
+                                    subCategory.isActive
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-red-100 text-red-800"
+                                  }`}
+                                >
+                                  {subCategory.isActive ? "نشط" : "معطل"}
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                              <div
-                                className={`px-2 py-1 rounded text-xs ${
+                            <div className="flex justify-end space-x-2 rtl:space-x-reverse mt-3">
+                              <button
+                                onClick={() =>
+                                  handleEditSubCategory(subCategory)
+                                }
+                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-blue-200"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-3 w-3 ml-1"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                  />
+                                </svg>
+                                تعديل
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleToggleSubCategoryStatus(subCategory.id)
+                                }
+                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center border ${
                                   subCategory.isActive
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
+                                    ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
+                                    : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                                 }`}
                               >
-                                {subCategory.isActive ? "نشط" : "معطل"}
-                              </div>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-3 w-3 ml-1"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  {subCategory.isActive ? (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                                    />
+                                  ) : (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                                    />
+                                  )}
+                                </svg>
+                                {subCategory.isActive ? "تعطيل" : "تفعيل"}
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleDeleteSubCategory(subCategory.id)
+                                }
+                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-3 w-3 ml-1"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                                حذف
+                              </button>
                             </div>
                           </div>
-                          <div className="flex justify-end space-x-2 rtl:space-x-reverse mt-3">
-                            <button
-                              onClick={() => handleEditSubCategory(subCategory)}
-                              className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-blue-200"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-3 w-3 ml-1"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                />
-                              </svg>
-                              تعديل
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleToggleSubCategoryStatus(subCategory.id)
-                              }
-                              className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center border ${
-                                subCategory.isActive
-                                  ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
-                                  : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                              }`}
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-3 w-3 ml-1"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                {subCategory.isActive ? (
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                  />
-                                ) : (
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                                  />
-                                )}
-                              </svg>
-                              {subCategory.isActive ? "تعطيل" : "تفعيل"}
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleDeleteSubCategory(subCategory.id)
-                              }
-                              className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-3 w-3 ml-1"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
-                              حذف
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )
                 ) : (
@@ -805,6 +945,22 @@ export default function CategoriesManagement() {
                       onChange={handleMainCategoryFormChange}
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                       required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      نسبة الخصم (%) (اختياري)
+                    </label>
+                    <input
+                      type="number"
+                      name="percentageDiscount"
+                      value={mainCategoryForm.percentageDiscount}
+                      onChange={handleMainCategoryFormChange}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      min="0"
+                      max="100"
+                      step="0.1"
                     />
                   </div>
 
@@ -896,6 +1052,36 @@ export default function CategoriesManagement() {
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      عنوان IP للطابعة (اختياري)
+                    </label>
+                    <input
+                      type="text"
+                      name="printIP"
+                      value={subCategoryForm.printIP}
+                      onChange={handleSubCategoryFormChange}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      placeholder="مثال: 192.168.1.100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      نسبة الخصم (%) (اختياري)
+                    </label>
+                    <input
+                      type="number"
+                      name="percentageDiscount"
+                      value={subCategoryForm.percentageDiscount}
+                      onChange={handleSubCategoryFormChange}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                    />
                   </div>
 
                   <div>
