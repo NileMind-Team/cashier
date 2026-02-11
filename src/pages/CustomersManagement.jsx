@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
+import axiosInstance from "../api/axiosInstance";
 
 export default function CustomersManagement() {
   const navigate = useNavigate();
@@ -12,253 +13,169 @@ export default function CustomersManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const hasFetched = useRef(false);
+  const searchTimeout = useRef(null);
 
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
-    address: {
-      city: "",
-      district: "",
-      street: "",
-      building: "",
-      floor: "",
-      apartment: "",
-      additionalInfo: "",
-    },
-    isActive: true,
-    joinDate: new Date().toISOString().split("T")[0],
+    address: "",
+    nationalId: "",
   });
 
-  const initialCustomers = [
-    {
-      id: 1,
-      name: "أحمد محمد",
-      phone: "01012345678",
-      address: {
-        city: "القاهرة",
-        district: "مدينة نصر",
-        street: "شارع النصر",
-        building: "15",
-        floor: "3",
-        apartment: "شقة 302",
-        additionalInfo: "بجوار مسجد النور",
-      },
-      totalPurchases: 125000,
-      purchaseCount: 42,
-      isActive: true,
-      joinDate: "2026-01-01",
-    },
-    {
-      id: 2,
-      name: "سارة علي",
-      phone: "01123456789",
-      address: {
-        city: "القاهرة",
-        district: "المعادي",
-        street: "شارع 9",
-        building: "8",
-        floor: "1",
-        apartment: "شقة 101",
-        additionalInfo: "عمارة الزهور",
-      },
-      totalPurchases: 85000,
-      purchaseCount: 28,
-      isActive: true,
-      joinDate: "2026-01-05",
-    },
-    {
-      id: 3,
-      name: "محمد خالد",
-      phone: "01234567890",
-      address: {
-        city: "الجيزة",
-        district: "المهندسين",
-        street: "شارع الهرم",
-        building: "22",
-        floor: "5",
-        apartment: "شقة 504",
-        additionalInfo: "",
-      },
-      totalPurchases: 32000,
-      purchaseCount: 15,
-      isActive: true,
-      joinDate: "2026-01-10",
-    },
-    {
-      id: 4,
-      name: "فاطمة أحمد",
-      phone: "01098765432",
-      address: {
-        city: "القاهرة",
-        district: "مدينة السلام",
-        street: "شارع السلام",
-        building: "10",
-        floor: "2",
-        apartment: "شقة 203",
-        additionalInfo: "مطعم فاطمة - الطابق الأرضي",
-      },
-      totalPurchases: 250000,
-      purchaseCount: 68,
-      isActive: true,
-      joinDate: "2026-01-03",
-    },
-    {
-      id: 5,
-      name: "علي حسن",
-      phone: "01187654321",
-      address: {
-        city: "القاهرة",
-        district: "الزيتون",
-        street: "شارع الثورة",
-        building: "5",
-        floor: "4",
-        apartment: "شقة 401",
-        additionalInfo: "",
-      },
-      totalPurchases: 18000,
-      purchaseCount: 8,
-      isActive: true,
-      joinDate: "2026-01-08",
-    },
-    {
-      id: 6,
-      name: "ريم سعد",
-      phone: "01276543210",
-      address: {
-        city: "القاهرة",
-        district: "المقطم",
-        street: "شارع القاهرة",
-        building: "12",
-        floor: "6",
-        apartment: "شقة 601",
-        additionalInfo: "تطلب دائماً توصيل للمنزل",
-      },
-      totalPurchases: 95000,
-      purchaseCount: 35,
-      isActive: true,
-      joinDate: "2026-01-06",
-    },
-    {
-      id: 7,
-      name: "خالد وليد",
-      phone: "01011112222",
-      address: {
-        city: "الجيزة",
-        district: "الدقي",
-        street: "شارع الجامعة",
-        building: "18",
-        floor: "3",
-        apartment: "شقة 301",
-        additionalInfo: "مدير شركة الأهرام",
-      },
-      totalPurchases: 120000,
-      purchaseCount: 40,
-      isActive: true,
-      joinDate: "2026-01-04",
-    },
-    {
-      id: 8,
-      name: "نورا عمرو",
-      phone: "01122223333",
-      address: {
-        city: "القاهرة",
-        district: "الزمالك",
-        street: "شارع النيل",
-        building: "7",
-        floor: "2",
-        apartment: "شقة 202",
-        additionalInfo: "طالبة جامعية",
-      },
-      totalPurchases: 15000,
-      purchaseCount: 6,
-      isActive: false,
-      joinDate: "2026-01-12",
-    },
-    {
-      id: 9,
-      name: "ياسر سليم",
-      phone: "01233334444",
-      address: {
-        city: "القاهرة",
-        district: "العباسية",
-        street: "شارع رمسيس",
-        building: "30",
-        floor: "1",
-        apartment: "شقة 102",
-        additionalInfo: "كافتيريا الجامعة",
-      },
-      totalPurchases: 180000,
-      purchaseCount: 55,
-      isActive: true,
-      joinDate: "2026-01-02",
-    },
-    {
-      id: 10,
-      name: "هدى محمود",
-      phone: "01044445555",
-      address: {
-        city: "الجيزة",
-        district: "الهرم",
-        street: "شارع الأهرام",
-        building: "9",
-        floor: "5",
-        apartment: "شقة 502",
-        additionalInfo: "تسدد دائماً بالفيزا",
-      },
-      totalPurchases: 75000,
-      purchaseCount: 30,
-      isActive: true,
-      joinDate: "2026-01-07",
-    },
-  ];
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get("/api/Customers/GetAll");
+
+      if (response.status === 200) {
+        if (Array.isArray(response.data)) {
+          const formattedCustomers = response.data.map((customer) => ({
+            id: customer.id,
+            name: customer.name,
+            phone: customer.phone,
+            address: customer.address || "",
+            nationalId: customer.nationalId || "",
+            totalPurchases: customer.totalPurchases || 0,
+            purchaseCount: customer.purchaseCount || 0,
+            isActive:
+              customer.isActive !== undefined ? customer.isActive : true,
+            joinDate:
+              customer.joinDate || new Date().toISOString().split("T")[0],
+          }));
+          setCustomers(formattedCustomers);
+          if (formattedCustomers.length === 0) {
+            toast.info("لا يوجد عملاء في النظام");
+          }
+        } else if (
+          response.data.isSuccess === true ||
+          response.data.isSuccess === undefined
+        ) {
+          let customersData = [];
+
+          if (Array.isArray(response.data.value)) {
+            customersData = response.data.value;
+          } else if (Array.isArray(response.data.data)) {
+            customersData = response.data.data;
+          } else if (Array.isArray(response.data)) {
+            customersData = response.data;
+          }
+
+          const formattedCustomers = customersData.map((customer) => ({
+            id: customer.id,
+            name: customer.name,
+            phone: customer.phone,
+            address: customer.address || "",
+            nationalId: customer.nationalId || "",
+            totalPurchases: customer.totalPurchases || 0,
+            purchaseCount: customer.purchaseCount || 0,
+            isActive:
+              customer.isActive !== undefined ? customer.isActive : true,
+            joinDate:
+              customer.joinDate || new Date().toISOString().split("T")[0],
+          }));
+
+          setCustomers(formattedCustomers);
+
+          if (formattedCustomers.length === 0) {
+            toast.info("لا يوجد عملاء في النظام");
+          }
+        } else {
+          setCustomers([]);
+          toast.info("لا يوجد عملاء في النظام");
+        }
+      } else {
+        toast.error("فشل في جلب العملاء");
+        setCustomers([]);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب العملاء:", error);
+      if (error.response?.status === 404) {
+        toast.info("لا يوجد عملاء في النظام");
+        setCustomers([]);
+      } else {
+        toast.error("حدث خطأ في جلب العملاء");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setCustomers(initialCustomers);
-      setLoading(false);
-    }, 500);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!hasFetched.current) {
+      fetchCustomers();
+      hasFetched.current = true;
+    }
   }, []);
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("ar-EG", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ar-EG", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const formatAddress = (address) => {
-    if (!address) return "لا يوجد عنوان";
-
-    const parts = [];
-    if (address.city) parts.push(address.city);
-    if (address.district) parts.push(address.district);
-    if (address.street) parts.push(address.street);
-
-    const buildingParts = [];
-    if (address.building) buildingParts.push(`مبني ${address.building}`);
-    if (address.floor) buildingParts.push(`الدور ${address.floor}`);
-    if (address.apartment) buildingParts.push(address.apartment);
-
-    if (buildingParts.length > 0) {
-      parts.push(buildingParts.join("، "));
+  const searchCustomers = async (term) => {
+    if (!term.trim()) {
+      fetchCustomers();
+      return;
     }
 
-    if (address.additionalInfo) {
-      parts.push(`(${address.additionalInfo})`);
-    }
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get(`/api/Customers/Search/${term}`);
 
-    return parts.join(" - ");
+      if (response.status === 200) {
+        let customersData = [];
+
+        // Check if response.data is a single object (has id property)
+        if (
+          response.data &&
+          typeof response.data === "object" &&
+          "id" in response.data
+        ) {
+          customersData = [response.data];
+        }
+        // Check if response.data is an array
+        else if (Array.isArray(response.data)) {
+          customersData = response.data;
+        }
+        // Check if response.data has value property that's an array
+        else if (
+          response.data.isSuccess === true &&
+          Array.isArray(response.data.value)
+        ) {
+          customersData = response.data.value;
+        }
+        // Check if response.data has data property that's an array
+        else if (Array.isArray(response.data.data)) {
+          customersData = response.data.data;
+        }
+
+        if (customersData.length > 0) {
+          const formattedCustomers = customersData.map((customer) => ({
+            id: customer.id,
+            name: customer.name,
+            phone: customer.phone,
+            address: customer.address || "",
+            nationalId: customer.nationalId || "",
+            totalPurchases: customer.totalPurchases || 0,
+            purchaseCount: customer.purchaseCount || 0,
+            isActive:
+              customer.isActive !== undefined ? customer.isActive : true,
+            joinDate:
+              customer.joinDate || new Date().toISOString().split("T")[0],
+          }));
+          setCustomers(formattedCustomers);
+          toast.success(`تم العثور على ${formattedCustomers.length} عميل`);
+        } else {
+          setCustomers([]);
+          toast.info("لا توجد نتائج للبحث");
+        }
+      } else {
+        setCustomers([]);
+        toast.info("لا توجد نتائج للبحث");
+      }
+    } catch (error) {
+      console.error("خطأ في البحث:", error);
+      setCustomers([]);
+      toast.info("لا توجد نتائج للبحث");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddCustomer = () => {
@@ -267,17 +184,8 @@ export default function CustomersManagement() {
     setFormData({
       name: "",
       phone: "",
-      address: {
-        city: "",
-        district: "",
-        street: "",
-        building: "",
-        floor: "",
-        apartment: "",
-        additionalInfo: "",
-      },
-      isActive: true,
-      joinDate: new Date().toISOString().split("T")[0],
+      address: "",
+      nationalId: "",
     });
   };
 
@@ -287,17 +195,8 @@ export default function CustomersManagement() {
     setFormData({
       name: customer.name,
       phone: customer.phone,
-      address: {
-        city: customer.address?.city || "",
-        district: customer.address?.district || "",
-        street: customer.address?.street || "",
-        building: customer.address?.building || "",
-        floor: customer.address?.floor || "",
-        apartment: customer.address?.apartment || "",
-        additionalInfo: customer.address?.additionalInfo || "",
-      },
-      isActive: customer.isActive,
-      joinDate: customer.joinDate,
+      address: customer.address || "",
+      nationalId: customer.nationalId || "",
     });
   };
 
@@ -308,8 +207,8 @@ export default function CustomersManagement() {
       title: "هل أنت متأكد من حذف هذا العميل؟",
       html: `
         <div class="text-right">
-          <p class="mb-3">العميل: <strong>${customer.name}</strong></p>
-          <p class="mb-3">رقم الهاتف: <strong>${customer.phone}</strong></p>
+          <p class="mb-3">العميل: <strong>${customer?.name}</strong></p>
+          <p class="mb-3">رقم الهاتف: <strong>${customer?.phone}</strong></p>
         </div>
       `,
       icon: "warning",
@@ -322,62 +221,41 @@ export default function CustomersManagement() {
     });
 
     if (result.isConfirmed) {
-      setCustomers(customers.filter((customer) => customer.id !== customerId));
-      toast.success("تم حذف العميل بنجاح");
-    }
-  };
+      try {
+        const response = await axiosInstance.delete(
+          `/api/Customers/Delete/${customerId}`,
+        );
 
-  const handleToggleCustomerStatus = async (customerId) => {
-    const customer = customers.find((c) => c.id === customerId);
-    const action = customer.isActive ? "تعطيل" : "تفعيل";
-
-    const result = await Swal.fire({
-      title: `هل أنت متأكد من ${action} هذا العميل؟`,
-      text: customer.isActive
-        ? "لن يتمكن العميل من الشراء حتى يتم تفعيله مرة أخرى."
-        : "سيتمكن العميل من الشراء من النظام.",
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: `نعم، ${action}`,
-      cancelButtonText: "إلغاء",
-      confirmButtonColor: customer.isActive ? "#F59E0B" : "#10B981",
-      cancelButtonColor: "#3085d6",
-      reverseButtons: true,
-    });
-
-    if (result.isConfirmed) {
-      setCustomers(
-        customers.map((customer) =>
-          customer.id === customerId
-            ? { ...customer, isActive: !customer.isActive }
-            : customer,
-        ),
-      );
-      toast.success(`تم ${action} العميل بنجاح`);
+        if (response.status === 200) {
+          if (response.data.isSuccess !== false) {
+            setCustomers(
+              customers.filter((customer) => customer.id !== customerId),
+            );
+            toast.success("تم حذف العميل بنجاح");
+          } else {
+            toast.error(
+              response.data.error?.description || "فشل في حذف العميل",
+            );
+          }
+        } else {
+          toast.error("فشل في حذف العميل");
+        }
+      } catch (error) {
+        console.error("خطأ في حذف العميل:", error);
+        toast.error("حدث خطأ في حذف العميل");
+      }
     }
   };
 
   const handleFormChange = (e) => {
-    const { name, value, type, checked } = e.target;
-
-    if (name.startsWith("address.")) {
-      const addressField = name.split(".")[1];
-      setFormData((prev) => ({
-        ...prev,
-        address: {
-          ...prev.address,
-          [addressField]: value,
-        },
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: type === "checkbox" ? checked : value,
-      }));
-    }
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
@@ -396,99 +274,95 @@ export default function CustomersManagement() {
       return;
     }
 
-    if (editingCustomer) {
-      const updatedCustomers = customers.map((customer) =>
-        customer.id === editingCustomer.id
-          ? {
-              ...customer,
-              name: formData.name,
-              phone: formData.phone,
-              address: {
-                city: formData.address.city,
-                district: formData.address.district,
-                street: formData.address.street,
-                building: formData.address.building,
-                floor: formData.address.floor,
-                apartment: formData.address.apartment,
-                additionalInfo: formData.address.additionalInfo,
-              },
-              isActive: formData.isActive,
-            }
-          : customer,
-      );
-      setCustomers(updatedCustomers);
-      toast.success("تم تحديث بيانات العميل بنجاح");
-    } else {
-      const newCustomer = {
-        id: customers.length + 1,
-        name: formData.name,
-        phone: formData.phone,
-        address: {
-          city: formData.address.city,
-          district: formData.address.district,
-          street: formData.address.street,
-          building: formData.address.building,
-          floor: formData.address.floor,
-          apartment: formData.address.apartment,
-          additionalInfo: formData.address.additionalInfo,
-        },
-        totalPurchases: 0,
-        purchaseCount: 0,
-        isActive: formData.isActive,
-        joinDate: formData.joinDate,
-      };
-      setCustomers([...customers, newCustomer]);
-      toast.success("تم إضافة العميل الجديد بنجاح");
+    try {
+      if (editingCustomer) {
+        toast.warning("تحديث العميل غير مدعوم من الخادم حالياً");
+        setShowAddModal(false);
+        setEditingCustomer(null);
+        return;
+      } else {
+        const customerData = {
+          name: formData.name,
+          phone: formData.phone,
+          address: formData.address || "",
+          nationalId: formData.nationalId || "",
+        };
+
+        const response = await axiosInstance.post(
+          "/api/Customers/Add",
+          customerData,
+        );
+
+        if (response.status === 200) {
+          if (response.data.isSuccess !== false) {
+            toast.success("تم إضافة العميل الجديد بنجاح");
+            fetchCustomers();
+          } else {
+            toast.error(
+              response.data.error?.description || "فشل في إضافة العميل",
+            );
+          }
+        } else {
+          toast.error("فشل في إضافة العميل");
+        }
+      }
+
+      setShowAddModal(false);
+      setEditingCustomer(null);
+      setFormData({
+        name: "",
+        phone: "",
+        address: "",
+        nationalId: "",
+      });
+    } catch (error) {
+      console.error("خطأ في حفظ العميل:", error);
+      toast.error("حدث خطأ في حفظ العميل");
     }
-
-    setShowAddModal(false);
-    setEditingCustomer(null);
-  };
-
-  const filteredCustomers = customers.filter((customer) => {
-    if (!searchTerm.trim()) return true;
-
-    const searchLower = searchTerm.toLowerCase();
-    const fullAddress = formatAddress(customer.address).toLowerCase();
-
-    return (
-      customer.name.toLowerCase().includes(searchLower) ||
-      customer.phone.includes(searchTerm) ||
-      fullAddress.includes(searchLower) ||
-      customer.address?.city?.toLowerCase().includes(searchLower) ||
-      customer.address?.district?.toLowerCase().includes(searchLower)
-    );
-  });
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentCustomers = filteredCustomers.slice(
-    indexOfFirstItem,
-    indexOfLastItem,
-  );
-  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
-
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
   };
 
   const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
+    const term = e.target.value;
+    setSearchTerm(term);
     setCurrentPage(1);
+
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+
+    searchTimeout.current = setTimeout(() => {
+      if (term.length > 0) {
+        searchCustomers(term);
+      } else {
+        fetchCustomers();
+      }
+    }, 300);
   };
 
   const handleClearSearch = () => {
     setSearchTerm("");
     setCurrentPage(1);
+
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+
+    fetchCustomers();
+  };
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentCustomers = customers.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(customers.length / itemsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
   };
 
   const stats = {
     totalCustomers: customers.length,
     activeCustomers: customers.filter((c) => c.isActive).length,
-    totalPurchases: customers.reduce(
-      (sum, customer) => sum + customer.totalPurchases,
-      0,
-    ),
+    inactiveCustomers: customers.filter((c) => !c.isActive).length,
   };
 
   return (
@@ -496,6 +370,7 @@ export default function CustomersManagement() {
       dir="rtl"
       className="min-h-screen bg-gradient-to-l from-gray-50 to-gray-100"
     >
+      {/* Navbar */}
       <div className="bg-white shadow-md">
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
@@ -507,6 +382,7 @@ export default function CustomersManagement() {
                 نظام الكاشير - إدارة العملاء
               </h1>
             </div>
+
             <button
               onClick={() => navigate("/")}
               className="px-4 py-2 rounded-lg font-medium border transition-all flex items-center"
@@ -541,7 +417,8 @@ export default function CustomersManagement() {
       </div>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {/* Stats Cards - العملاء فقط */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
             <div className="flex items-center justify-between">
               <div>
@@ -549,13 +426,9 @@ export default function CustomersManagement() {
                 <p className="text-2xl font-bold text-blue-900 mt-1">
                   {stats.totalCustomers}
                 </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  {stats.activeCustomers} نشط •{" "}
-                  {stats.totalCustomers - stats.activeCustomers} غير نشط
-                </p>
               </div>
               <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                <span className="text-blue-700 font-bold">👥</span>
+                <span className="text-blue-700 font-bold text-xl">👥</span>
               </div>
             </div>
           </div>
@@ -563,41 +436,33 @@ export default function CustomersManagement() {
           <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-green-800">إجمالي المشتريات</p>
+                <p className="text-sm text-green-800">العملاء النشطاء</p>
                 <p className="text-2xl font-bold text-green-900 mt-1">
-                  {formatCurrency(stats.totalPurchases)} ج.م
+                  {stats.activeCustomers}
                 </p>
-                <p className="text-xs text-green-600 mt-1">جميع العملاء</p>
               </div>
               <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                <span className="text-green-700 font-bold">💰</span>
+                <span className="text-green-700 font-bold text-xl">✅</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
+          <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-amber-800">أعلى شراء</p>
-                <p className="text-2xl font-bold text-amber-900 mt-1">
-                  {stats.totalCustomers > 0
-                    ? formatCurrency(
-                        Math.max(...customers.map((c) => c.totalPurchases)),
-                      )
-                    : "0.00"}{" "}
-                  ج.م
-                </p>
-                <p className="text-xs text-amber-600 mt-1">
-                  أفضل عميل من حيث المبيعات
+                <p className="text-sm text-red-800">العملاء غير النشطاء</p>
+                <p className="text-2xl font-bold text-red-900 mt-1">
+                  {stats.inactiveCustomers}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
-                <span className="text-amber-700 font-bold">🏆</span>
+              <div className="w-12 h-12 bg-red-200 rounded-full flex items-center justify-center">
+                <span className="text-red-700 font-bold text-xl">⛔</span>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Header and Search - تعديل: تكبير عرض حقل البحث */}
         <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -605,8 +470,7 @@ export default function CustomersManagement() {
                 قائمة العملاء
               </h3>
               <p className="text-sm text-gray-600">
-                إدارة بيانات العملاء في النظام - يمكنك البحث بالاسم، رقم الهاتف،
-                أو العنوان
+                إدارة بيانات العملاء في النظام - يمكنك البحث بالاسم، رقم الهاتف
               </p>
             </div>
 
@@ -615,11 +479,12 @@ export default function CustomersManagement() {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="ابحث باسم العميل أو رقم الهاتف..."
+                    placeholder="ابحث باسم العميل أو رقم الهاتف او الرقم القومي..."
                     value={searchTerm}
                     onChange={handleSearch}
-                    className="w-full md:w-80 px-12 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all duration-300 hover:border-blue-300 text-right"
+                    className="w-full md:w-96 lg:w-[450px] xl:w-[500px] px-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all duration-300 hover:border-blue-300 text-right"
                     dir="rtl"
+                    autoComplete="off"
                   />
                   <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
                     🔍
@@ -635,7 +500,7 @@ export default function CustomersManagement() {
                 </div>
                 {searchTerm && (
                   <div className="text-xs text-blue-600 mt-1 text-right">
-                    {filteredCustomers.length} نتيجة للبحث: "{searchTerm}"
+                    {customers.length} نتيجة للبحث: "{searchTerm}"
                   </div>
                 )}
               </div>
@@ -665,6 +530,7 @@ export default function CustomersManagement() {
           </div>
         </div>
 
+        {/* Customers Table */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           {loading ? (
             <div className="p-8 flex flex-col items-center justify-center">
@@ -681,10 +547,10 @@ export default function CustomersManagement() {
                         العميل
                       </th>
                       <th className="py-4 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                        العنوان التفصيلي
+                        العنوان
                       </th>
                       <th className="py-4 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                        الإحصائيات
+                        الرقم القومي
                       </th>
                       <th className="py-4 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
                         الحالة
@@ -738,7 +604,7 @@ export default function CustomersManagement() {
                           <td className="py-4 px-4 text-right">
                             <div className="flex items-center">
                               <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center ml-3 text-blue-700 font-bold text-lg">
-                                {customer.name.charAt(0)}
+                                {customer.name?.charAt(0) || "?"}
                               </div>
                               <div>
                                 <div className="font-bold text-gray-900">
@@ -747,66 +613,17 @@ export default function CustomersManagement() {
                                 <div className="text-sm text-gray-500">
                                   {customer.phone}
                                 </div>
-                                <div className="text-xs text-gray-400 mt-1">
-                                  انضم في: {formatDate(customer.joinDate)}
-                                </div>
                               </div>
                             </div>
                           </td>
                           <td className="py-4 px-4 text-right">
-                            <div className="space-y-1">
-                              <div className="text-sm font-medium text-gray-800">
-                                {customer.address?.city || "غير محدد"}
-                                {customer.address?.district &&
-                                  ` - ${customer.address.district}`}
-                              </div>
-                              {customer.address?.street && (
-                                <div className="text-xs text-gray-600">
-                                  {customer.address.street}
-                                </div>
-                              )}
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {customer.address?.building && (
-                                  <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                                    مبني {customer.address.building}
-                                  </span>
-                                )}
-                                {customer.address?.floor && (
-                                  <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                                    الدور {customer.address.floor}
-                                  </span>
-                                )}
-                                {customer.address?.apartment && (
-                                  <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                                    {customer.address.apartment}
-                                  </span>
-                                )}
-                              </div>
-                              {customer.address?.additionalInfo && (
-                                <div className="text-xs text-blue-600 mt-1 italic">
-                                  {customer.address.additionalInfo}
-                                </div>
-                              )}
+                            <div className="text-sm text-gray-800 max-w-xs">
+                              {customer.address || "لا يوجد عنوان"}
                             </div>
                           </td>
                           <td className="py-4 px-4 text-right">
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-600">
-                                  إجمالي المشتريات:
-                                </span>
-                                <span className="font-bold text-green-700 text-sm">
-                                  {formatCurrency(customer.totalPurchases)} ج.م
-                                </span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-600">
-                                  عدد المشتريات:
-                                </span>
-                                <span className="font-medium text-blue-700 text-sm">
-                                  {customer.purchaseCount}
-                                </span>
-                              </div>
+                            <div className="text-sm text-gray-800">
+                              {customer.nationalId || "غير مسجل"}
                             </div>
                           </td>
                           <td className="py-4 px-4 text-right">
@@ -853,41 +670,6 @@ export default function CustomersManagement() {
                               </button>
                               <button
                                 onClick={() =>
-                                  handleToggleCustomerStatus(customer.id)
-                                }
-                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border ${
-                                  customer.isActive
-                                    ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
-                                    : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                                }`}
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  {customer.isActive ? (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                    />
-                                  ) : (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                                    />
-                                  )}
-                                </svg>
-                                {customer.isActive ? "تعطيل" : "تفعيل"}
-                              </button>
-                              <button
-                                onClick={() =>
                                   handleDeleteCustomer(customer.id)
                                 }
                                 className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200"
@@ -917,13 +699,14 @@ export default function CustomersManagement() {
                 </table>
               </div>
 
-              {filteredCustomers.length > itemsPerPage && (
+              {/* Pagination */}
+              {customers.length > itemsPerPage && (
                 <div className="px-4 py-3 border-t border-gray-200">
                   <div className="flex flex-col md:flex-row md:items-center justify-between">
                     <div className="text-sm text-gray-700 mb-2 md:mb-0">
                       عرض {indexOfFirstItem + 1} -{" "}
-                      {Math.min(indexOfLastItem, filteredCustomers.length)} من{" "}
-                      {filteredCustomers.length} عميل
+                      {Math.min(indexOfLastItem, customers.length)} من{" "}
+                      {customers.length} عميل
                       {searchTerm && (
                         <span className="text-blue-600"> (نتائج البحث)</span>
                       )}
@@ -989,6 +772,7 @@ export default function CustomersManagement() {
         </div>
       </div>
 
+      {/* Add/Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -1019,6 +803,7 @@ export default function CustomersManagement() {
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
                       required
                       dir="rtl"
+                      disabled={editingCustomer}
                     />
                   </div>
 
@@ -1035,137 +820,39 @@ export default function CustomersManagement() {
                       required
                       placeholder="01xxxxxxxxx"
                       dir="rtl"
+                      disabled={editingCustomer}
                     />
                   </div>
-                </div>
 
-                <div className="mb-6">
-                  <h4
-                    className="text-lg font-bold mb-4"
-                    style={{ color: "#193F94" }}
-                  >
-                    العنوان التفصيلي
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        المدينة
-                      </label>
-                      <input
-                        type="text"
-                        name="address.city"
-                        value={formData.address.city}
-                        onChange={handleFormChange}
-                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
-                        dir="rtl"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        المنطقة/الحي
-                      </label>
-                      <input
-                        type="text"
-                        name="address.district"
-                        value={formData.address.district}
-                        onChange={handleFormChange}
-                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
-                        dir="rtl"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        اسم الشارع
-                      </label>
-                      <input
-                        type="text"
-                        name="address.street"
-                        value={formData.address.street}
-                        onChange={handleFormChange}
-                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
-                        dir="rtl"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          المبني
-                        </label>
-                        <input
-                          type="text"
-                          name="address.building"
-                          value={formData.address.building}
-                          onChange={handleFormChange}
-                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
-                          placeholder="رقم"
-                          dir="rtl"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          الدور
-                        </label>
-                        <input
-                          type="text"
-                          name="address.floor"
-                          value={formData.address.floor}
-                          onChange={handleFormChange}
-                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
-                          placeholder="رقم"
-                          dir="rtl"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          الشقة
-                        </label>
-                        <input
-                          type="text"
-                          name="address.apartment"
-                          value={formData.address.apartment}
-                          onChange={handleFormChange}
-                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
-                          placeholder="رقم"
-                          dir="rtl"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        معلومات إضافية
-                      </label>
-                      <textarea
-                        name="address.additionalInfo"
-                        value={formData.address.additionalInfo}
-                        onChange={handleFormChange}
-                        rows="2"
-                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm resize-none text-right"
-                        placeholder="أي معلومات إضافية لتحديد العنوان بدقة..."
-                        dir="rtl"
-                      ></textarea>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <label className="flex items-center cursor-pointer">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      العنوان
+                    </label>
                     <input
-                      type="checkbox"
-                      name="isActive"
-                      checked={formData.isActive}
+                      type="text"
+                      name="address"
+                      value={formData.address}
                       onChange={handleFormChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
+                      dir="rtl"
+                      placeholder="العنوان بالكامل"
                     />
-                    <span className="mr-2 text-sm font-medium text-gray-700">
-                      العميل نشط (يمكنه الشراء من النظام)
-                    </span>
-                  </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      الرقم القومي
+                    </label>
+                    <input
+                      type="text"
+                      name="nationalId"
+                      value={formData.nationalId}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
+                      dir="rtl"
+                      placeholder="14 رقم"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
@@ -14,6 +14,7 @@ export default function CategoriesManagement() {
   const [editingMainCategory, setEditingMainCategory] = useState(null);
   const [editingSubCategory, setEditingSubCategory] = useState(null);
   const [selectedMainCategory, setSelectedMainCategory] = useState(null);
+  const hasFetched = useRef(false);
 
   const [mainCategoryForm, setMainCategoryForm] = useState({
     name: "",
@@ -29,50 +30,65 @@ export default function CategoriesManagement() {
     printIP: "",
   });
 
-  const fetchMainCategories = async () => {
+  const fetchAllData = async () => {
     try {
       setLoading(true);
-      const response = await axiosInstance.get(
-        "/api/MainCategories/GetAllMainCategories",
+      const [mainCategoriesResponse, subCategoriesResponse] = await Promise.all(
+        [
+          axiosInstance.get("/api/MainCategories/GetAllMainCategories"),
+          axiosInstance.get("/api/SubCategories/GetAllSubCategories"),
+        ],
       );
 
-      if (response.status === 200 && response.data) {
-        setMainCategories(response.data);
+      if (
+        mainCategoriesResponse.status === 200 &&
+        mainCategoriesResponse.data
+      ) {
+        setMainCategories(mainCategoriesResponse.data);
 
-        if (response.data.length > 0) {
-          setSelectedMainCategory(response.data[0]);
+        if (mainCategoriesResponse.data.length > 0) {
+          if (selectedMainCategory) {
+            const stillExists = mainCategoriesResponse.data.some(
+              (cat) => cat.id === selectedMainCategory.id,
+            );
+            if (stillExists) {
+              setSelectedMainCategory(
+                mainCategoriesResponse.data.find(
+                  (cat) => cat.id === selectedMainCategory.id,
+                ),
+              );
+            } else {
+              setSelectedMainCategory(mainCategoriesResponse.data[0]);
+            }
+          } else {
+            setSelectedMainCategory(mainCategoriesResponse.data[0]);
+          }
+        } else {
+          setSelectedMainCategory(null);
         }
       } else {
         toast.error("فشل في جلب الفئات الرئيسية");
       }
+
+      if (subCategoriesResponse.status === 200 && subCategoriesResponse.data) {
+        setSubCategories(subCategoriesResponse.data);
+      } else {
+        toast.error("فشل في جلب الفئات الفرعية");
+      }
     } catch (error) {
-      console.error("خطأ في جلب الفئات الرئيسية:", error);
-      toast.error("حدث خطأ في جلب الفئات الرئيسية");
+      console.error("خطأ في جلب البيانات:", error);
+      toast.error("حدث خطأ في جلب البيانات");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchSubCategories = async () => {
-    try {
-      const response = await axiosInstance.get(
-        "/api/SubCategories/GetAllSubCategories",
-      );
-
-      if (response.status === 200 && response.data) {
-        setSubCategories(response.data);
-      } else {
-        toast.error("فشل في جلب الفئات الفرعية");
-      }
-    } catch (error) {
-      console.error("خطأ في جلب الفئات الفرعية:", error);
-      toast.error("حدث خطأ في جلب الفئات الفرعية");
-    }
-  };
-
   useEffect(() => {
-    fetchMainCategories();
-    fetchSubCategories();
+    if (!hasFetched.current) {
+      fetchAllData();
+      hasFetched.current = true;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAddMainCategory = () => {
@@ -167,13 +183,13 @@ export default function CategoriesManagement() {
           },
         );
 
-        if (response.status === 200 && response.data.isSuccess) {
-          await fetchMainCategories();
+        if (response.status === 200) {
+          await fetchAllData();
           toast.success("تم تحديث الفئة الرئيسية بنجاح");
+          setShowMainCategoryModal(false);
+          setEditingMainCategory(null);
         } else {
-          toast.error(
-            response.data.error?.description || "فشل في تحديث الفئة الرئيسية",
-          );
+          toast.error("فشل في تحديث الفئة الرئيسية");
         }
       } else {
         const response = await axiosInstance.post("/api/MainCategories/Add", {
@@ -183,21 +199,25 @@ export default function CategoriesManagement() {
           percentageDiscount: mainCategoryForm.percentageDiscount,
         });
 
-        if (response.status === 200 && response.data.isSuccess) {
-          await fetchMainCategories();
+        if (response.status === 201) {
+          await fetchAllData();
           toast.success("تم إضافة الفئة الرئيسية بنجاح");
+          setShowMainCategoryModal(false);
+          setEditingMainCategory(null);
         } else {
-          toast.error(
-            response.data.error?.description || "فشل في إضافة الفئة الرئيسية",
-          );
+          toast.error("فشل في إضافة الفئة الرئيسية");
         }
       }
-
-      setShowMainCategoryModal(false);
-      setEditingMainCategory(null);
     } catch (error) {
       console.error("خطأ في حفظ الفئة الرئيسية:", error);
-      toast.error("حدث خطأ في حفظ الفئة الرئيسية");
+      if (error.response?.status === 201 || error.response?.status === 200) {
+        await fetchAllData();
+        toast.success("تم حفظ الفئة الرئيسية بنجاح");
+        setShowMainCategoryModal(false);
+        setEditingMainCategory(null);
+      } else {
+        toast.error("حدث خطأ في حفظ الفئة الرئيسية");
+      }
     }
   };
 
@@ -224,13 +244,13 @@ export default function CategoriesManagement() {
           },
         );
 
-        if (response.status === 200 && response.data.isSuccess) {
-          await fetchSubCategories();
+        if (response.status === 200) {
+          await fetchAllData();
           toast.success("تم تحديث الفئة الفرعية بنجاح");
+          setShowSubCategoryModal(false);
+          setEditingSubCategory(null);
         } else {
-          toast.error(
-            response.data.error?.description || "فشل في تحديث الفئة الفرعية",
-          );
+          toast.error("فشل في تحديث الفئة الفرعية");
         }
       } else {
         const response = await axiosInstance.post("/api/SubCategories/Add", {
@@ -241,21 +261,25 @@ export default function CategoriesManagement() {
           printIP: subCategoryForm.printIP || "",
         });
 
-        if (response.status === 200 && response.data.isSuccess) {
-          await fetchSubCategories();
+        if (response.status === 201) {
+          await fetchAllData();
           toast.success("تم إضافة الفئة الفرعية بنجاح");
+          setShowSubCategoryModal(false);
+          setEditingSubCategory(null);
         } else {
-          toast.error(
-            response.data.error?.description || "فشل في إضافة الفئة الفرعية",
-          );
+          toast.error("فشل في إضافة الفئة الفرعية");
         }
       }
-
-      setShowSubCategoryModal(false);
-      setEditingSubCategory(null);
     } catch (error) {
       console.error("خطأ في حفظ الفئة الفرعية:", error);
-      toast.error("حدث خطأ في حفظ الفئة الفرعية");
+      if (error.response?.status === 201 || error.response?.status === 200) {
+        await fetchAllData();
+        toast.success("تم حفظ الفئة الفرعية بنجاح");
+        setShowSubCategoryModal(false);
+        setEditingSubCategory(null);
+      } else {
+        toast.error("حدث خطأ في حفظ الفئة الفرعية");
+      }
     }
   };
 
@@ -288,7 +312,7 @@ export default function CategoriesManagement() {
         );
 
         if (response.status === 200 || response.status === 204) {
-          await fetchMainCategories();
+          await fetchAllData();
           toast.success("تم حذف الفئة الرئيسية بنجاح");
         } else {
           toast.error("فشل في حذف الفئة الرئيسية");
@@ -320,7 +344,7 @@ export default function CategoriesManagement() {
         );
 
         if (response.status === 200 || response.status === 204) {
-          await fetchSubCategories();
+          await fetchAllData();
           toast.success("تم حذف الفئة الفرعية بنجاح");
         } else {
           toast.error("فشل في حذف الفئة الفرعية");
@@ -357,13 +381,11 @@ export default function CategoriesManagement() {
           },
         );
 
-        if (response.status === 200 && response.data.isSuccess) {
-          await fetchMainCategories();
+        if (response.status === 200) {
+          await fetchAllData();
           toast.success(`تم ${action} الفئة بنجاح`);
         } else {
-          toast.error(
-            response.data.error?.description || `فشل في ${action} الفئة`,
-          );
+          toast.error(`فشل في ${action} الفئة`);
         }
       } catch (error) {
         console.error(`خطأ في ${action} الفئة:`, error);
@@ -397,14 +419,11 @@ export default function CategoriesManagement() {
           },
         );
 
-        if (response.status === 200 && response.data.isSuccess) {
-          await fetchSubCategories();
+        if (response.status === 200) {
+          await fetchAllData();
           toast.success(`تم ${action} الفئة الفرعية بنجاح`);
         } else {
-          toast.error(
-            response.data.error?.description ||
-              `فشل في ${action} الفئة الفرعية`,
-          );
+          toast.error(`فشل في ${action} الفئة الفرعية`);
         }
       } catch (error) {
         console.error(`خطأ في ${action} الفئة الفرعية:`, error);

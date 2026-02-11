@@ -23,6 +23,7 @@ import {
   FaLayerGroup,
   FaBoxOpen,
   FaUser,
+  FaChair,
 } from "react-icons/fa";
 
 export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
@@ -184,6 +185,10 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
     navigate("/payment-methods");
   };
 
+  const handleHallsNavigation = () => {
+    navigate("/halls");
+  };
+
   const isReportsActive = location.pathname.startsWith("/reports");
   const isUsersActive = location.pathname === "/users";
   const isCategoriesActive = location.pathname === "/categories";
@@ -192,27 +197,28 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
   const isCustomersActive = location.pathname === "/customers";
   const isShippingCompaniesActive = location.pathname === "/shipping-companies";
   const isPaymentMethodsActive = location.pathname === "/payment-methods";
+  const isHallsActive = location.pathname === "/halls";
 
   return (
     <div className="bg-white shadow-md relative">
       <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
-          <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center mr-3">
+          <div className="flex items-center flex-shrink-0 ml-4">
+            <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-2">
               <FaCashRegister className="text-white text-xl" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
+            <div className="whitespace-nowrap">
+              <h1 className="text-xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير
               </h1>
-              <div className="flex items-center mt-1">
+              <div className="flex items-center mt-0.5">
                 {isShiftOpen && (
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium border border-green-200 flex items-center">
+                  <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium border border-green-200 flex items-center whitespace-nowrap">
                     <FaCircle className="w-2 h-2 text-green-500 ml-1 animate-pulse" />
                     الوردية مفتوحة
                   </span>
                 )}
-                <span className="text-xs text-gray-500 mr-2">
+                <span className="text-xs text-gray-500 mr-2 whitespace-nowrap">
                   <FaCalendarDay className="inline ml-1" />
                   {new Date().toLocaleDateString("ar-EG")}
                 </span>
@@ -220,94 +226,107 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 rtl:space-x-reverse">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse overflow-x-auto pb-1 flex-nowrap">
+            {/* زر إدارة الصالات */}
+            <button
+              onClick={handleHallsNavigation}
+              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
+                isHallsActive
+                  ? "bg-blue-900 text-white border-blue-900"
+                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+              }`}
+            >
+              <FaChair className="h-4 w-4 ml-1.5" />
+              إدارة الصالات
+            </button>
+
             <button
               onClick={handleCategoriesNavigation}
-              className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center text-sm ${
+              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
                 isCategoriesActive
                   ? "bg-blue-900 text-white border-blue-900"
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
-              <FaLayerGroup className="h-5 w-5 ml-2" />
+              <FaLayerGroup className="h-4 w-4 ml-1.5" />
               إدارة الفئات
             </button>
 
             <button
               onClick={handleProductsManagementNavigation}
-              className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center text-sm ${
+              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
                 isProductsManagementActive
                   ? "bg-blue-900 text-white border-blue-900"
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
-              <FaBoxOpen className="h-5 w-5 ml-2" />
+              <FaBoxOpen className="h-4 w-4 ml-1.5" />
               إدارة المنتجات
             </button>
 
             <button
               onClick={handleCustomersNavigation}
-              className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center text-sm ${
+              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
                 isCustomersActive
                   ? "bg-blue-900 text-white border-blue-900"
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
-              <FaUser className="h-5 w-5 ml-2" />
+              <FaUser className="h-4 w-4 ml-1.5" />
               إدارة العملاء
             </button>
 
             <button
               onClick={handleShippingCompaniesNavigation}
-              className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center text-sm ${
+              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
                 isShippingCompaniesActive
                   ? "bg-blue-900 text-white border-blue-900"
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
-              <FaTruck className="h-5 w-5 ml-2" />
+              <FaTruck className="h-4 w-4 ml-1.5" />
               شركات التوصيل
             </button>
 
             <button
               onClick={handlePaymentMethodsNavigation}
-              className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center text-sm ${
+              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
                 isPaymentMethodsActive
                   ? "bg-blue-900 text-white border-blue-900"
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
-              <FaCreditCard className="h-5 w-5 ml-2" />
+              <FaCreditCard className="h-4 w-4 ml-1.5" />
               طرق الدفع
             </button>
 
             <button
               onClick={handleUsersNavigation}
-              className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center text-sm ${
+              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
                 isUsersActive
                   ? "bg-blue-900 text-white border-blue-900"
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
               }`}
             >
-              <FaUserCog className="h-5 w-5 ml-2" />
+              <FaUserCog className="h-4 w-4 ml-1.5" />
               إدارة الموظفين
             </button>
 
-            <div className="relative" ref={dropdownRef}>
+            <div className="relative flex-shrink-0" ref={dropdownRef}>
               <button
                 onClick={() => setShowReportsDropdown(!showReportsDropdown)}
                 aria-expanded={showReportsDropdown}
                 aria-haspopup="true"
-                className={`h-11 px-4 rounded-lg font-medium border transition-all flex items-center ${
+                className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap ${
                   isReportsActive
                     ? "bg-blue-900 text-white border-blue-900"
                     : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
                 } ${showReportsDropdown ? "bg-blue-900 text-white" : ""}`}
               >
-                <FaChartBar className="h-5 w-5 ml-2" />
+                <FaChartBar className="h-4 w-4 ml-1.5" />
                 التقارير
                 <FaChevronDown
-                  className={`h-4 w-4 mr-2 transition-transform duration-200 ${
+                  className={`h-3 w-3 mr-1.5 transition-transform duration-200 ${
                     showReportsDropdown ? "rotate-180" : ""
                   }`}
                 />
@@ -481,7 +500,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
             {isShiftOpen && (
               <button
                 onClick={handleCloseShift}
-                className="h-11 px-4 rounded-lg font-medium border transition-all flex items-center"
+                className="h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0"
                 style={{ borderColor: "#F59E0B", color: "#F59E0B" }}
                 onMouseEnter={(e) => {
                   e.target.style.backgroundColor = "#F59E0B";
@@ -492,7 +511,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                   e.target.style.color = "#F59E0B";
                 }}
               >
-                <FaStopCircle className="h-5 w-5 ml-2" />
+                <FaStopCircle className="h-4 w-4 ml-1.5" />
                 إغلاق الوردية
               </button>
             )}
