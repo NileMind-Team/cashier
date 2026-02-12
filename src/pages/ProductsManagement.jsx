@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
+import axiosInstance from "../api/axiosInstance";
 
 export default function ProductsManagement() {
   const navigate = useNavigate();
@@ -13,171 +14,87 @@ export default function ProductsManagement() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-
-  const initialMainCategories = [
-    { id: 1, name: "المشروبات", color: "#3B82F6", isActive: true },
-    { id: 2, name: "الوجبات", color: "#10B981", isActive: true },
-    { id: 3, name: "الحلويات", color: "#8B5CF6", isActive: true },
-    { id: 4, name: "المقبلات", color: "#F59E0B", isActive: true },
-    { id: 5, name: "المشروبات الغازية", color: "#EF4444", isActive: true },
-  ];
-
-  const initialSubCategories = [
-    { id: 1, name: "المشروبات الساخنة", mainCategoryId: 1, isActive: true },
-    { id: 2, name: "المشروبات الباردة", mainCategoryId: 1, isActive: true },
-    { id: 3, name: "العصائر", mainCategoryId: 1, isActive: true },
-    { id: 4, name: "ساندويتشات", mainCategoryId: 2, isActive: true },
-    { id: 5, name: "وجبات رئيسية", mainCategoryId: 2, isActive: true },
-    { id: 6, name: "سلطات", mainCategoryId: 2, isActive: true },
-    { id: 7, name: "كيك", mainCategoryId: 3, isActive: true },
-    { id: 8, name: "حلويات شرقية", mainCategoryId: 3, isActive: true },
-    { id: 9, name: "آيس كريم", mainCategoryId: 3, isActive: true },
-    { id: 10, name: "مقبلات ساخنة", mainCategoryId: 4, isActive: true },
-    { id: 11, name: "مقبلات باردة", mainCategoryId: 4, isActive: true },
-    { id: 12, name: "مشروبات غازية", mainCategoryId: 5, isActive: true },
-    { id: 13, name: "مياه معبأة", mainCategoryId: 5, isActive: true },
-  ];
-
-  const initialProducts = [
-    {
-      id: 1,
-      name: "قهوة تركية",
-      price: 15,
-      image:
-        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=150&h=150&fit=crop&crop=center",
-      mainCategoryId: 1,
-      subCategoryId: 1,
-      isActive: true,
-    },
-    {
-      id: 2,
-      name: "شاي أخضر",
-      price: 10,
-      image:
-        "https://images.unsplash.com/photo-1561047029-3000c68339ca?w=150&h=150&fit=crop&crop=center",
-      mainCategoryId: 1,
-      subCategoryId: 1,
-      isActive: true,
-    },
-    {
-      id: 3,
-      name: "عصير برتقال",
-      price: 12,
-      image:
-        "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=150&h=150&fit=crop&crop=center",
-      mainCategoryId: 1,
-      subCategoryId: 3,
-      isActive: true,
-    },
-    {
-      id: 4,
-      name: "كابتشينو",
-      price: 18,
-      image:
-        "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=150&h=150&fit=crop&crop=center",
-      mainCategoryId: 1,
-      subCategoryId: 1,
-      isActive: true,
-    },
-    {
-      id: 5,
-      name: "إسبريسو",
-      price: 12,
-      image:
-        "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=150&h=150&fit=crop&crop=center",
-      mainCategoryId: 1,
-      subCategoryId: 1,
-      isActive: true,
-    },
-    {
-      id: 6,
-      name: "ساندويتش جبنة",
-      price: 25,
-      image:
-        "https://images.unsplash.com/photo-1481070555726-e2fe8357725c?w=150&h=150&fit=crop&crop=center",
-      mainCategoryId: 2,
-      subCategoryId: 4,
-      isActive: true,
-    },
-    {
-      id: 7,
-      name: "ساندويتش دجاج",
-      price: 30,
-      image:
-        "https://images.unsplash.com/photo-1606755962773-d324e0a13086?w=150&h=150&fit=crop&crop=center",
-      mainCategoryId: 2,
-      subCategoryId: 4,
-      isActive: true,
-    },
-    {
-      id: 8,
-      name: "ساندويتش لحم",
-      price: 35,
-      image:
-        "https://images.unsplash.com/photo-1550317138-10000687a72b?w=150&h=150&fit=crop&crop=center",
-      mainCategoryId: 2,
-      subCategoryId: 4,
-      isActive: true,
-    },
-    {
-      id: 9,
-      name: "كرواسون",
-      price: 8,
-      image:
-        "https://images.unsplash.com/photo-1550317138-10000687a72b?w=150&h=150&fit=crop&crop=center",
-      mainCategoryId: 3,
-      subCategoryId: 7,
-      isActive: true,
-    },
-    {
-      id: 10,
-      name: "دونات",
-      price: 10,
-      image:
-        "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=150&h=150&fit=crop&crop=center",
-      mainCategoryId: 3,
-      subCategoryId: 7,
-      isActive: true,
-    },
-    {
-      id: 11,
-      name: "تشيز كيك",
-      price: 20,
-      image:
-        "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=150&h=150&fit=crop&crop=center",
-      mainCategoryId: 3,
-      subCategoryId: 7,
-      isActive: false,
-    },
-    {
-      id: 12,
-      name: "كيك شوكولاتة",
-      price: 22,
-      image:
-        "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=150&h=150&fit=crop&crop=center",
-      mainCategoryId: 3,
-      subCategoryId: 7,
-      isActive: true,
-    },
-  ];
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [selectedMainCategoryId, setSelectedMainCategoryId] = useState("");
 
   const [productForm, setProductForm] = useState({
     name: "",
     price: "",
-    image: "",
-    mainCategoryId: "",
+    imgUrl: "",
     subCategoryId: "",
-    isActive: true,
+    isAvailable: true,
+    valueAddedTax: 1,
+    isVatIncluded: true,
+    discountValue: null,
+    isPercentage: true,
   });
 
-  useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setProducts(initialProducts);
-      setMainCategories(initialMainCategories);
-      setSubCategories(initialSubCategories);
+  // Fetch all products
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get("/api/Items/GetAllItems");
+
+      if (response.status === 200 && Array.isArray(response.data)) {
+        setProducts(response.data);
+      } else {
+        setProducts([]);
+        toast.info("لا يوجد منتجات في النظام");
+      }
+    } catch (error) {
+      console.error("خطأ في جلب المنتجات:", error);
+      if (error.response?.status === 404) {
+        setProducts([]);
+        toast.info("لا يوجد منتجات في النظام");
+      } else {
+        toast.error("حدث خطأ في جلب المنتجات");
+      }
+    } finally {
       setLoading(false);
-    }, 500);
+    }
+  };
+
+  // Fetch main categories
+  const fetchMainCategories = async () => {
+    try {
+      const response = await axiosInstance.get(
+        "/api/MainCategories/GetAllMainCategories",
+      );
+      if (response.status === 200 && Array.isArray(response.data)) {
+        setMainCategories(response.data);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب الفئات الرئيسية:", error);
+    }
+  };
+
+  // Fetch sub categories
+  const fetchSubCategories = async () => {
+    try {
+      const response = await axiosInstance.get(
+        "/api/SubCategories/GetAllSubCategories",
+      );
+      if (response.status === 200 && Array.isArray(response.data)) {
+        setSubCategories(response.data);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب الفئات الفرعية:", error);
+    }
+  };
+
+  // Fetch all initial data
+  const fetchAllData = async () => {
+    setCategoriesLoading(true);
+    await Promise.all([
+      fetchProducts(),
+      fetchMainCategories(),
+      fetchSubCategories(),
+    ]);
+    setCategoriesLoading(false);
+  };
+
+  useEffect(() => {
+    fetchAllData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -188,27 +105,39 @@ export default function ProductsManagement() {
     }
     setShowProductModal(true);
     setEditingProduct(null);
+    setSelectedMainCategoryId("");
     setProductForm({
       name: "",
       price: "",
-      image: "",
-      mainCategoryId: mainCategories[0].id,
-      subCategoryId:
-        getSubCategoriesForMainCategory(mainCategories[0].id)[0]?.id || "",
-      isActive: true,
+      imgUrl: "",
+      subCategoryId: "",
+      isAvailable: true,
+      valueAddedTax: 1,
+      isVatIncluded: true,
+      discountValue: null,
+      isPercentage: true,
     });
   };
 
   const handleEditProduct = (product) => {
     setEditingProduct(product);
     setShowProductModal(true);
+
+    const subCategory = subCategories.find(
+      (sub) => sub.id === product.subCategoryId,
+    );
+    setSelectedMainCategoryId(subCategory?.mainCategoryId?.toString() || "");
+
     setProductForm({
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      mainCategoryId: product.mainCategoryId,
-      subCategoryId: product.subCategoryId,
-      isActive: product.isActive,
+      name: product.name || "",
+      price: product.price || "",
+      imgUrl: product.imgUrl || "",
+      subCategoryId: product.subCategoryId || "",
+      isAvailable: product.isAvailable ?? true,
+      valueAddedTax: product.valueAddedTax || 1,
+      isVatIncluded: product.isVatIncluded ?? true,
+      discountValue: product.discountValue || null,
+      isPercentage: product.isPercentage ?? true,
     });
   };
 
@@ -216,28 +145,41 @@ export default function ProductsManagement() {
     const { name, value, type, checked } = e.target;
     setProductForm((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : name === "price" ||
+              name === "valueAddedTax" ||
+              name === "subCategoryId"
+            ? parseFloat(value) || ""
+            : value,
     }));
   };
 
-  const handleMainCategoryChange = (mainCategoryId) => {
-    const subCats = getSubCategoriesForMainCategory(parseInt(mainCategoryId));
+  const handleMainCategoryChange = (e) => {
+    const mainCategoryId = e.target.value;
+    setSelectedMainCategoryId(mainCategoryId);
     setProductForm((prev) => ({
       ...prev,
-      mainCategoryId: parseInt(mainCategoryId),
-      subCategoryId: subCats.length > 0 ? subCats[0].id : "",
+      subCategoryId: "",
     }));
   };
 
-  const getSubCategoriesForMainCategory = (mainCategoryId) => {
+  const getFilteredSubCategories = () => {
+    if (!selectedMainCategoryId) return [];
     return subCategories.filter(
-      (sub) => sub.mainCategoryId === mainCategoryId && sub.isActive,
+      (sub) =>
+        sub.mainCategoryId === parseInt(selectedMainCategoryId) && sub.isActive,
     );
   };
 
-  const getMainCategoryName = (mainCategoryId) => {
-    const category = mainCategories.find((cat) => cat.id === mainCategoryId);
-    return category ? category.name : "غير معروف";
+  const getMainCategoryName = (subCategoryId) => {
+    const subCategory = subCategories.find((sub) => sub.id === subCategoryId);
+    if (!subCategory) return "غير معروف";
+    const mainCategory = mainCategories.find(
+      (cat) => cat.id === subCategory.mainCategoryId,
+    );
+    return mainCategory ? mainCategory.name : "غير معروف";
   };
 
   const getSubCategoryName = (subCategoryId) => {
@@ -245,7 +187,7 @@ export default function ProductsManagement() {
     return subCategory ? subCategory.name : "غير معروف";
   };
 
-  const handleSubmitProduct = (e) => {
+  const handleSubmitProduct = async (e) => {
     e.preventDefault();
 
     if (!productForm.name.trim()) {
@@ -258,7 +200,7 @@ export default function ProductsManagement() {
       return;
     }
 
-    if (!productForm.mainCategoryId) {
+    if (!selectedMainCategoryId) {
       toast.error("يرجى اختيار الفئة الرئيسية");
       return;
     }
@@ -268,40 +210,73 @@ export default function ProductsManagement() {
       return;
     }
 
-    if (editingProduct) {
-      const updatedProducts = products.map((prod) =>
-        prod.id === editingProduct.id
-          ? {
-              ...prod,
-              name: productForm.name,
-              price: parseFloat(productForm.price),
-              image: productForm.image,
-              mainCategoryId: parseInt(productForm.mainCategoryId),
-              subCategoryId: parseInt(productForm.subCategoryId),
-              isActive: productForm.isActive,
-            }
-          : prod,
-      );
-      setProducts(updatedProducts);
-      toast.success("تم تحديث المنتج بنجاح");
-    } else {
-      const newProduct = {
-        id: products.length + 1,
+    try {
+      const productData = {
         name: productForm.name,
+        imgUrl: productForm.imgUrl || "",
         price: parseFloat(productForm.price),
-        image:
-          productForm.image ||
-          "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop&crop=center",
-        mainCategoryId: parseInt(productForm.mainCategoryId),
+        discountValue: productForm.discountValue,
+        isPercentage: productForm.isPercentage,
+        stockQuantity: null,
+        isAvailable: productForm.isAvailable,
+        valueAddedTax: parseFloat(productForm.valueAddedTax) || 1,
+        isVatIncluded: productForm.isVatIncluded,
         subCategoryId: parseInt(productForm.subCategoryId),
-        isActive: productForm.isActive,
       };
-      setProducts([...products, newProduct]);
-      toast.success("تم إضافة المنتج بنجاح");
-    }
 
-    setShowProductModal(false);
-    setEditingProduct(null);
+      if (editingProduct) {
+        const response = await axiosInstance.put(
+          `/api/Items/Update/${editingProduct.id}`,
+          productData,
+        );
+
+        if (response.status === 200) {
+          toast.success("تم تحديث المنتج بنجاح");
+          await fetchProducts();
+          setShowProductModal(false);
+          setEditingProduct(null);
+        } else {
+          toast.error("فشل في تحديث المنتج");
+        }
+      } else {
+        const response = await axiosInstance.post(
+          "/api/Items/Add",
+          productData,
+        );
+
+        if (response.status === 201 || response.status === 200) {
+          toast.success("تم إضافة المنتج بنجاح");
+          await fetchProducts();
+          setShowProductModal(false);
+          setEditingProduct(null);
+        } else {
+          toast.error("فشل في إضافة المنتج");
+        }
+      }
+
+      setProductForm({
+        name: "",
+        price: "",
+        imgUrl: "",
+        subCategoryId: "",
+        isAvailable: true,
+        valueAddedTax: 1,
+        isVatIncluded: true,
+        discountValue: null,
+        isPercentage: true,
+      });
+      setSelectedMainCategoryId("");
+    } catch (error) {
+      console.error("خطأ في حفظ المنتج:", error);
+      if (error.response?.status === 201 || error.response?.status === 200) {
+        toast.success("تم حفظ المنتج بنجاح");
+        await fetchProducts();
+        setShowProductModal(false);
+        setEditingProduct(null);
+      } else {
+        toast.error("حدث خطأ في حفظ المنتج");
+      }
+    }
   };
 
   const handleDeleteProduct = async (productId) => {
@@ -318,18 +293,48 @@ export default function ProductsManagement() {
     });
 
     if (result.isConfirmed) {
-      setProducts(products.filter((prod) => prod.id !== productId));
-      toast.success("تم حذف المنتج بنجاح");
+      try {
+        const response = await axiosInstance.delete(
+          `/api/Items/Delete/${productId}`,
+        );
+
+        if (response.status === 204 || response.status === 200) {
+          toast.success("تم حذف المنتج بنجاح");
+          await fetchProducts();
+        } else {
+          toast.error("فشل في حذف المنتج");
+        }
+      } catch (error) {
+        console.error("خطأ في حذف المنتج:", error);
+        toast.error("حدث خطأ في حذف المنتج");
+      }
     }
   };
 
-  const handleToggleProductStatus = (productId) => {
-    setProducts(
-      products.map((prod) =>
-        prod.id === productId ? { ...prod, isActive: !prod.isActive } : prod,
-      ),
-    );
-    toast.success("تم تغيير حالة المنتج بنجاح");
+  const handleToggleProductStatus = async (productId) => {
+    const product = products.find((p) => p.id === productId);
+
+    try {
+      const response = await axiosInstance.put(
+        `/api/Items/Update/${productId}`,
+        {
+          ...product,
+          isAvailable: !product.isAvailable,
+        },
+      );
+
+      if (response.status === 200) {
+        toast.success(
+          `تم ${product.isAvailable ? "تعطيل" : "تفعيل"} المنتج بنجاح`,
+        );
+        await fetchProducts();
+      } else {
+        toast.error("فشل في تغيير حالة المنتج");
+      }
+    } catch (error) {
+      console.error("خطأ في تغيير حالة المنتج:", error);
+      toast.error("حدث خطأ في تغيير حالة المنتج");
+    }
   };
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -345,13 +350,13 @@ export default function ProductsManagement() {
     return new Intl.NumberFormat("ar-EG", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(amount);
+    }).format(amount || 0);
   };
 
   const stats = {
     totalProducts: products.length,
-    activeProducts: products.filter((p) => p.isActive).length,
-    inactiveProducts: products.filter((p) => !p.isActive).length,
+    activeProducts: products.filter((p) => p.isAvailable).length,
+    inactiveProducts: products.filter((p) => !p.isAvailable).length,
   };
 
   return (
@@ -405,7 +410,7 @@ export default function ProductsManagement() {
       </div>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
             <div className="flex items-center justify-between">
               <div>
@@ -431,9 +436,12 @@ export default function ProductsManagement() {
                   {stats.activeProducts}
                 </p>
                 <p className="text-xs text-green-600 mt-1">
-                  {((stats.activeProducts / stats.totalProducts) * 100).toFixed(
-                    1,
-                  )}
+                  {stats.totalProducts > 0
+                    ? (
+                        (stats.activeProducts / stats.totalProducts) *
+                        100
+                      ).toFixed(1)
+                    : 0}
                   % من إجمالي المنتجات
                 </p>
               </div>
@@ -449,49 +457,13 @@ export default function ProductsManagement() {
                 <p className="text-sm text-purple-800">القيمة الإجمالية</p>
                 <p className="text-2xl font-bold text-purple-900 mt-1">
                   {formatCurrency(
-                    products.reduce((sum, prod) => sum + prod.price, 0),
+                    products.reduce((sum, prod) => sum + (prod.price || 0), 0),
                   )}{" "}
                   ج.م
-                </p>
-                <p className="text-xs text-purple-600 mt-1">
-                  {stats.totalProducts > 0
-                    ? formatCurrency(
-                        products.reduce((sum, prod) => sum + prod.price, 0) /
-                          stats.totalProducts,
-                      )
-                    : 0}{" "}
-                  ج.م/منتج
                 </p>
               </div>
               <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
                 <span className="text-purple-700 font-bold">💰</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-amber-800">متوسط السعر</p>
-                <p className="text-2xl font-bold text-amber-900 mt-1">
-                  {stats.totalProducts > 0
-                    ? formatCurrency(
-                        products.reduce((sum, prod) => sum + prod.price, 0) /
-                          stats.totalProducts,
-                      )
-                    : "0.00"}{" "}
-                  ج.م
-                </p>
-                <p className="text-xs text-amber-600 mt-1">
-                  أعلى سعر:{" "}
-                  {stats.totalProducts > 0
-                    ? formatCurrency(Math.max(...products.map((p) => p.price)))
-                    : "0.00"}{" "}
-                  ج.م
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
-                <span className="text-amber-700 font-bold">📊</span>
               </div>
             </div>
           </div>
@@ -532,7 +504,7 @@ export default function ProductsManagement() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          {loading ? (
+          {loading || categoriesLoading ? (
             <div className="p-8 flex flex-col items-center justify-center">
               <div className="w-16 h-16 border-t-4 border-blue-600 border-solid rounded-full animate-spin mb-4"></div>
               <p className="text-gray-600">جاري تحميل المنتجات...</p>
@@ -592,161 +564,152 @@ export default function ProductsManagement() {
                         </td>
                       </tr>
                     ) : (
-                      currentProducts.map((product) => {
-                        const mainCategory = mainCategories.find(
-                          (cat) => cat.id === product.mainCategoryId,
-                        );
-
-                        return (
-                          <tr
-                            key={product.id}
-                            className="hover:bg-gray-50 transition-colors border-b border-gray-100"
-                          >
-                            <td className="py-4 px-4 text-right">
-                              <div className="flex items-center">
-                                <div className="w-16 h-16 rounded-lg overflow-hidden ml-3 flex-shrink-0 border border-gray-300">
-                                  <img
-                                    src={product.image}
-                                    alt={product.name}
-                                    className="w-full h-full object-cover"
+                      currentProducts.map((product) => (
+                        <tr
+                          key={product.id}
+                          className="hover:bg-gray-50 transition-colors border-b border-gray-100"
+                        >
+                          <td className="py-4 px-4 text-right">
+                            <div className="flex items-center">
+                              <div className="w-16 h-16 rounded-lg overflow-hidden ml-3 flex-shrink-0 border border-gray-300">
+                                <img
+                                  src={
+                                    product.imgUrl ||
+                                    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop&crop=center"
+                                  }
+                                  alt={product.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.target.src =
+                                      "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop&crop=center";
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <div className="font-bold text-gray-900">
+                                  {product.name}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium">
+                                {getMainCategoryName(product.subCategoryId)}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {getSubCategoryName(product.subCategoryId)}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="text-sm">
+                              <span className="font-bold text-green-700">
+                                {formatCurrency(product.price)} ج.م
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="flex items-center">
+                              <div
+                                className={`w-3 h-3 rounded-full ml-2 ${
+                                  product.isAvailable
+                                    ? "bg-green-500 animate-pulse"
+                                    : "bg-red-500"
+                                }`}
+                              ></div>
+                              <span
+                                className={`font-medium ${
+                                  product.isAvailable
+                                    ? "text-green-700"
+                                    : "text-red-700"
+                                }`}
+                              >
+                                {product.isAvailable ? "نشط" : "معطل"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="flex flex-col space-y-2">
+                              <button
+                                onClick={() => handleEditProduct(product)}
+                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-blue-200"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-3 w-3 ml-1"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                                   />
-                                </div>
-                                <div>
-                                  <div className="font-bold text-gray-900">
-                                    {product.name}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="py-4 px-4 text-right">
-                              <div className="space-y-1">
-                                <div className="text-sm font-medium">
-                                  {getMainCategoryName(product.mainCategoryId)}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {getSubCategoryName(product.subCategoryId)}
-                                </div>
-                                {mainCategory && (
-                                  <div
-                                    className="w-4 h-4 rounded-full ml-2 inline-block"
-                                    style={{
-                                      backgroundColor: mainCategory.color,
-                                    }}
-                                  ></div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-4 px-4 text-right">
-                              <div className="text-sm">
-                                <span className="font-bold text-green-700">
-                                  {formatCurrency(product.price)} ج.م
-                                </span>
-                              </div>
-                            </td>
-                            <td className="py-4 px-4 text-right">
-                              <div className="flex items-center">
-                                <div
-                                  className={`w-3 h-3 rounded-full ml-2 ${
-                                    product.isActive
-                                      ? "bg-green-500 animate-pulse"
-                                      : "bg-red-500"
-                                  }`}
-                                ></div>
-                                <span
-                                  className={`font-medium ${
-                                    product.isActive
-                                      ? "text-green-700"
-                                      : "text-red-700"
-                                  }`}
+                                </svg>
+                                تعديل
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleToggleProductStatus(product.id)
+                                }
+                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border ${
+                                  product.isAvailable
+                                    ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
+                                    : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                                }`}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-3 w-3 ml-1"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
                                 >
-                                  {product.isActive ? "نشط" : "معطل"}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="py-4 px-4 text-right">
-                              <div className="flex flex-col space-y-2">
-                                <button
-                                  onClick={() => handleEditProduct(product)}
-                                  className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-blue-200"
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-3 w-3 ml-1"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
+                                  {product.isAvailable ? (
                                     <path
                                       strokeLinecap="round"
                                       strokeLinejoin="round"
                                       strokeWidth={2}
-                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
                                     />
-                                  </svg>
-                                  تعديل
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    handleToggleProductStatus(product.id)
-                                  }
-                                  className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border ${
-                                    product.isActive
-                                      ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
-                                      : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                                  }`}
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-3 w-3 ml-1"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
-                                    {product.isActive ? (
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                      />
-                                    ) : (
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                                      />
-                                    )}
-                                  </svg>
-                                  {product.isActive ? "تعطيل" : "تفعيل"}
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    handleDeleteProduct(product.id)
-                                  }
-                                  className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200"
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-3 w-3 ml-1"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
+                                  ) : (
                                     <path
                                       strokeLinecap="round"
                                       strokeLinejoin="round"
                                       strokeWidth={2}
-                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                      d="M13 10V3L4 14h7v7l9-11h-7z"
                                     />
-                                  </svg>
-                                  حذف
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
+                                  )}
+                                </svg>
+                                {product.isAvailable ? "تعطيل" : "تفعيل"}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProduct(product.id)}
+                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-3 w-3 ml-1"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                                حذف
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
                     )}
                   </tbody>
                 </table>
@@ -856,54 +819,57 @@ export default function ProductsManagement() {
                       required
                     />
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      رابط الصورة
-                    </label>
-                    <input
-                      type="url"
-                      name="image"
-                      value={productForm.image}
-                      onChange={handleProductFormChange}
-                      placeholder="https://example.com/image.jpg"
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                    />
-                    {productForm.image && (
-                      <div className="mt-2">
-                        <div className="text-xs text-gray-500 mb-1">
-                          معاينة الصورة:
-                        </div>
-                        <img
-                          src={productForm.image}
-                          alt="معاينة"
-                          className="w-20 h-20 rounded-lg object-cover border border-gray-300"
-                          onError={(e) => {
-                            e.target.src =
-                              "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop&crop=center";
-                          }}
-                        />
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    رابط الصورة
+                  </label>
+                  <input
+                    type="url"
+                    name="imgUrl"
+                    value={productForm.imgUrl}
+                    onChange={handleProductFormChange}
+                    placeholder="https://example.com/image.jpg"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                  {productForm.imgUrl && (
+                    <div className="mt-2">
+                      <div className="text-xs text-gray-500 mb-1">
+                        معاينة الصورة:
                       </div>
-                    )}
-                  </div>
+                      <img
+                        src={productForm.imgUrl}
+                        alt="معاينة"
+                        className="w-20 h-20 rounded-lg object-cover border border-gray-300"
+                        onError={(e) => {
+                          e.target.src =
+                            "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop&crop=center";
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       الفئة الرئيسية *
                     </label>
                     <select
-                      name="mainCategoryId"
-                      value={productForm.mainCategoryId}
-                      onChange={(e) => handleMainCategoryChange(e.target.value)}
+                      value={selectedMainCategoryId}
+                      onChange={handleMainCategoryChange}
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                       required
                     >
                       <option value="">اختر الفئة الرئيسية</option>
-                      {mainCategories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
+                      {mainCategories
+                        .filter((cat) => cat.isActive)
+                        .map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
                     </select>
                   </div>
 
@@ -917,32 +883,98 @@ export default function ProductsManagement() {
                       onChange={handleProductFormChange}
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                       required
+                      disabled={!selectedMainCategoryId}
                     >
-                      <option value="">اختر الفئة الفرعية</option>
-                      {getSubCategoriesForMainCategory(
-                        parseInt(productForm.mainCategoryId),
-                      ).map((subCategory) => (
+                      <option value="">
+                        {selectedMainCategoryId
+                          ? "اختر الفئة الفرعية"
+                          : "الرجاء اختيار الفئة الرئيسية أولاً"}
+                      </option>
+                      {getFilteredSubCategories().map((subCategory) => (
                         <option key={subCategory.id} value={subCategory.id}>
                           {subCategory.name}
                         </option>
                       ))}
                     </select>
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ضريبة القيمة المضافة (%)
+                    </label>
+                    <input
+                      type="number"
+                      name="valueAddedTax"
+                      value={productForm.valueAddedTax}
+                      onChange={handleProductFormChange}
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      قيمة الخصم
+                    </label>
+                    <input
+                      type="number"
+                      name="discountValue"
+                      value={productForm.discountValue || ""}
+                      onChange={handleProductFormChange}
+                      min="0"
+                      step="0.01"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                  </div>
                 </div>
 
-                <div className="mb-6">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="isActive"
-                      checked={productForm.isActive}
-                      onChange={handleProductFormChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="mr-2 text-sm font-medium text-gray-700">
-                      المنتج نشط (سيظهر في النظام)
-                    </span>
-                  </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="isAvailable"
+                        checked={productForm.isAvailable}
+                        onChange={handleProductFormChange}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="mr-2 text-sm font-medium text-gray-700">
+                        المنتج متاح
+                      </span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="isVatIncluded"
+                        checked={productForm.isVatIncluded}
+                        onChange={handleProductFormChange}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="mr-2 text-sm font-medium text-gray-700">
+                        الضريبة مضمنة في السعر
+                      </span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="isPercentage"
+                        checked={productForm.isPercentage}
+                        onChange={handleProductFormChange}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="mr-2 text-sm font-medium text-gray-700">
+                        خصم نسبة مئوية
+                      </span>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t">
