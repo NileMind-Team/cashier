@@ -14,19 +14,20 @@ export default function CategoriesManagement() {
   const [editingMainCategory, setEditingMainCategory] = useState(null);
   const [editingSubCategory, setEditingSubCategory] = useState(null);
   const [selectedMainCategory, setSelectedMainCategory] = useState(null);
+  const [focusedField, setFocusedField] = useState(null);
   const hasFetched = useRef(false);
 
   const [mainCategoryForm, setMainCategoryForm] = useState({
     name: "",
     isActive: true,
-    percentageDiscount: 0,
+    percentageDiscount: null,
   });
 
   const [subCategoryForm, setSubCategoryForm] = useState({
     name: "",
     mainCategoryId: "",
     isActive: true,
-    percentageDiscount: 0,
+    percentageDiscount: null,
     printIP: "",
   });
 
@@ -88,7 +89,7 @@ export default function CategoriesManagement() {
       fetchAllData();
       hasFetched.current = true;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAddMainCategory = () => {
@@ -97,8 +98,9 @@ export default function CategoriesManagement() {
     setMainCategoryForm({
       name: "",
       isActive: true,
-      percentageDiscount: 0,
+      percentageDiscount: null,
     });
+    setFocusedField(null);
   };
 
   const handleEditMainCategory = (category) => {
@@ -107,8 +109,9 @@ export default function CategoriesManagement() {
     setMainCategoryForm({
       name: category.name,
       isActive: category.isActive,
-      percentageDiscount: category.percentageDiscount || 0,
+      percentageDiscount: category.percentageDiscount || null,
     });
+    setFocusedField(null);
   };
 
   const handleAddSubCategory = () => {
@@ -122,9 +125,10 @@ export default function CategoriesManagement() {
       name: "",
       mainCategoryId: selectedMainCategory?.id || mainCategories[0]?.id || "",
       isActive: true,
-      percentageDiscount: 0,
+      percentageDiscount: null,
       printIP: "",
     });
+    setFocusedField(null);
   };
 
   const handleEditSubCategory = (subCategory) => {
@@ -134,9 +138,10 @@ export default function CategoriesManagement() {
       name: subCategory.name,
       mainCategoryId: subCategory.mainCategoryId,
       isActive: subCategory.isActive,
-      percentageDiscount: subCategory.percentageDiscount || 0,
+      percentageDiscount: subCategory.percentageDiscount || null,
       printIP: subCategory.printIP || "",
     });
+    setFocusedField(null);
   };
 
   const handleMainCategoryFormChange = (e) => {
@@ -147,7 +152,7 @@ export default function CategoriesManagement() {
         type === "checkbox"
           ? checked
           : name === "percentageDiscount"
-            ? parseFloat(value) || 0
+            ? value
             : value,
     }));
   };
@@ -160,9 +165,17 @@ export default function CategoriesManagement() {
         type === "checkbox"
           ? checked
           : name === "percentageDiscount" || name === "mainCategoryId"
-            ? parseInt(value) || 0
+            ? value
             : value,
     }));
+  };
+
+  const handleFocus = (fieldName) => {
+    setFocusedField(fieldName);
+  };
+
+  const handleBlur = () => {
+    setFocusedField(null);
   };
 
   const handleSubmitMainCategory = async (e) => {
@@ -196,7 +209,8 @@ export default function CategoriesManagement() {
           name: mainCategoryForm.name,
           iconName: null,
           isActive: mainCategoryForm.isActive,
-          percentageDiscount: mainCategoryForm.percentageDiscount,
+          percentageDiscount:
+            parseFloat(mainCategoryForm.percentageDiscount) || null,
         });
 
         if (response.status === 201) {
@@ -255,9 +269,10 @@ export default function CategoriesManagement() {
       } else {
         const response = await axiosInstance.post("/api/SubCategories/Add", {
           name: subCategoryForm.name,
-          mainCategoryId: subCategoryForm.mainCategoryId,
+          mainCategoryId: parseInt(subCategoryForm.mainCategoryId),
           isActive: subCategoryForm.isActive,
-          percentageDiscount: subCategoryForm.percentageDiscount,
+          percentageDiscount:
+            parseFloat(subCategoryForm.percentageDiscount) || null,
           printIP: subCategoryForm.printIP || "",
         });
 
@@ -488,6 +503,7 @@ export default function CategoriesManagement() {
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
           <div className="bg-white rounded-2xl shadow-lg p-5">
             <div className="flex justify-between items-center mb-6">
               <div>
@@ -500,7 +516,7 @@ export default function CategoriesManagement() {
               </div>
               <button
                 onClick={handleAddMainCategory}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-colors flex items-center"
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center shadow-md"
                 style={{ backgroundColor: "#193F94" }}
               >
                 <svg
@@ -554,16 +570,16 @@ export default function CategoriesManagement() {
                 {mainCategories.map((category) => (
                   <div
                     key={category.id}
-                    className={`p-4 rounded-xl border transition-all ${
+                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
                       selectedMainCategory?.id === category.id
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 shadow-md"
+                        : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
                     }`}
                     onClick={() => setSelectedMainCategory(category)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center ml-3 bg-blue-100 text-blue-700 font-bold text-lg">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center ml-3 bg-gradient-to-br from-blue-400 to-blue-600 text-white font-bold text-lg shadow-md">
                           {category.name.charAt(0)}
                         </div>
                         <div>
@@ -572,7 +588,7 @@ export default function CategoriesManagement() {
                           </div>
                           <div className="text-xs text-gray-500">
                             {category.percentageDiscount > 0 && (
-                              <span className="text-green-600">
+                              <span className="text-green-600 font-medium ml-1">
                                 خصم {category.percentageDiscount}% •
                               </span>
                             )}{" "}
@@ -586,13 +602,18 @@ export default function CategoriesManagement() {
                       </div>
                       <div className="flex items-center space-x-2 rtl:space-x-reverse">
                         <div
-                          className={`px-2 py-1 rounded text-xs ${
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
                             category.isActive
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
+                              ? "bg-green-100 text-green-800 border border-green-200"
+                              : "bg-red-100 text-red-800 border border-red-200"
                           }`}
                         >
-                          {category.isActive ? "نشط" : "معطل"}
+                          <span className="flex items-center">
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ml-1 ${category.isActive ? "bg-green-500" : "bg-red-500"}`}
+                            ></span>
+                            {category.isActive ? "نشط" : "معطل"}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -696,11 +717,11 @@ export default function CategoriesManagement() {
                   إضافة وتعديل الفئات الفرعية داخل الفئات الرئيسية
                 </p>
                 {selectedMainCategory && (
-                  <div className="mt-2 flex items-center">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center ml-2 bg-blue-100 text-blue-700 text-sm font-bold">
+                  <div className="mt-2 flex items-center bg-gradient-to-l from-blue-50 to-transparent p-2 rounded-lg">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center ml-2 bg-gradient-to-br from-blue-400 to-blue-600 text-white text-sm font-bold shadow-md">
                       {selectedMainCategory.name.charAt(0)}
                     </div>
-                    <span className="text-sm text-gray-700">
+                    <span className="text-sm font-medium text-gray-700">
                       {selectedMainCategory.name}
                     </span>
                   </div>
@@ -708,7 +729,7 @@ export default function CategoriesManagement() {
               </div>
               <button
                 onClick={handleAddSubCategory}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition-colors flex items-center"
+                className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center shadow-md"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -773,14 +794,12 @@ export default function CategoriesManagement() {
                         return (
                           <div
                             key={subCategory.id}
-                            className="p-4 rounded-xl border border-gray-200 hover:border-gray-300 transition-all"
+                            className="p-4 rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center">
-                                <div className="w-10 h-10 rounded-lg flex items-center justify-center ml-3 bg-gray-100 border-l-4 border-blue-500">
-                                  <span className="text-gray-700 font-bold">
-                                    {subCategory.name.charAt(0)}
-                                  </span>
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center ml-3 bg-gradient-to-br from-purple-400 to-purple-600 text-white font-bold text-lg shadow-md">
+                                  {subCategory.name.charAt(0)}
                                 </div>
                                 <div>
                                   <div className="font-bold text-gray-900">
@@ -788,17 +807,17 @@ export default function CategoriesManagement() {
                                   </div>
                                   <div className="text-xs text-gray-500">
                                     تابعة لـ{" "}
-                                    {mainCat?.name ||
-                                      subCategory.mainCategoryName}
+                                    <span className="font-medium text-blue-600">
+                                      {mainCat?.name ||
+                                        subCategory.mainCategoryName}
+                                    </span>
                                     {subCategory.printIP && (
-                                      <span className="text-blue-600">
-                                        {" "}
+                                      <span className="text-purple-600 mr-1">
                                         • IP: {subCategory.printIP}
                                       </span>
                                     )}
                                     {subCategory.percentageDiscount > 0 && (
-                                      <span className="text-green-600">
-                                        {" "}
+                                      <span className="text-green-600 mr-1">
                                         • خصم {subCategory.percentageDiscount}%
                                       </span>
                                     )}
@@ -807,13 +826,18 @@ export default function CategoriesManagement() {
                               </div>
                               <div className="flex items-center space-x-2 rtl:space-x-reverse">
                                 <div
-                                  className={`px-2 py-1 rounded text-xs ${
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
                                     subCategory.isActive
-                                      ? "bg-green-100 text-green-800"
-                                      : "bg-red-100 text-red-800"
+                                      ? "bg-green-100 text-green-800 border border-green-200"
+                                      : "bg-red-100 text-red-800 border border-red-200"
                                   }`}
                                 >
-                                  {subCategory.isActive ? "نشط" : "معطل"}
+                                  <span className="flex items-center">
+                                    <span
+                                      className={`w-1.5 h-1.5 rounded-full ml-1 ${subCategory.isActive ? "bg-green-500" : "bg-red-500"}`}
+                                    ></span>
+                                    {subCategory.isActive ? "نشط" : "معطل"}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -938,80 +962,178 @@ export default function CategoriesManagement() {
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold" style={{ color: "#193F94" }}>
-                  {editingMainCategory
-                    ? "تعديل فئة رئيسية"
-                    : "إضافة فئة رئيسية"}
-                </h3>
+                <div>
+                  <h3
+                    className="text-2xl font-bold"
+                    style={{ color: "#193F94" }}
+                  >
+                    {editingMainCategory
+                      ? "تعديل فئة رئيسية"
+                      : "إضافة فئة رئيسية"}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {editingMainCategory
+                      ? "قم بتعديل بيانات الفئة الرئيسية"
+                      : "أدخل بيانات الفئة الرئيسية الجديدة"}
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowMainCategoryModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
                 >
                   ×
                 </button>
               </div>
 
               <form onSubmit={handleSubmitMainCategory}>
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      اسم الفئة الرئيسية *
-                    </label>
+                <div className="mb-4">
+                  <div className="relative">
                     <input
                       type="text"
                       name="name"
                       value={mainCategoryForm.name}
                       onChange={handleMainCategoryFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      onFocus={() => handleFocus("mainCategoryName")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       required
+                      dir="rtl"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      نسبة الخصم (%) (اختياري)
-                    </label>
-                    <input
-                      type="number"
-                      name="percentageDiscount"
-                      value={mainCategoryForm.percentageDiscount}
-                      onChange={handleMainCategoryFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="isActive"
-                        checked={mainCategoryForm.isActive}
-                        onChange={handleMainCategoryFormChange}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="mr-2 text-sm font-medium text-gray-700">
-                        الفئة نشطة (ستظهر في النظام)
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "mainCategoryName" ||
+                        mainCategoryForm.name
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                          />
+                        </svg>
+                        اسم الفئة الرئيسية *
                       </span>
                     </label>
                   </div>
                 </div>
 
-                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t">
+                <div className="mb-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="percentageDiscount"
+                      value={mainCategoryForm.percentageDiscount}
+                      onChange={handleMainCategoryFormChange}
+                      onFocus={() => handleFocus("mainCategoryDiscount")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      dir="ltr"
+                      inputMode="numeric"
+                      pattern="\d*\.?\d*"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ MozAppearance: "textfield" }}
+                    />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "mainCategoryDiscount" ||
+                        mainCategoryForm.percentageDiscount
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M20 12H4M4 12l3-3m-3 3l3 3"
+                          />
+                        </svg>
+                        نسبة الخصم (%)
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="flex items-center cursor-pointer p-3 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-all">
+                    <input
+                      type="checkbox"
+                      name="isActive"
+                      checked={mainCategoryForm.isActive}
+                      onChange={handleMainCategoryFormChange}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="mr-2 text-sm font-medium text-gray-700">
+                      الفئة نشطة (ستظهر في النظام)
+                    </span>
+                  </label>
+                </div>
+
+                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t-2 border-gray-100">
                   <button
                     type="button"
                     onClick={() => setShowMainCategoryModal(false)}
-                    className="flex-1 py-3 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
                   >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
                     style={{ backgroundColor: "#193F94" }}
                   >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      {editingMainCategory ? (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                        />
+                      ) : (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      )}
+                    </svg>
                     {editingMainCategory ? "حفظ التعديلات" : "إضافة فئة"}
                   </button>
                 </div>
@@ -1026,42 +1148,78 @@ export default function CategoriesManagement() {
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold" style={{ color: "#193F94" }}>
-                  {editingSubCategory ? "تعديل فئة فرعية" : "إضافة فئة فرعية"}
-                </h3>
+                <div>
+                  <h3
+                    className="text-2xl font-bold"
+                    style={{ color: "#10B981" }}
+                  >
+                    {editingSubCategory ? "تعديل فئة فرعية" : "إضافة فئة فرعية"}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {editingSubCategory
+                      ? "قم بتعديل بيانات الفئة الفرعية"
+                      : "أدخل بيانات الفئة الفرعية الجديدة"}
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowSubCategoryModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
                 >
                   ×
                 </button>
               </div>
 
               <form onSubmit={handleSubmitSubCategory}>
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      اسم الفئة الفرعية *
-                    </label>
+                <div className="mb-4">
+                  <div className="relative">
                     <input
                       type="text"
                       name="name"
                       value={subCategoryForm.name}
                       onChange={handleSubCategoryFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      onFocus={() => handleFocus("subCategoryName")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all text-sm bg-white"
                       required
+                      dir="rtl"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      الفئة الرئيسية *
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "subCategoryName" ||
+                        subCategoryForm.name
+                          ? "-top-2.5 text-xs text-green-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l5 5a2 2 0 01.586 1.414V19a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z"
+                          />
+                        </svg>
+                        اسم الفئة الفرعية *
+                      </span>
                     </label>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <div className="relative">
                     <select
                       name="mainCategoryId"
                       value={subCategoryForm.mainCategoryId}
                       onChange={handleSubCategoryFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      onFocus={() => handleFocus("mainCategorySelect")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all text-sm bg-white appearance-none"
                       required
                     >
                       <option value="">اختر الفئة الرئيسية</option>
@@ -1071,67 +1229,196 @@ export default function CategoriesManagement() {
                         </option>
                       ))}
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      عنوان IP للطابعة (اختياري)
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "mainCategorySelect" ||
+                        subCategoryForm.mainCategoryId
+                          ? "-top-2.5 text-xs text-green-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                          />
+                        </svg>
+                        الفئة الرئيسية *
+                      </span>
                     </label>
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <div className="relative">
                     <input
                       type="text"
                       name="printIP"
                       value={subCategoryForm.printIP}
                       onChange={handleSubCategoryFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      onFocus={() => handleFocus("printIP")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all text-sm bg-white"
                       placeholder="مثال: 192.168.1.100"
+                      dir="ltr"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      نسبة الخصم (%) (اختياري)
-                    </label>
-                    <input
-                      type="number"
-                      name="percentageDiscount"
-                      value={subCategoryForm.percentageDiscount}
-                      onChange={handleSubCategoryFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="isActive"
-                        checked={subCategoryForm.isActive}
-                        onChange={handleSubCategoryFormChange}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="mr-2 text-sm font-medium text-gray-700">
-                        الفئة الفرعية نشطة (ستظهر في النظام)
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "printIP" || subCategoryForm.printIP
+                          ? "-top-2.5 text-xs text-green-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                        عنوان IP للطابعة
                       </span>
                     </label>
                   </div>
                 </div>
 
-                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t">
+                <div className="mb-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="percentageDiscount"
+                      value={subCategoryForm.percentageDiscount}
+                      onChange={handleSubCategoryFormChange}
+                      onFocus={() => handleFocus("subCategoryDiscount")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all text-sm bg-white"
+                      dir="ltr"
+                      inputMode="numeric"
+                      pattern="\d*\.?\d*"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ MozAppearance: "textfield" }}
+                    />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "subCategoryDiscount" ||
+                        subCategoryForm.percentageDiscount
+                          ? "-top-2.5 text-xs text-green-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M20 12H4M4 12l3-3m-3 3l3 3"
+                          />
+                        </svg>
+                        نسبة الخصم (%)
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="flex items-center cursor-pointer p-3 border-2 border-gray-200 rounded-xl hover:border-green-300 transition-all">
+                    <input
+                      type="checkbox"
+                      name="isActive"
+                      checked={subCategoryForm.isActive}
+                      onChange={handleSubCategoryFormChange}
+                      className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                    />
+                    <span className="mr-2 text-sm font-medium text-gray-700">
+                      الفئة الفرعية نشطة (ستظهر في النظام)
+                    </span>
+                  </label>
+                </div>
+
+                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t-2 border-gray-100">
                   <button
                     type="button"
                     onClick={() => setShowSubCategoryModal(false)}
-                    className="flex-1 py-3 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
                   >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
                     style={{ backgroundColor: "#10B981" }}
                   >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      {editingSubCategory ? (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                        />
+                      ) : (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      )}
+                    </svg>
                     {editingSubCategory ? "حفظ التعديلات" : "إضافة فئة فرعية"}
                   </button>
                 </div>

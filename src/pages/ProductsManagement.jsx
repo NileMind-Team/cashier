@@ -16,6 +16,7 @@ export default function ProductsManagement() {
   const [itemsPerPage] = useState(10);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [selectedMainCategoryId, setSelectedMainCategoryId] = useState("");
+  const [focusedField, setFocusedField] = useState(null);
 
   const [productForm, setProductForm] = useState({
     name: "",
@@ -23,13 +24,12 @@ export default function ProductsManagement() {
     imgUrl: "",
     subCategoryId: "",
     isAvailable: true,
-    valueAddedTax: 1,
+    valueAddedTax: null,
     isVatIncluded: true,
     discountValue: null,
     isPercentage: true,
   });
 
-  // Fetch all products
   const fetchProducts = async () => {
     try {
       setLoading(true);
@@ -54,7 +54,6 @@ export default function ProductsManagement() {
     }
   };
 
-  // Fetch main categories
   const fetchMainCategories = async () => {
     try {
       const response = await axiosInstance.get(
@@ -62,13 +61,18 @@ export default function ProductsManagement() {
       );
       if (response.status === 200 && Array.isArray(response.data)) {
         setMainCategories(response.data);
+        const activeMainCategories = response.data.filter(
+          (cat) => cat.isActive,
+        );
+        if (activeMainCategories.length > 0 && !selectedMainCategoryId) {
+          setSelectedMainCategoryId(activeMainCategories[0].id.toString());
+        }
       }
     } catch (error) {
       console.error("خطأ في جلب الفئات الرئيسية:", error);
     }
   };
 
-  // Fetch sub categories
   const fetchSubCategories = async () => {
     try {
       const response = await axiosInstance.get(
@@ -82,7 +86,6 @@ export default function ProductsManagement() {
     }
   };
 
-  // Fetch all initial data
   const fetchAllData = async () => {
     setCategoriesLoading(true);
     await Promise.all([
@@ -98,6 +101,22 @@ export default function ProductsManagement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (selectedMainCategoryId && !productForm.subCategoryId) {
+      const filteredSubs = subCategories.filter(
+        (sub) =>
+          sub.mainCategoryId === parseInt(selectedMainCategoryId) &&
+          sub.isActive,
+      );
+      if (filteredSubs.length > 0) {
+        setProductForm((prev) => ({
+          ...prev,
+          subCategoryId: filteredSubs[0].id.toString(),
+        }));
+      }
+    }
+  }, [selectedMainCategoryId, subCategories, productForm.subCategoryId]);
+
   const handleAddProduct = () => {
     if (mainCategories.length === 0) {
       toast.error("يجب إضافة فئات أولاً");
@@ -105,28 +124,40 @@ export default function ProductsManagement() {
     }
     setShowProductModal(true);
     setEditingProduct(null);
-    setSelectedMainCategoryId("");
+
+    const activeMainCategories = mainCategories.filter((cat) => cat.isActive);
+    const defaultMainCategoryId =
+      activeMainCategories.length > 0
+        ? activeMainCategories[0].id.toString()
+        : "";
+    setSelectedMainCategoryId(defaultMainCategoryId);
+
+    const filteredSubs = subCategories.filter(
+      (sub) =>
+        sub.mainCategoryId === parseInt(defaultMainCategoryId) && sub.isActive,
+    );
+    const defaultSubCategoryId =
+      filteredSubs.length > 0 ? filteredSubs[0].id.toString() : "";
+
     setProductForm({
       name: "",
       price: "",
       imgUrl: "",
-      subCategoryId: "",
+      subCategoryId: defaultSubCategoryId,
       isAvailable: true,
-      valueAddedTax: 1,
+      valueAddedTax: null,
       isVatIncluded: true,
       discountValue: null,
       isPercentage: true,
     });
+    setFocusedField(null);
   };
 
   const handleEditProduct = (product) => {
     setEditingProduct(product);
     setShowProductModal(true);
 
-    const subCategory = subCategories.find(
-      (sub) => sub.id === product.subCategoryId,
-    );
-    setSelectedMainCategoryId(subCategory?.mainCategoryId?.toString() || "");
+    setSelectedMainCategoryId(product.mainCategoryId?.toString() || "");
 
     setProductForm({
       name: product.name || "",
@@ -134,11 +165,12 @@ export default function ProductsManagement() {
       imgUrl: product.imgUrl || "",
       subCategoryId: product.subCategoryId || "",
       isAvailable: product.isAvailable ?? true,
-      valueAddedTax: product.valueAddedTax || 1,
+      valueAddedTax: product.valueAddedTax || null,
       isVatIncluded: product.isVatIncluded ?? true,
       discountValue: product.discountValue || null,
       isPercentage: product.isPercentage ?? true,
     });
+    setFocusedField(null);
   };
 
   const handleProductFormChange = (e) => {
@@ -151,17 +183,32 @@ export default function ProductsManagement() {
           : name === "price" ||
               name === "valueAddedTax" ||
               name === "subCategoryId"
-            ? parseFloat(value) || ""
+            ? value
             : value,
     }));
+  };
+
+  const handleFocus = (fieldName) => {
+    setFocusedField(fieldName);
+  };
+
+  const handleBlur = () => {
+    setFocusedField(null);
   };
 
   const handleMainCategoryChange = (e) => {
     const mainCategoryId = e.target.value;
     setSelectedMainCategoryId(mainCategoryId);
+
+    const filteredSubs = subCategories.filter(
+      (sub) => sub.mainCategoryId === parseInt(mainCategoryId) && sub.isActive,
+    );
+    const defaultSubCategoryId =
+      filteredSubs.length > 0 ? filteredSubs[0].id.toString() : "";
+
     setProductForm((prev) => ({
       ...prev,
-      subCategoryId: "",
+      subCategoryId: defaultSubCategoryId,
     }));
   };
 
@@ -171,20 +218,6 @@ export default function ProductsManagement() {
       (sub) =>
         sub.mainCategoryId === parseInt(selectedMainCategoryId) && sub.isActive,
     );
-  };
-
-  const getMainCategoryName = (subCategoryId) => {
-    const subCategory = subCategories.find((sub) => sub.id === subCategoryId);
-    if (!subCategory) return "غير معروف";
-    const mainCategory = mainCategories.find(
-      (cat) => cat.id === subCategory.mainCategoryId,
-    );
-    return mainCategory ? mainCategory.name : "غير معروف";
-  };
-
-  const getSubCategoryName = (subCategoryId) => {
-    const subCategory = subCategories.find((sub) => sub.id === subCategoryId);
-    return subCategory ? subCategory.name : "غير معروف";
   };
 
   const handleSubmitProduct = async (e) => {
@@ -215,11 +248,13 @@ export default function ProductsManagement() {
         name: productForm.name,
         imgUrl: productForm.imgUrl || "",
         price: parseFloat(productForm.price),
-        discountValue: productForm.discountValue,
+        discountValue: productForm.discountValue
+          ? parseFloat(productForm.discountValue)
+          : null,
         isPercentage: productForm.isPercentage,
         stockQuantity: null,
         isAvailable: productForm.isAvailable,
-        valueAddedTax: parseFloat(productForm.valueAddedTax) || 1,
+        valueAddedTax: parseFloat(productForm.valueAddedTax) || null,
         isVatIncluded: productForm.isVatIncluded,
         subCategoryId: parseInt(productForm.subCategoryId),
       };
@@ -254,18 +289,32 @@ export default function ProductsManagement() {
         }
       }
 
+      const activeMainCategories = mainCategories.filter((cat) => cat.isActive);
+      const defaultMainCategoryId =
+        activeMainCategories.length > 0
+          ? activeMainCategories[0].id.toString()
+          : "";
+      setSelectedMainCategoryId(defaultMainCategoryId);
+
+      const filteredSubs = subCategories.filter(
+        (sub) =>
+          sub.mainCategoryId === parseInt(defaultMainCategoryId) &&
+          sub.isActive,
+      );
+      const defaultSubCategoryId =
+        filteredSubs.length > 0 ? filteredSubs[0].id.toString() : "";
+
       setProductForm({
         name: "",
         price: "",
         imgUrl: "",
-        subCategoryId: "",
+        subCategoryId: defaultSubCategoryId,
         isAvailable: true,
-        valueAddedTax: 1,
+        valueAddedTax: null,
         isVatIncluded: true,
         discountValue: null,
         isPercentage: true,
       });
-      setSelectedMainCategoryId("");
     } catch (error) {
       console.error("خطأ في حفظ المنتج:", error);
       if (error.response?.status === 201 || error.response?.status === 200) {
@@ -313,27 +362,41 @@ export default function ProductsManagement() {
 
   const handleToggleProductStatus = async (productId) => {
     const product = products.find((p) => p.id === productId);
+    const action = product.isAvailable ? "تعطيل" : "تفعيل";
 
-    try {
-      const response = await axiosInstance.put(
-        `/api/Items/Update/${productId}`,
-        {
-          ...product,
-          isAvailable: !product.isAvailable,
-        },
-      );
+    const result = await Swal.fire({
+      title: `هل أنت متأكد من ${action} هذا المنتج؟`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: `نعم، ${action}`,
+      cancelButtonText: "إلغاء",
+      confirmButtonColor: product.isAvailable ? "#f59e0b" : "#10b981",
+      cancelButtonColor: "#6B7280",
+      reverseButtons: true,
+    });
 
-      if (response.status === 200) {
-        toast.success(
-          `تم ${product.isAvailable ? "تعطيل" : "تفعيل"} المنتج بنجاح`,
+    if (result.isConfirmed) {
+      try {
+        const response = await axiosInstance.put(
+          `/api/Items/Update/${productId}`,
+          {
+            ...product,
+            isAvailable: !product.isAvailable,
+          },
         );
-        await fetchProducts();
-      } else {
-        toast.error("فشل في تغيير حالة المنتج");
+
+        if (response.status === 200) {
+          toast.success(
+            `تم ${product.isAvailable ? "تعطيل" : "تفعيل"} المنتج بنجاح`,
+          );
+          await fetchProducts();
+        } else {
+          toast.error("فشل في تغيير حالة المنتج");
+        }
+      } catch (error) {
+        console.error("خطأ في تغيير حالة المنتج:", error);
+        toast.error("حدث خطأ في تغيير حالة المنتج");
       }
-    } catch (error) {
-      console.error("خطأ في تغيير حالة المنتج:", error);
-      toast.error("حدث خطأ في تغيير حالة المنتج");
     }
   };
 
@@ -410,60 +473,121 @@ export default function ProductsManagement() {
       </div>
 
       <div className="container mx-auto px-4 py-6">
+        {/* Professional Stats Cards with Modern Icons */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+          {/* Total Products Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-800">إجمالي المنتجات</p>
-                <p className="text-2xl font-bold text-blue-900 mt-1">
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  إجمالي المنتجات
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
                   {stats.totalProducts}
                 </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  {stats.activeProducts} نشط • {stats.inactiveProducts} معطل
+                <p className="text-xs text-gray-500 mt-2 flex items-center">
+                  <span className="text-green-600 font-medium ml-1">
+                    {stats.activeProducts} نشط
+                  </span>
+                  <span className="mx-1">•</span>
+                  <span className="text-red-500 font-medium">
+                    {stats.inactiveProducts} معطل
+                  </span>
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                <span className="text-blue-700 font-bold">📦</span>
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                  />
+                </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+          {/* Active Products Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-green-800">المنتجات النشطة</p>
-                <p className="text-2xl font-bold text-green-900 mt-1">
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  المنتجات النشطة
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
                   {stats.activeProducts}
                 </p>
-                <p className="text-xs text-green-600 mt-1">
-                  {stats.totalProducts > 0
-                    ? (
-                        (stats.activeProducts / stats.totalProducts) *
-                        100
-                      ).toFixed(1)
-                    : 0}
-                  % من إجمالي المنتجات
+                <p className="text-xs text-gray-500 mt-2">
+                  <span className="text-blue-600 font-medium">
+                    {stats.totalProducts > 0
+                      ? (
+                          (stats.activeProducts / stats.totalProducts) *
+                          100
+                        ).toFixed(1)
+                      : 0}
+                    %
+                  </span>{" "}
+                  من إجمالي المنتجات
                 </p>
               </div>
-              <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                <span className="text-green-700 font-bold">✅</span>
+              <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
+                </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+          {/* Total Value Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-purple-800">القيمة الإجمالية</p>
-                <p className="text-2xl font-bold text-purple-900 mt-1">
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  القيمة الإجمالية
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
                   {formatCurrency(
                     products.reduce((sum, prod) => sum + (prod.price || 0), 0),
-                  )}{" "}
-                  ج.م
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  <span className="text-purple-600 font-medium">ج.م</span>{" "}
+                  إجمالي قيمة المنتجات
                 </p>
               </div>
-              <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                <span className="text-purple-700 font-bold">💰</span>
+              <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
               </div>
             </div>
           </div>
@@ -481,7 +605,7 @@ export default function ProductsManagement() {
             </div>
             <button
               onClick={handleAddProduct}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-colors flex items-center whitespace-nowrap"
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center whitespace-nowrap shadow-md"
               style={{ backgroundColor: "#193F94" }}
             >
               <svg
@@ -594,11 +718,11 @@ export default function ProductsManagement() {
                           </td>
                           <td className="py-4 px-4 text-right">
                             <div className="space-y-1">
-                              <div className="text-sm font-medium">
-                                {getMainCategoryName(product.subCategoryId)}
+                              <div className="text-sm font-medium text-blue-700">
+                                {product.mainCategoryName || "غير معروف"}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {getSubCategoryName(product.subCategoryId)}
+                                {product.subCategoryName || "غير معروف"}
                               </div>
                             </div>
                           </td>
@@ -774,65 +898,151 @@ export default function ProductsManagement() {
 
       {showProductModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold" style={{ color: "#193F94" }}>
-                  {editingProduct ? "تعديل منتج" : "إضافة منتج جديد"}
-                </h3>
+                <div>
+                  <h3
+                    className="text-2xl font-bold"
+                    style={{ color: "#193F94" }}
+                  >
+                    {editingProduct ? "تعديل منتج" : "إضافة منتج جديد"}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {editingProduct
+                      ? "قم بتعديل بيانات المنتج"
+                      : "أدخل بيانات المنتج الجديد"}
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowProductModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
                 >
                   ×
                 </button>
               </div>
 
               <form onSubmit={handleSubmitProduct}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      اسم المنتج *
-                    </label>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="relative">
                     <input
                       type="text"
                       name="name"
                       value={productForm.name}
                       onChange={handleProductFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      onFocus={() => handleFocus("name")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       required
+                      dir="rtl"
                     />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "name" || productForm.name
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                        اسم المنتج *
+                      </span>
+                    </label>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      السعر *
-                    </label>
+                  <div className="relative">
                     <input
-                      type="number"
+                      type="text"
                       name="price"
                       value={productForm.price}
                       onChange={handleProductFormChange}
-                      min="0"
-                      step="0.01"
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      onFocus={() => handleFocus("price")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       required
+                      dir="ltr"
+                      inputMode="numeric"
+                      pattern="\d*\.?\d*"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ MozAppearance: "textfield" }}
                     />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "price" || productForm.price
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        السعر *
+                      </span>
+                    </label>
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    رابط الصورة
-                  </label>
-                  <input
-                    type="url"
-                    name="imgUrl"
-                    value={productForm.imgUrl}
-                    onChange={handleProductFormChange}
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  />
+                <div className="mb-4">
+                  <div className="relative">
+                    <input
+                      type="url"
+                      name="imgUrl"
+                      value={productForm.imgUrl}
+                      onChange={handleProductFormChange}
+                      onFocus={() => handleFocus("imgUrl")}
+                      onBlur={handleBlur}
+                      placeholder="https://example.com/image.jpg"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      dir="ltr"
+                    />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "imgUrl" || productForm.imgUrl
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                        رابط الصورة
+                      </span>
+                    </label>
+                  </div>
                   {productForm.imgUrl && (
                     <div className="mt-2">
                       <div className="text-xs text-gray-500 mb-1">
@@ -851,18 +1061,16 @@ export default function ProductsManagement() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      الفئة الرئيسية *
-                    </label>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="relative">
                     <select
                       value={selectedMainCategoryId}
                       onChange={handleMainCategoryChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      onFocus={() => handleFocus("mainCategory")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white appearance-none"
                       required
                     >
-                      <option value="">اختر الفئة الرئيسية</option>
                       {mainCategories
                         .filter((cat) => cat.isActive)
                         .map((category) => (
@@ -871,125 +1079,284 @@ export default function ProductsManagement() {
                           </option>
                         ))}
                     </select>
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "mainCategory" ||
+                        selectedMainCategoryId
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                          />
+                        </svg>
+                        الفئة الرئيسية *
+                      </span>
+                    </label>
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      الفئة الفرعية *
-                    </label>
+                  <div className="relative">
                     <select
                       name="subCategoryId"
                       value={productForm.subCategoryId}
                       onChange={handleProductFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      onFocus={() => handleFocus("subCategory")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white appearance-none"
                       required
-                      disabled={!selectedMainCategoryId}
+                      disabled={
+                        !selectedMainCategoryId ||
+                        getFilteredSubCategories().length === 0
+                      }
                     >
-                      <option value="">
-                        {selectedMainCategoryId
-                          ? "اختر الفئة الفرعية"
-                          : "الرجاء اختيار الفئة الرئيسية أولاً"}
-                      </option>
                       {getFilteredSubCategories().map((subCategory) => (
                         <option key={subCategory.id} value={subCategory.id}>
                           {subCategory.name}
                         </option>
                       ))}
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ضريبة القيمة المضافة (%)
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "subCategory" ||
+                        productForm.subCategoryId
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l5 5a2 2 0 01.586 1.414V19a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z"
+                          />
+                        </svg>
+                        الفئة الفرعية *
+                      </span>
                     </label>
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="relative">
                     <input
-                      type="number"
+                      type="text"
                       name="valueAddedTax"
                       value={productForm.valueAddedTax}
                       onChange={handleProductFormChange}
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      onFocus={() => handleFocus("tax")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      dir="ltr"
+                      inputMode="numeric"
+                      pattern="\d*\.?\d*"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ MozAppearance: "textfield" }}
                     />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "tax" || productForm.valueAddedTax
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        ضريبة القيمة المضافة (%)
+                      </span>
+                    </label>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      قيمة الخصم
-                    </label>
+                  <div className="relative">
                     <input
-                      type="number"
+                      type="text"
                       name="discountValue"
                       value={productForm.discountValue || ""}
                       onChange={handleProductFormChange}
-                      min="0"
-                      step="0.01"
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      onFocus={() => handleFocus("discount")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      dir="ltr"
+                      inputMode="numeric"
+                      pattern="\d*\.?\d*"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ MozAppearance: "textfield" }}
                     />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="isAvailable"
-                        checked={productForm.isAvailable}
-                        onChange={handleProductFormChange}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="mr-2 text-sm font-medium text-gray-700">
-                        المنتج متاح
-                      </span>
-                    </label>
-                  </div>
-
-                  <div>
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="isVatIncluded"
-                        checked={productForm.isVatIncluded}
-                        onChange={handleProductFormChange}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="mr-2 text-sm font-medium text-gray-700">
-                        الضريبة مضمنة في السعر
-                      </span>
-                    </label>
-                  </div>
-
-                  <div>
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="isPercentage"
-                        checked={productForm.isPercentage}
-                        onChange={handleProductFormChange}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="mr-2 text-sm font-medium text-gray-700">
-                        خصم نسبة مئوية
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "discount" || productForm.discountValue
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M20 12H4M4 12l3-3m-3 3l3 3"
+                          />
+                        </svg>
+                        قيمة الخصم
                       </span>
                     </label>
                   </div>
                 </div>
 
-                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t">
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <label className="flex items-center cursor-pointer p-3 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-all">
+                    <input
+                      type="checkbox"
+                      name="isAvailable"
+                      checked={productForm.isAvailable}
+                      onChange={handleProductFormChange}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="mr-2 text-sm font-medium text-gray-700">
+                      المنتج متاح
+                    </span>
+                  </label>
+
+                  <label className="flex items-center cursor-pointer p-3 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-all">
+                    <input
+                      type="checkbox"
+                      name="isVatIncluded"
+                      checked={productForm.isVatIncluded}
+                      onChange={handleProductFormChange}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="mr-2 text-sm font-medium text-gray-700">
+                      الضريبة مضمنة
+                    </span>
+                  </label>
+
+                  <label className="flex items-center cursor-pointer p-3 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-all">
+                    <input
+                      type="checkbox"
+                      name="isPercentage"
+                      checked={productForm.isPercentage}
+                      onChange={handleProductFormChange}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="mr-2 text-sm font-medium text-gray-700">
+                      خصم نسبة مئوية
+                    </span>
+                  </label>
+                </div>
+
+                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t-2 border-gray-100">
                   <button
                     type="button"
                     onClick={() => setShowProductModal(false)}
-                    className="flex-1 py-3 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
                   >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
                     style={{ backgroundColor: "#193F94" }}
                   >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      {editingProduct ? (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                        />
+                      ) : (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      )}
+                    </svg>
                     {editingProduct ? "حفظ التعديلات" : "إضافة منتج"}
                   </button>
                 </div>

@@ -23,6 +23,8 @@ export default function CustomersManagement() {
     nationalId: "",
   });
 
+  const [focusedField, setFocusedField] = useState(null);
+
   const fetchCustomers = async () => {
     try {
       setLoading(true);
@@ -187,6 +189,7 @@ export default function CustomersManagement() {
       address: "",
       nationalId: "",
     });
+    setFocusedField(null);
   };
 
   const handleEditCustomer = (customer) => {
@@ -198,6 +201,7 @@ export default function CustomersManagement() {
       address: customer.address || "",
       nationalId: customer.nationalId || "",
     });
+    setFocusedField(null);
   };
 
   const handleDeleteCustomer = async (customerId) => {
@@ -255,6 +259,14 @@ export default function CustomersManagement() {
     }));
   };
 
+  const handleFocus = (fieldName) => {
+    setFocusedField(fieldName);
+  };
+
+  const handleBlur = () => {
+    setFocusedField(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -276,10 +288,45 @@ export default function CustomersManagement() {
 
     try {
       if (editingCustomer) {
-        toast.warning("تحديث العميل غير مدعوم من الخادم حالياً");
-        setShowAddModal(false);
-        setEditingCustomer(null);
-        return;
+        const customerData = {
+          id: editingCustomer.id,
+          name: formData.name,
+          phone: formData.phone,
+          address: formData.address || "",
+          nationalId: formData.nationalId || "",
+        };
+
+        try {
+          const response = await axiosInstance.put(
+            `/api/Customers/Update/${editingCustomer.id}`,
+            customerData,
+          );
+
+          if (response.status === 200) {
+            if (response.data.isSuccess !== false) {
+              setCustomers(
+                customers.map((c) =>
+                  c.id === editingCustomer.id ? { ...c, ...customerData } : c,
+                ),
+              );
+              toast.success("تم تحديث بيانات العميل بنجاح");
+            } else {
+              toast.error(
+                response.data.error?.description || "فشل في تحديث العميل",
+              );
+            }
+          } else {
+            toast.error("فشل في تحديث العميل");
+          }
+        } catch (error) {
+          console.error("خطأ في تحديث العميل:", error);
+          setCustomers(
+            customers.map((c) =>
+              c.id === editingCustomer.id ? { ...c, ...customerData } : c,
+            ),
+          );
+          toast.success("تم تحديث بيانات العميل محلياً");
+        }
       } else {
         const customerData = {
           name: formData.name,
@@ -417,52 +464,132 @@ export default function CustomersManagement() {
       </div>
 
       <div className="container mx-auto px-4 py-6">
-        {/* Stats Cards - العملاء فقط */}
+        {/* Professional Stats Cards with Modern Icons */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+          {/* Total Customers Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-800">إجمالي العملاء</p>
-                <p className="text-2xl font-bold text-blue-900 mt-1">
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  إجمالي العملاء
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
                   {stats.totalCustomers}
                 </p>
+                <p className="text-xs text-gray-500 mt-2 flex items-center">
+                  <span className="text-green-600 font-medium ml-1">
+                    {stats.activeCustomers} نشط
+                  </span>
+                  <span className="mx-1">•</span>
+                  <span className="text-red-500 font-medium">
+                    {stats.inactiveCustomers} غير نشط
+                  </span>
+                </p>
               </div>
-              <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                <span className="text-blue-700 font-bold text-xl">👥</span>
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+          {/* Active Customers Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-green-800">العملاء النشطاء</p>
-                <p className="text-2xl font-bold text-green-900 mt-1">
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  العملاء النشطاء
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
                   {stats.activeCustomers}
                 </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  <span className="text-blue-600 font-medium">
+                    {stats.totalCustomers > 0
+                      ? (
+                          (stats.activeCustomers / stats.totalCustomers) *
+                          100
+                        ).toFixed(1)
+                      : 0}
+                    %
+                  </span>{" "}
+                  من إجمالي العملاء
+                </p>
               </div>
-              <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                <span className="text-green-700 font-bold text-xl">✅</span>
+              <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
+                </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
+          {/* Inactive Customers Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-red-800">العملاء غير النشطاء</p>
-                <p className="text-2xl font-bold text-red-900 mt-1">
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  العملاء غير النشطاء
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
                   {stats.inactiveCustomers}
                 </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  <span className="text-red-600 font-medium">
+                    {stats.totalCustomers > 0
+                      ? (
+                          (stats.inactiveCustomers / stats.totalCustomers) *
+                          100
+                        ).toFixed(1)
+                      : 0}
+                    %
+                  </span>{" "}
+                  من إجمالي العملاء
+                </p>
               </div>
-              <div className="w-12 h-12 bg-red-200 rounded-full flex items-center justify-center">
-                <span className="text-red-700 font-bold text-xl">⛔</span>
+              <div className="w-14 h-14 bg-gradient-to-br from-red-400 to-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                  />
+                </svg>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Header and Search - تعديل: تكبير عرض حقل البحث */}
         <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -487,14 +614,40 @@ export default function CustomersManagement() {
                     autoComplete="off"
                   />
                   <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-                    🔍
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
                   </div>
                   {searchTerm && (
                     <button
                       onClick={handleClearSearch}
                       className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                     >
-                      ✕
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
                     </button>
                   )}
                 </div>
@@ -772,102 +925,243 @@ export default function CustomersManagement() {
         </div>
       </div>
 
-      {/* Add/Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold" style={{ color: "#193F94" }}>
-                  {editingCustomer ? "تعديل بيانات العميل" : "إضافة عميل جديد"}
-                </h3>
+                <div>
+                  <h3
+                    className="text-2xl font-bold"
+                    style={{ color: "#193F94" }}
+                  >
+                    {editingCustomer
+                      ? "تعديل بيانات العميل"
+                      : "إضافة عميل جديد"}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {editingCustomer
+                      ? "قم بتعديل بيانات العميل"
+                      : "أدخل بيانات العميل الجديد"}
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
                 >
                   ×
                 </button>
               </div>
 
               <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      اسم العميل *
-                    </label>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="relative">
                     <input
                       type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
+                      onFocus={() => handleFocus("name")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       required
                       dir="rtl"
-                      disabled={editingCustomer}
                     />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "name" || formData.name
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                        اسم العميل *
+                      </span>
+                    </label>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      رقم الهاتف *
-                    </label>
+                  <div className="relative">
                     <input
                       type="tel"
                       name="phone"
                       value={formData.phone}
                       onChange={handleFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
+                      onFocus={() => handleFocus("phone")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       required
-                      placeholder="01xxxxxxxxx"
                       dir="rtl"
-                      disabled={editingCustomer}
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      العنوان
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "phone" || formData.phone
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                          />
+                        </svg>
+                        رقم الهاتف *
+                      </span>
                     </label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="relative">
                     <input
                       type="text"
                       name="address"
                       value={formData.address}
                       onChange={handleFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
+                      onFocus={() => handleFocus("address")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       dir="rtl"
-                      placeholder="العنوان بالكامل"
                     />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "address" || formData.address
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                        العنوان
+                      </span>
+                    </label>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      الرقم القومي
-                    </label>
+                  <div className="relative">
                     <input
                       type="text"
                       name="nationalId"
                       value={formData.nationalId}
                       onChange={handleFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
+                      onFocus={() => handleFocus("nationalId")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       dir="rtl"
-                      placeholder="14 رقم"
                     />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "nationalId" || formData.nationalId
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
+                          />
+                        </svg>
+                        الرقم القومي
+                      </span>
+                    </label>
                   </div>
                 </div>
 
-                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t">
+                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t-2 border-gray-100">
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 py-3 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
                   >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
                     style={{ backgroundColor: "#193F94" }}
                   >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      {editingCustomer ? (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                        />
+                      ) : (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      )}
+                    </svg>
                     {editingCustomer ? "حفظ التعديلات" : "إضافة عميل"}
                   </button>
                 </div>
