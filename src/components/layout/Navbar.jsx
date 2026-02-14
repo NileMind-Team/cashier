@@ -6,6 +6,7 @@ import {
   FaCalendarDay,
   FaCircle,
   FaClock,
+  FaChair,
 } from "react-icons/fa6";
 import {
   FaChartBar,
@@ -23,7 +24,6 @@ import {
   FaLayerGroup,
   FaBoxOpen,
   FaUser,
-  FaChair,
 } from "react-icons/fa";
 
 export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
@@ -201,24 +201,24 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
 
   return (
     <div className="bg-white shadow-md relative">
-      <div className="container mx-auto px-4 py-3">
+      <div className="container mx-auto px-4 py-2">
         <div className="flex justify-between items-center">
-          <div className="flex items-center flex-shrink-0 ml-4">
-            <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-2">
+          <div className="flex items-center">
+            <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
               <FaCashRegister className="text-white text-xl" />
             </div>
-            <div className="whitespace-nowrap">
-              <h1 className="text-xl font-bold" style={{ color: "#193F94" }}>
+            <div>
+              <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير
               </h1>
               <div className="flex items-center mt-0.5">
                 {isShiftOpen && (
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium border border-green-200 flex items-center whitespace-nowrap">
+                  <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium border border-green-200 flex items-center">
                     <FaCircle className="w-2 h-2 text-green-500 ml-1 animate-pulse" />
                     الوردية مفتوحة
                   </span>
                 )}
-                <span className="text-xs text-gray-500 mr-2 whitespace-nowrap">
+                <span className="text-xs text-gray-500 mr-2">
                   <FaCalendarDay className="inline ml-1" />
                   {new Date().toLocaleDateString("ar-EG")}
                 </span>
@@ -226,11 +226,10 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 rtl:space-x-reverse overflow-x-auto pb-1 flex-nowrap">
-            {/* زر إدارة الصالات */}
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
             <button
               onClick={handleHallsNavigation}
-              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
+              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm whitespace-nowrap flex-shrink-0 ${
                 isHallsActive
                   ? "bg-blue-900 text-white border-blue-900"
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
@@ -242,7 +241,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
 
             <button
               onClick={handleCategoriesNavigation}
-              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
+              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
                 isCategoriesActive
                   ? "bg-blue-900 text-white border-blue-900"
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
@@ -254,7 +253,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
 
             <button
               onClick={handleProductsManagementNavigation}
-              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
+              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
                 isProductsManagementActive
                   ? "bg-blue-900 text-white border-blue-900"
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
@@ -266,7 +265,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
 
             <button
               onClick={handleCustomersNavigation}
-              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
+              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
                 isCustomersActive
                   ? "bg-blue-900 text-white border-blue-900"
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
@@ -278,7 +277,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
 
             <button
               onClick={handleShippingCompaniesNavigation}
-              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
+              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
                 isShippingCompaniesActive
                   ? "bg-blue-900 text-white border-blue-900"
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
@@ -290,7 +289,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
 
             <button
               onClick={handlePaymentMethodsNavigation}
-              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
+              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
                 isPaymentMethodsActive
                   ? "bg-blue-900 text-white border-blue-900"
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
@@ -302,7 +301,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
 
             <button
               onClick={handleUsersNavigation}
-              className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0 ${
+              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
                 isUsersActive
                   ? "bg-blue-900 text-white border-blue-900"
                   : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
@@ -312,12 +311,12 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
               إدارة الموظفين
             </button>
 
-            <div className="relative flex-shrink-0" ref={dropdownRef}>
+            <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowReportsDropdown(!showReportsDropdown)}
                 aria-expanded={showReportsDropdown}
                 aria-haspopup="true"
-                className={`h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap ${
+                className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
                   isReportsActive
                     ? "bg-blue-900 text-white border-blue-900"
                     : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
@@ -326,32 +325,32 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                 <FaChartBar className="h-4 w-4 ml-1.5" />
                 التقارير
                 <FaChevronDown
-                  className={`h-3 w-3 mr-1.5 transition-transform duration-200 ${
+                  className={`h-3 w-3 mr-1 transition-transform duration-200 ${
                     showReportsDropdown ? "rotate-180" : ""
                   }`}
                 />
               </button>
 
               {showReportsDropdown && (
-                <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-fadeIn">
-                  <div className="p-2">
-                    <div className="space-y-1 mt-2">
+                <div className="absolute left-0 mt-1 w-60 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-fadeIn">
+                  <div className="p-1">
+                    <div className="space-y-1 mt-1">
                       <button
                         onClick={() => handleReportNavigation("shifts")}
-                        className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
                           location.pathname === "/reports/shifts"
                             ? "bg-blue-50 text-blue-700"
                             : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
                             location.pathname === "/reports/shifts"
                               ? "bg-blue-100"
                               : "bg-gray-100"
                           }`}
                         >
-                          <FaClock className="h-4 w-4 text-blue-600" />
+                          <FaClock className="h-3.5 w-3.5 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير الورديات</p>
@@ -360,20 +359,20 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
 
                       <button
                         onClick={() => handleReportNavigation("sales")}
-                        className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
                           location.pathname === "/reports/sales"
                             ? "bg-blue-50 text-blue-700"
                             : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
                             location.pathname === "/reports/sales"
                               ? "bg-blue-100"
                               : "bg-gray-100"
                           }`}
                         >
-                          <FaChartLine className="h-4 w-4 text-blue-600" />
+                          <FaChartLine className="h-3.5 w-3.5 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير المبيعات</p>
@@ -382,20 +381,20 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
 
                       <button
                         onClick={() => handleReportNavigation("products")}
-                        className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
                           location.pathname === "/reports/products"
                             ? "bg-blue-50 text-blue-700"
                             : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
                             location.pathname === "/reports/products"
                               ? "bg-blue-100"
                               : "bg-gray-100"
                           }`}
                         >
-                          <FaBoxes className="h-4 w-4 text-blue-600" />
+                          <FaBoxes className="h-3.5 w-3.5 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير المنتجات</p>
@@ -404,20 +403,20 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
 
                       <button
                         onClick={() => handleReportNavigation("customers")}
-                        className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
                           location.pathname === "/reports/customers"
                             ? "bg-blue-50 text-blue-700"
                             : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
                             location.pathname === "/reports/customers"
                               ? "bg-blue-100"
                               : "bg-gray-100"
                           }`}
                         >
-                          <FaUserFriends className="h-4 w-4 text-blue-600" />
+                          <FaUserFriends className="h-3.5 w-3.5 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير العملاء</p>
@@ -428,20 +427,20 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                         onClick={() =>
                           handleReportNavigation("payment-methods")
                         }
-                        className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
                           location.pathname === "/reports/payment-methods"
                             ? "bg-blue-50 text-blue-700"
                             : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
                             location.pathname === "/reports/payment-methods"
                               ? "bg-blue-100"
                               : "bg-gray-100"
                           }`}
                         >
-                          <FaMoneyCheck className="h-4 w-4 text-blue-600" />
+                          <FaMoneyCheck className="h-3.5 w-3.5 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير طرق الدفع</p>
@@ -450,20 +449,20 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
 
                       <button
                         onClick={() => handleReportNavigation("pending-bills")}
-                        className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
                           location.pathname === "/reports/pending-bills"
                             ? "bg-blue-50 text-blue-700"
                             : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
                             location.pathname === "/reports/pending-bills"
                               ? "bg-blue-100"
                               : "bg-gray-100"
                           }`}
                         >
-                          <FaExclamationCircle className="h-4 w-4 text-blue-600" />
+                          <FaExclamationCircle className="h-3.5 w-3.5 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير الفواتير المعلقة</p>
@@ -472,20 +471,20 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
 
                       <button
                         onClick={() => handleReportNavigation("returns")}
-                        className={`flex items-center w-full px-4 py-3 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
                           location.pathname === "/reports/returns"
                             ? "bg-blue-50 text-blue-700"
                             : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
                             location.pathname === "/reports/returns"
                               ? "bg-blue-100"
                               : "bg-gray-100"
                           }`}
                         >
-                          <FaUndo className="h-4 w-4 text-blue-600" />
+                          <FaUndo className="h-3.5 w-3.5 text-blue-600" />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير المرتجعات</p>
@@ -500,7 +499,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
             {isShiftOpen && (
               <button
                 onClick={handleCloseShift}
-                className="h-10 px-3 rounded-lg font-medium border transition-all flex items-center text-xs whitespace-nowrap flex-shrink-0"
+                className="h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm"
                 style={{ borderColor: "#F59E0B", color: "#F59E0B" }}
                 onMouseEnter={(e) => {
                   e.target.style.backgroundColor = "#F59E0B";
