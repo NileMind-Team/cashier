@@ -206,238 +206,315 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
   const isHallsActive = location.pathname === "/halls";
 
   return (
-    <div className="bg-white shadow-md relative">
+    <div className="bg-gradient-to-r from-white to-gray-50/80 shadow-lg backdrop-blur-sm border-b border-gray-200/80 sticky top-0 z-50">
       <div className="container mx-auto px-4 py-2">
         <div className="flex justify-between items-center">
-          <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
+          {/* Logo Section */}
+          <div className="flex items-center group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center ml-3 shadow-md shadow-blue-900/20 group-hover:shadow-lg group-hover:shadow-blue-900/30 transition-all duration-300 transform group-hover:scale-105">
               <FaCashRegister className="text-white text-xl" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
+              <h1 className="text-2xl font-bold bg-gradient-to-l from-blue-900 to-blue-700 bg-clip-text text-transparent">
                 نظام الكاشير
               </h1>
-              <div className="flex items-center mt-0.5">
+              <div className="flex items-center mt-0.5 space-x-2 rtl:space-x-reverse">
                 {isShiftOpen && (
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium border border-green-200 flex items-center">
+                  <span className="text-xs bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 px-2 py-0.5 rounded-full font-medium border border-green-200 flex items-center shadow-sm">
                     <FaCircle className="w-2 h-2 text-green-500 ml-1 animate-pulse" />
                     الوردية مفتوحة
                   </span>
                 )}
-                <span className="text-xs text-gray-500 mr-2">
-                  <FaCalendarDay className="inline ml-1" />
+                <span className="text-xs text-gray-500 flex items-center">
+                  <FaCalendarDay className="inline ml-1 text-blue-600" />
                   {new Date().toLocaleDateString("ar-EG")}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+          {/* Navigation Buttons */}
+          <div className="flex items-center space-x-1.5 rtl:space-x-reverse">
+            {/* Halls Management */}
             <button
               onClick={handleHallsNavigation}
-              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm whitespace-nowrap flex-shrink-0 ${
+              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm whitespace-nowrap flex-shrink-0 relative overflow-hidden group ${
                 isHallsActive
-                  ? "bg-blue-900 text-white border-blue-900"
-                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
+                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
               }`}
             >
-              <FaChair className="h-4 w-4 ml-1.5" />
-              إدارة الصالات
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
+              <FaChair
+                className={`h-4 w-4 ml-1.5 ${isHallsActive ? "text-white" : "text-blue-700"}`}
+              />
+              <span className="relative">إدارة الصالات</span>
             </button>
 
+            {/* Categories Management */}
             <button
               onClick={handleCategoriesNavigation}
-              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
+              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
                 isCategoriesActive
-                  ? "bg-blue-900 text-white border-blue-900"
-                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
+                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
               }`}
             >
-              <FaLayerGroup className="h-4 w-4 ml-1.5" />
-              إدارة الفئات
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
+              <FaLayerGroup
+                className={`h-4 w-4 ml-1.5 ${isCategoriesActive ? "text-white" : "text-blue-700"}`}
+              />
+              <span className="relative">إدارة الفئات</span>
             </button>
 
+            {/* Products Management */}
             <button
               onClick={handleProductsManagementNavigation}
-              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
+              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
                 isProductsManagementActive
-                  ? "bg-blue-900 text-white border-blue-900"
-                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
+                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
               }`}
             >
-              <FaBoxOpen className="h-4 w-4 ml-1.5" />
-              إدارة المنتجات
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
+              <FaBoxOpen
+                className={`h-4 w-4 ml-1.5 ${isProductsManagementActive ? "text-white" : "text-blue-700"}`}
+              />
+              <span className="relative">إدارة المنتجات</span>
             </button>
 
+            {/* Customers Management */}
             <button
               onClick={handleCustomersNavigation}
-              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
+              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
                 isCustomersActive
-                  ? "bg-blue-900 text-white border-blue-900"
-                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
+                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
               }`}
             >
-              <FaUser className="h-4 w-4 ml-1.5" />
-              إدارة العملاء
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
+              <FaUser
+                className={`h-4 w-4 ml-1.5 ${isCustomersActive ? "text-white" : "text-blue-700"}`}
+              />
+              <span className="relative">إدارة العملاء</span>
             </button>
 
+            {/* Shipping Companies */}
             <button
               onClick={handleShippingCompaniesNavigation}
-              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
+              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
                 isShippingCompaniesActive
-                  ? "bg-blue-900 text-white border-blue-900"
-                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
+                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
               }`}
             >
-              <FaTruck className="h-4 w-4 ml-1.5" />
-              شركات التوصيل
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
+              <FaTruck
+                className={`h-4 w-4 ml-1.5 ${isShippingCompaniesActive ? "text-white" : "text-blue-700"}`}
+              />
+              <span className="relative">شركات التوصيل</span>
             </button>
 
+            {/* Payment Methods */}
             <button
               onClick={handlePaymentMethodsNavigation}
-              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
+              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
                 isPaymentMethodsActive
-                  ? "bg-blue-900 text-white border-blue-900"
-                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
+                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
               }`}
             >
-              <FaCreditCard className="h-4 w-4 ml-1.5" />
-              طرق الدفع
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
+              <FaCreditCard
+                className={`h-4 w-4 ml-1.5 ${isPaymentMethodsActive ? "text-white" : "text-blue-700"}`}
+              />
+              <span className="relative">طرق الدفع</span>
             </button>
 
+            {/* Users Management */}
             <button
               onClick={handleUsersNavigation}
-              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
+              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
                 isUsersActive
-                  ? "bg-blue-900 text-white border-blue-900"
-                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
+                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
               }`}
             >
-              <FaUserCog className="h-4 w-4 ml-1.5" />
-              إدارة الموظفين
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
+              <FaUserCog
+                className={`h-4 w-4 ml-1.5 ${isUsersActive ? "text-white" : "text-blue-700"}`}
+              />
+              <span className="relative">إدارة الموظفين</span>
             </button>
 
+            {/* Permissions Management */}
             <button
               onClick={handlePermissionsNavigation}
-              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
+              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
                 isPermissionsActive
-                  ? "bg-blue-900 text-white border-blue-900"
-                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
+                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
               }`}
             >
-              <FaShieldAlt className="h-4 w-4 ml-1.5" />
-              إدارة الصلاحيات
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
+              <FaShieldAlt
+                className={`h-4 w-4 ml-1.5 ${isPermissionsActive ? "text-white" : "text-blue-700"}`}
+              />
+              <span className="relative">إدارة الصلاحيات</span>
             </button>
 
+            {/* Reports Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowReportsDropdown(!showReportsDropdown)}
                 aria-expanded={showReportsDropdown}
                 aria-haspopup="true"
-                className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
+                className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
                   isReportsActive
-                    ? "bg-blue-900 text-white border-blue-900"
-                    : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
-                } ${showReportsDropdown ? "bg-blue-900 text-white" : ""}`}
+                    ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
+                    : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
+                } ${showReportsDropdown ? "bg-gradient-to-r from-blue-900 to-blue-700 text-white" : ""}`}
               >
-                <FaChartBar className="h-4 w-4 ml-1.5" />
-                التقارير
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
+                <FaChartBar
+                  className={`h-4 w-4 ml-1.5 ${isReportsActive || showReportsDropdown ? "text-white" : "text-blue-700"}`}
+                />
+                <span className="relative">التقارير</span>
                 <FaChevronDown
-                  className={`h-3 w-3 mr-1 transition-transform duration-200 ${
-                    showReportsDropdown ? "rotate-180" : ""
-                  }`}
+                  className={`h-3 w-3 mr-1 transition-all duration-300 ${
+                    showReportsDropdown ? "rotate-180 transform" : ""
+                  } ${isReportsActive || showReportsDropdown ? "text-white" : "text-gray-500"}`}
                 />
               </button>
 
               {showReportsDropdown && (
-                <div className="absolute left-0 mt-1 w-60 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-fadeIn">
-                  <div className="p-1">
-                    <div className="space-y-1 mt-1">
+                <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-slideDown">
+                  <div className="p-2 bg-gradient-to-b from-gray-50 to-white">
+                    <div className="text-xs font-semibold text-gray-500 px-3 py-2 border-b border-gray-100 mb-2">
+                      قائمة التقارير
+                    </div>
+                    <div className="space-y-1">
                       <button
                         onClick={() => handleReportNavigation("shifts")}
-                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/shifts"
-                            ? "bg-blue-50 text-blue-700"
-                            : "text-gray-700 hover:bg-gray-50"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
+                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
                             location.pathname === "/reports/shifts"
-                              ? "bg-blue-100"
-                              : "bg-gray-100"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
-                          <FaClock className="h-3.5 w-3.5 text-blue-600" />
+                          <FaClock
+                            className={`h-4 w-4 transition-all duration-200 ${
+                              location.pathname === "/reports/shifts"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير الورديات</p>
+                          <p className="text-xs text-gray-500">
+                            سجل الورديات والإيرادات
+                          </p>
                         </div>
                       </button>
 
                       <button
                         onClick={() => handleReportNavigation("sales")}
-                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/sales"
-                            ? "bg-blue-50 text-blue-700"
-                            : "text-gray-700 hover:bg-gray-50"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
+                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
                             location.pathname === "/reports/sales"
-                              ? "bg-blue-100"
-                              : "bg-gray-100"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
-                          <FaChartLine className="h-3.5 w-3.5 text-blue-600" />
+                          <FaChartLine
+                            className={`h-4 w-4 transition-all duration-200 ${
+                              location.pathname === "/reports/sales"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير المبيعات</p>
+                          <p className="text-xs text-gray-500">
+                            تحليلات المبيعات والأرباح
+                          </p>
                         </div>
                       </button>
 
                       <button
                         onClick={() => handleReportNavigation("products")}
-                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/products"
-                            ? "bg-blue-50 text-blue-700"
-                            : "text-gray-700 hover:bg-gray-50"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
+                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
                             location.pathname === "/reports/products"
-                              ? "bg-blue-100"
-                              : "bg-gray-100"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
-                          <FaBoxes className="h-3.5 w-3.5 text-blue-600" />
+                          <FaBoxes
+                            className={`h-4 w-4 transition-all duration-200 ${
+                              location.pathname === "/reports/products"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير المنتجات</p>
+                          <p className="text-xs text-gray-500">
+                            أكثر المنتجات مبيعاً
+                          </p>
                         </div>
                       </button>
 
                       <button
                         onClick={() => handleReportNavigation("customers")}
-                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/customers"
-                            ? "bg-blue-50 text-blue-700"
-                            : "text-gray-700 hover:bg-gray-50"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
+                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
                             location.pathname === "/reports/customers"
-                              ? "bg-blue-100"
-                              : "bg-gray-100"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
-                          <FaUserFriends className="h-3.5 w-3.5 text-blue-600" />
+                          <FaUserFriends
+                            className={`h-4 w-4 transition-all duration-200 ${
+                              location.pathname === "/reports/customers"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير العملاء</p>
+                          <p className="text-xs text-gray-500">
+                            تحليلات العملاء والمشتريات
+                          </p>
                         </div>
                       </button>
 
@@ -445,67 +522,94 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                         onClick={() =>
                           handleReportNavigation("payment-methods")
                         }
-                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/payment-methods"
-                            ? "bg-blue-50 text-blue-700"
-                            : "text-gray-700 hover:bg-gray-50"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
+                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
                             location.pathname === "/reports/payment-methods"
-                              ? "bg-blue-100"
-                              : "bg-gray-100"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
-                          <FaMoneyCheck className="h-3.5 w-3.5 text-blue-600" />
+                          <FaMoneyCheck
+                            className={`h-4 w-4 transition-all duration-200 ${
+                              location.pathname === "/reports/payment-methods"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير طرق الدفع</p>
+                          <p className="text-xs text-gray-500">
+                            تحليلات طرق الدفع المستخدمة
+                          </p>
                         </div>
                       </button>
 
                       <button
                         onClick={() => handleReportNavigation("pending-bills")}
-                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/pending-bills"
-                            ? "bg-blue-50 text-blue-700"
-                            : "text-gray-700 hover:bg-gray-50"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
+                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
                             location.pathname === "/reports/pending-bills"
-                              ? "bg-blue-100"
-                              : "bg-gray-100"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
-                          <FaExclamationCircle className="h-3.5 w-3.5 text-blue-600" />
+                          <FaExclamationCircle
+                            className={`h-4 w-4 transition-all duration-200 ${
+                              location.pathname === "/reports/pending-bills"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير الفواتير المعلقة</p>
+                          <p className="text-xs text-gray-500">
+                            الفواتير غير المكتملة
+                          </p>
                         </div>
                       </button>
 
                       <button
                         onClick={() => handleReportNavigation("returns")}
-                        className={`flex items-center w-full px-3 py-2 text-right transition-colors rounded-lg text-sm ${
+                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/returns"
-                            ? "bg-blue-50 text-blue-700"
-                            : "text-gray-700 hover:bg-gray-50"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 ${
+                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
                             location.pathname === "/reports/returns"
-                              ? "bg-blue-100"
-                              : "bg-gray-100"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
-                          <FaUndo className="h-3.5 w-3.5 text-blue-600" />
+                          <FaUndo
+                            className={`h-4 w-4 transition-all duration-200 ${
+                              location.pathname === "/reports/returns"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
                         </div>
                         <div className="flex-1 text-right">
                           <p className="font-medium">تقارير المرتجعات</p>
+                          <p className="text-xs text-gray-500">
+                            سجل المنتجات المرتجعة
+                          </p>
                         </div>
                       </button>
                     </div>
@@ -514,27 +618,37 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
               )}
             </div>
 
+            {/* Close Shift Button */}
             {isShiftOpen && (
               <button
                 onClick={handleCloseShift}
-                className="h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm"
-                style={{ borderColor: "#F59E0B", color: "#F59E0B" }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = "#F59E0B";
-                  e.target.style.color = "white";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = "transparent";
-                  e.target.style.color = "#F59E0B";
-                }}
+                className="h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/30 hover:shadow-lg hover:shadow-amber-500/40 hover:scale-105 active:scale-95"
               >
+                <span className="absolute inset-0 bg-gradient-to-r from-white/0 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                 <FaStopCircle className="h-4 w-4 ml-1.5" />
-                إغلاق الوردية
+                <span className="relative">إغلاق الوردية</span>
               </button>
             )}
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-slideDown {
+          animation: slideDown 0.2s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
