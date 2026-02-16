@@ -24,6 +24,7 @@ import {
   FaLayerGroup,
   FaBoxOpen,
   FaUser,
+  FaShieldAlt,
 } from "react-icons/fa";
 
 export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
@@ -165,6 +166,10 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
     navigate("/users");
   };
 
+  const handlePermissionsNavigation = () => {
+    navigate("/permissions");
+  };
+
   const handleCategoriesNavigation = () => {
     navigate("/categories");
   };
@@ -191,6 +196,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
 
   const isReportsActive = location.pathname.startsWith("/reports");
   const isUsersActive = location.pathname === "/users";
+  const isPermissionsActive = location.pathname === "/permissions";
   const isCategoriesActive = location.pathname === "/categories";
   const isProductsManagementActive =
     location.pathname === "/products-management";
@@ -309,6 +315,18 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
             >
               <FaUserCog className="h-4 w-4 ml-1.5" />
               إدارة الموظفين
+            </button>
+
+            <button
+              onClick={handlePermissionsNavigation}
+              className={`h-9 px-3 rounded-lg font-medium border transition-all flex items-center text-sm ${
+                isPermissionsActive
+                  ? "bg-blue-900 text-white border-blue-900"
+                  : "border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+              }`}
+            >
+              <FaShieldAlt className="h-4 w-4 ml-1.5" />
+              إدارة الصلاحيات
             </button>
 
             <div className="relative" ref={dropdownRef}>

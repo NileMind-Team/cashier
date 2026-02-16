@@ -15,6 +15,7 @@ import CustomersManagement from "../pages/CustomersManagement";
 import ShippingCompaniesManagement from "../pages/ShippingCompaniesManagement";
 import PaymentMethodsManagement from "../pages/PaymentMethodsManagement";
 import HallsManagement from "../pages/HallsManagement";
+import PermissionsManagement from "../pages/PermissionsManagement";
 
 export default function AppRoutes() {
   return (
@@ -41,6 +42,7 @@ export default function AppRoutes() {
       />
       <Route path="/payment-methods" element={<PaymentMethodsManagement />} />
       <Route path="/halls" element={<HallsManagement />} />
+      <Route path="/permissions" element={<PermissionsManagement />} />
     </Routes>
   );
 }
