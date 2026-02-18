@@ -25,6 +25,7 @@ import {
   FaBoxOpen,
   FaUser,
   FaShieldAlt,
+  FaPizzaSlice,
 } from "react-icons/fa";
 
 export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
@@ -194,6 +195,10 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
     navigate("/halls");
   };
 
+  const handleOptionsNavigation = () => {
+    navigate("/options");
+  };
+
   const isReportsActive = location.pathname.startsWith("/reports");
   const isUsersActive = location.pathname === "/users";
   const isPermissionsActive = location.pathname === "/permissions";
@@ -204,6 +209,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
   const isShippingCompaniesActive = location.pathname === "/shipping-companies";
   const isPaymentMethodsActive = location.pathname === "/payment-methods";
   const isHallsActive = location.pathname === "/halls";
+  const isOptionsActive = location.pathname === "/options";
 
   return (
     <div className="bg-gradient-to-r from-white to-gray-50/80 shadow-lg backdrop-blur-sm border-b border-gray-200/80 sticky top-0 z-50">
@@ -249,6 +255,22 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                 className={`h-4 w-4 ml-1.5 ${isHallsActive ? "text-white" : "text-blue-700"}`}
               />
               <span className="relative">إدارة الصالات</span>
+            </button>
+
+            {/* Options Management */}
+            <button
+              onClick={handleOptionsNavigation}
+              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm whitespace-nowrap flex-shrink-0 relative overflow-hidden group ${
+                isOptionsActive
+                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
+                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
+              }`}
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
+              <FaPizzaSlice
+                className={`h-4 w-4 ml-1.5 ${isOptionsActive ? "text-white" : "text-blue-700"}`}
+              />
+              <span className="relative">إدارة الإضافات</span>
             </button>
 
             {/* Categories Management */}

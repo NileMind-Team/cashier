@@ -266,8 +266,10 @@ export default function UsersManagement() {
 
     try {
       const response = await axiosInstance.put(
-        `/api/Users/AddRoles?userId=${selectedUserForRole.id}`,
-        selectedRoles,
+        `/api/Users/UpdateUserRoles?userId=${selectedUserForRole.id}`,
+        {
+          roles: selectedRoles,
+        },
         {
           headers: {
             "Content-Type": "application/json",
@@ -276,24 +278,12 @@ export default function UsersManagement() {
       );
 
       if (response.status === 200) {
-        setUsers((prevUsers) => {
-          const updatedUsers = prevUsers.map((u) =>
-            u.id === selectedUserForRole.id
-              ? { ...u, roles: selectedRoles }
-              : u,
-          );
-          if (currentEmployee) {
-            const otherUsers = updatedUsers.filter(
-              (u) => u.id !== currentEmployee.id,
-            );
-            return [currentEmployee, ...otherUsers];
-          }
-          return updatedUsers;
-        });
         toast.success("تم تغيير صلاحيات الموظف بنجاح");
         setShowRoleModal(false);
         setSelectedUserForRole(null);
         setSelectedRoles([]);
+
+        window.location.reload();
       } else {
         toast.error(
           response.data.error?.description || "فشل في تغيير صلاحيات الموظف",
