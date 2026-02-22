@@ -369,7 +369,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
             >
               <span className="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-purple-600/0 group-hover:from-purple-600/5 group-hover:to-purple-600/0 transition-all duration-300"></span>
               <FaPercentage
-                className={`h-4 w-4 ml-1.5 ${isDiscountsActive ? "text-white" : "text-purple-700"}`}
+                className={`h-4 w-4 ml-1.5 ${isDiscountsActive ? "text-white" : "text-blue-700"}`}
               />
               <span className="relative">إدارة الخصومات</span>
             </button>

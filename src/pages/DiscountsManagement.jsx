@@ -71,7 +71,7 @@ export default function DiscountsManagement() {
   };
 
   const getProductsWithDiscount = () => {
-    return products.filter((prod) => prod.discountValue > 0);
+    return products.filter((prod) => prod.discountPrice > 0);
   };
 
   const handleEditDiscount = (item, type) => {
@@ -82,7 +82,7 @@ export default function DiscountsManagement() {
     } else if (type === "subCategory") {
       currentDiscount = item.percentageDiscount || 0;
     } else if (type === "product") {
-      currentDiscount = item.discountValue || 0;
+      currentDiscount = item.discountPrice || 0;
     }
 
     setEditingDiscount({
@@ -259,7 +259,7 @@ export default function DiscountsManagement() {
 
     total += mainCategories.filter((c) => c.percentageDiscount > 0).length;
     total += subCategories.filter((s) => s.percentageDiscount > 0).length;
-    total += products.filter((p) => p.discountValue > 0).length;
+    total += products.filter((p) => p.discountPrice > 0).length;
 
     return total;
   };
@@ -307,35 +307,6 @@ export default function DiscountsManagement() {
           )}
         </div>
       </div>
-
-      {/* عرض الفئات الفرعية التابعة */}
-      {category.subCategories && category.subCategories.length > 0 && (
-        <div className="mt-3 mr-12 pr-3 border-r-2 border-purple-200">
-          <p className="text-xs font-medium text-gray-500 mb-2">
-            الفئات الفرعية التابعة:
-          </p>
-          <div className="space-y-2">
-            {category.subCategories.map((sub) => (
-              <div
-                key={sub.id}
-                className="flex items-center justify-between bg-purple-50/50 p-2 rounded-lg"
-              >
-                <div className="flex items-center">
-                  <div className="w-6 h-6 rounded-full bg-purple-200 flex items-center justify-center ml-2 text-purple-700 text-xs font-bold">
-                    {sub.name.charAt(0)}
-                  </div>
-                  <span className="text-sm text-gray-700">{sub.name}</span>
-                </div>
-                {sub.percentageDiscount > 0 && (
-                  <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-                    خصم {sub.percentageDiscount}%
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 
@@ -386,35 +357,6 @@ export default function DiscountsManagement() {
           )}
         </div>
       </div>
-
-      {/* عرض المنتجات التابعة */}
-      {subCategory.items && subCategory.items.length > 0 && (
-        <div className="mt-3 mr-12 pr-3 border-r-2 border-indigo-200">
-          <p className="text-xs font-medium text-gray-500 mb-2">
-            المنتجات التابعة:
-          </p>
-          <div className="space-y-2">
-            {subCategory.items.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between bg-indigo-50/50 p-2 rounded-lg"
-              >
-                <div className="flex items-center">
-                  <div className="w-6 h-6 rounded-full bg-indigo-200 flex items-center justify-center ml-2 text-indigo-700 text-xs font-bold">
-                    {item.name.charAt(0)}
-                  </div>
-                  <span className="text-sm text-gray-700">{item.name}</span>
-                </div>
-                {item.discountValue > 0 && (
-                  <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-                    خصم {item.discountValue}%
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 
@@ -443,15 +385,29 @@ export default function DiscountsManagement() {
               {product.mainCategoryName || "غير معروف"} •{" "}
               {product.subCategoryName || "غير معروف"}
             </div>
-            <div className="text-sm font-bold text-green-700 mt-1">
-              {product.price?.toFixed(2)} ج.م
+            <div className="flex items-center mt-1">
+              {product.discountPrice > 0 ? (
+                <>
+                  <div className="text-sm font-bold text-green-700">
+                    {product.discountPrice?.toFixed(2)} ج.م
+                  </div>
+                  <div className="text-xs text-gray-400 line-through mr-2">
+                    {product.price?.toFixed(2)} ج.م
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm font-bold text-green-700">
+                  {product.price?.toFixed(2)} ج.م
+                </div>
+              )}
             </div>
           </div>
         </div>
         <div className="flex items-center space-x-2 rtl:space-x-reverse">
-          {product.discountValue > 0 && (
+          {product.discountPrice > 0 && (
             <div className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-lg text-sm font-bold border border-purple-200">
-              خصم {product.discountValue}%
+              خصم{" "}
+              {((1 - product.discountPrice / product.price) * 100).toFixed(1)}%
             </div>
           )}
           {showActions && (
@@ -463,7 +419,7 @@ export default function DiscountsManagement() {
               >
                 <FaPercentage className="h-4 w-4" />
               </button>
-              {product.discountValue > 0 && (
+              {product.discountPrice > 0 && (
                 <button
                   onClick={() => handleRemoveDiscount(product, "product")}
                   className="p-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors border border-red-200"
@@ -556,7 +512,7 @@ export default function DiscountsManagement() {
               </span>{" "}
               فئة فرعية •{" "}
               <span className="text-purple-600 font-bold ml-1">
-                {products.filter((p) => p.discountValue > 0).length}
+                {products.filter((p) => p.discountPrice > 0).length}
               </span>{" "}
               منتج
             </div>
@@ -617,9 +573,9 @@ export default function DiscountsManagement() {
               >
                 <FaBoxOpen className="inline ml-2 h-4 w-4" />
                 المنتجات
-                {products.filter((p) => p.discountValue > 0).length > 0 && (
+                {products.filter((p) => p.discountPrice > 0).length > 0 && (
                   <span className="mr-2 bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full text-xs">
-                    {products.filter((p) => p.discountValue > 0).length}
+                    {products.filter((p) => p.discountPrice > 0).length}
                   </span>
                 )}
               </button>
