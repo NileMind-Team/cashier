@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
+import axiosInstance from "../api/axiosInstance";
 
 export default function PaymentMethodsManagement() {
   const navigate = useNavigate();
@@ -9,45 +10,72 @@ export default function PaymentMethodsManagement() {
   const [loading, setLoading] = useState(false);
   const [editingMethod, setEditingMethod] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [focusedField, setFocusedField] = useState(null);
+  const hasFetched = useRef(false);
+
+  const [stats, setStats] = useState({
+    totalPaymentMethods: 0,
+    activePaymentMethods: 0,
+    inactivePaymentMethods: 0,
+    totalTransactions: 0,
+    totalAmount: 0,
+  });
 
   const [formData, setFormData] = useState({
     name: "",
-    isActive: true,
   });
 
-  const initialMethods = [
-    {
-      id: 1,
-      name: "كاش",
-      isActive: true,
-      totalTransactions: 1250,
-      totalAmount: 45000.75,
-    },
-    {
-      id: 2,
-      name: "فيزا",
-      isActive: true,
-      totalTransactions: 850,
-      totalAmount: 32000.5,
-    },
-    {
-      id: 3,
-      name: "محفظة إلكترونية",
-      isActive: true,
-      totalTransactions: 420,
-      totalAmount: 15000.25,
-    },
-  ];
+  const fetchMethods = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get("/api/Payment/GetAll");
+
+      if (response.status === 200 && Array.isArray(response.data)) {
+        const formattedMethods = response.data.map((method) => ({
+          id: method.id,
+          name: method.name || "",
+          isActive: method.isActive || false,
+          totalTransactions: 0,
+          totalAmount: 0,
+        }));
+        setMethods(formattedMethods);
+      } else {
+        setMethods([]);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب طرق الدفع:", error);
+      setMethods([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStatistics = async () => {
+    try {
+      const response = await axiosInstance.get(
+        "/api/Payment/GetStatistics/stats",
+      );
+
+      if (response.status === 200) {
+        setStats({
+          totalPaymentMethods: response.data.totalPaymentMethods || 0,
+          activePaymentMethods: response.data.activePaymentMethods || 0,
+          inactivePaymentMethods: response.data.inactivePaymentMethods || 0,
+          totalTransactions: response.data.totalTransactions || 0,
+          totalAmount: response.data.totalAmount || 0,
+        });
+      }
+    } catch (error) {
+      console.error("خطأ في جلب الإحصائيات:", error);
+    }
+  };
 
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setMethods(initialMethods);
-      setLoading(false);
-    }, 500);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!hasFetched.current) {
+      fetchMethods();
+      fetchStatistics();
+      hasFetched.current = true;
+    }
   }, []);
 
   const formatCurrency = (amount) => {
@@ -62,17 +90,17 @@ export default function PaymentMethodsManagement() {
     setEditingMethod(null);
     setFormData({
       name: "",
-      isActive: true,
     });
+    setFocusedField(null);
   };
 
   const handleEditMethod = (method) => {
     setEditingMethod(method);
     setShowAddModal(true);
     setFormData({
-      name: method.name,
-      isActive: method.isActive,
+      name: method.name || "",
     });
+    setFocusedField(null);
   };
 
   const handleDeleteMethod = async (methodId) => {
@@ -82,7 +110,7 @@ export default function PaymentMethodsManagement() {
       title: "هل أنت متأكد من حذف طريقة الدفع؟",
       html: `
         <div class="text-right">
-          <p class="mb-3">طريقة الدفع: <strong>${method.name}</strong></p>
+          <p class="mb-3">طريقة الدفع: <strong>${method?.name}</strong></p>
         </div>
       `,
       icon: "warning",
@@ -95,8 +123,22 @@ export default function PaymentMethodsManagement() {
     });
 
     if (result.isConfirmed) {
-      setMethods(methods.filter((method) => method.id !== methodId));
-      toast.success("تم حذف طريقة الدفع بنجاح");
+      try {
+        const response = await axiosInstance.delete(
+          `/api/Payment/Delete/${methodId}`,
+        );
+
+        if (response.status === 200 || response.status === 204) {
+          setMethods(methods.filter((method) => method.id !== methodId));
+          toast.success("تم حذف طريقة الدفع بنجاح");
+          fetchStatistics();
+        } else {
+          toast.error("فشل في حذف طريقة الدفع");
+        }
+      } catch (error) {
+        console.error("خطأ في حذف طريقة الدفع:", error);
+        toast.error("حدث خطأ في حذف طريقة الدفع");
+      }
     }
   };
 
@@ -119,26 +161,48 @@ export default function PaymentMethodsManagement() {
     });
 
     if (result.isConfirmed) {
-      setMethods(
-        methods.map((method) =>
-          method.id === methodId
-            ? { ...method, isActive: !method.isActive }
-            : method,
-        ),
-      );
-      toast.success(`تم ${action} طريقة الدفع بنجاح`);
+      try {
+        const response = await axiosInstance.patch(
+          `/api/Payment/ToggleActivation/${methodId}/toggle`,
+        );
+
+        if (response.status === 200) {
+          setMethods(
+            methods.map((method) =>
+              method.id === methodId
+                ? { ...method, isActive: !method.isActive }
+                : method,
+            ),
+          );
+          toast.success(`تم ${action} طريقة الدفع بنجاح`);
+          fetchStatistics();
+        } else {
+          toast.error(`فشل في ${action} طريقة الدفع`);
+        }
+      } catch (error) {
+        console.error(`خطأ في ${action} طريقة الدفع:`, error);
+        toast.error(`حدث خطأ في ${action} طريقة الدفع`);
+      }
     }
   };
 
   const handleFormChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleFocus = (fieldName) => {
+    setFocusedField(fieldName);
+  };
+
+  const handleBlur = () => {
+    setFocusedField(null);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
@@ -146,51 +210,60 @@ export default function PaymentMethodsManagement() {
       return;
     }
 
-    if (editingMethod) {
-      const updatedMethods = methods.map((method) =>
-        method.id === editingMethod.id
-          ? {
-              ...method,
-              name: formData.name,
-              isActive: formData.isActive,
-            }
-          : method,
-      );
-      setMethods(updatedMethods);
-      toast.success("تم تحديث بيانات طريقة الدفع بنجاح");
-    } else {
-      const newMethod = {
-        id: methods.length + 1,
+    try {
+      const methodData = {
         name: formData.name,
-        isActive: formData.isActive,
-        totalTransactions: 0,
-        totalAmount: 0,
       };
-      setMethods([...methods, newMethod]);
-      toast.success("تم إضافة طريقة الدفع الجديدة بنجاح");
+
+      if (editingMethod) {
+        const response = await axiosInstance.put(
+          `/api/Payment/Update/${editingMethod.id}`,
+          methodData,
+        );
+
+        if (response.status === 200) {
+          setMethods(
+            methods.map((method) =>
+              method.id === editingMethod.id
+                ? {
+                    ...method,
+                    name: formData.name,
+                  }
+                : method,
+            ),
+          );
+          toast.success("تم تحديث بيانات طريقة الدفع بنجاح");
+        } else {
+          toast.error("فشل في تحديث بيانات طريقة الدفع");
+        }
+      } else {
+        const response = await axiosInstance.post(
+          "/api/Payment/Add",
+          methodData,
+        );
+
+        if (response.status === 201 || response.status === 200) {
+          const newMethod = {
+            id: response.data.id || Date.now(),
+            name: formData.name,
+            isActive: true,
+            totalTransactions: 0,
+            totalAmount: 0,
+          };
+          setMethods([...methods, newMethod]);
+          toast.success("تم إضافة طريقة الدفع الجديدة بنجاح");
+        } else {
+          toast.error("فشل في إضافة طريقة الدفع");
+        }
+      }
+
+      fetchStatistics();
+      setShowAddModal(false);
+      setEditingMethod(null);
+    } catch (error) {
+      console.error("خطأ في حفظ طريقة الدفع:", error);
+      toast.error("حدث خطأ في حفظ طريقة الدفع");
     }
-
-    setShowAddModal(false);
-    setEditingMethod(null);
-  };
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentMethods = methods.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(methods.length / itemsPerPage);
-
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
-
-  const stats = {
-    totalMethods: methods.length,
-    activeMethods: methods.filter((m) => m.isActive).length,
-    totalTransactions: methods.reduce(
-      (sum, method) => sum + method.totalTransactions,
-      0,
-    ),
-    totalAmount: methods.reduce((sum, method) => sum + method.totalAmount, 0),
   };
 
   const getMethodColor = (methodId) => {
@@ -209,6 +282,7 @@ export default function PaymentMethodsManagement() {
       dir="rtl"
       className="min-h-screen bg-gradient-to-l from-gray-50 to-gray-100"
     >
+      {/* Navbar */}
       <div className="bg-white shadow-md">
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
@@ -254,75 +328,146 @@ export default function PaymentMethodsManagement() {
       </div>
 
       <div className="container mx-auto px-4 py-6">
+        {/* Professional Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+          {/* Total Payment Methods Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-800">إجمالي طرق الدفع</p>
-                <p className="text-2xl font-bold text-blue-900 mt-1">
-                  {stats.totalMethods}
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  إجمالي طرق الدفع
                 </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  {stats.activeMethods} نشط •{" "}
-                  {stats.totalMethods - stats.activeMethods} غير نشط
+                <p className="text-3xl font-bold text-gray-800">
+                  {stats.totalPaymentMethods}
+                </p>
+                <p className="text-xs text-gray-500 mt-2 flex items-center">
+                  <span className="text-green-600 font-medium ml-1">
+                    {stats.activePaymentMethods} نشط
+                  </span>
+                  <span className="mx-1">•</span>
+                  <span className="text-red-500 font-medium">
+                    {stats.inactivePaymentMethods} غير نشط
+                  </span>
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                <span className="text-blue-700 font-bold">💳</span>
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                  />
+                </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+          {/* Total Transactions Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-green-800">إجمالي المعاملات</p>
-                <p className="text-2xl font-bold text-green-900 mt-1">
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  إجمالي المعاملات
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
                   {stats.totalTransactions.toLocaleString()}
                 </p>
-                <p className="text-xs text-green-600 mt-1">جميع طرق الدفع</p>
+                <p className="text-xs text-gray-500 mt-2">جميع طرق الدفع</p>
               </div>
-              <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                <span className="text-green-700 font-bold">📊</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-purple-800">المعاملات النشطة</p>
-                <p className="text-2xl font-bold text-purple-900 mt-1">
-                  {stats.activeMethods}
-                </p>
-                <p className="text-xs text-purple-600 mt-1">
-                  طرق الدفع المتاحة
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                <span className="text-purple-700 font-bold">✅</span>
+              <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
+          {/* Active Methods Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-amber-800">إجمالي المبالغ</p>
-                <p className="text-2xl font-bold text-amber-900 mt-1">
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  طرق الدفع النشطة
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
+                  {stats.activePaymentMethods}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  المتاحة للاستخدام حالياً
+                </p>
+              </div>
+              <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Total Amount Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  إجمالي المبالغ
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
                   {formatCurrency(stats.totalAmount)} ج.م
                 </p>
-                <p className="text-xs text-amber-600 mt-1">جميع المعاملات</p>
+                <p className="text-xs text-gray-500 mt-2">جميع المعاملات</p>
               </div>
-              <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
-                <span className="text-amber-700 font-bold">💵</span>
+              <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Header Section */}
         <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold" style={{ color: "#193F94" }}>
                 قائمة طرق الدفع
@@ -354,6 +499,7 @@ export default function PaymentMethodsManagement() {
           </div>
         </div>
 
+        {/* Methods Table */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           {loading ? (
             <div className="p-8 flex flex-col items-center justify-center">
@@ -381,7 +527,7 @@ export default function PaymentMethodsManagement() {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentMethods.length === 0 ? (
+                    {methods.length === 0 ? (
                       <tr>
                         <td
                           colSpan="4"
@@ -412,7 +558,7 @@ export default function PaymentMethodsManagement() {
                         </td>
                       </tr>
                     ) : (
-                      currentMethods.map((method) => (
+                      methods.map((method) => (
                         <tr
                           key={method.id}
                           className="hover:bg-gray-50 transition-colors border-b border-gray-100"
@@ -425,7 +571,7 @@ export default function PaymentMethodsManagement() {
                                 )} border`}
                               >
                                 <span className="font-bold text-lg">
-                                  {method.name.charAt(0)}
+                                  {method.name?.charAt(0) || "?"}
                                 </span>
                               </div>
                               <div>
@@ -442,7 +588,8 @@ export default function PaymentMethodsManagement() {
                                   المعاملات:
                                 </span>
                                 <span className="font-bold">
-                                  {method.totalTransactions.toLocaleString()}
+                                  {method.totalTransactions?.toLocaleString() ||
+                                    0}
                                 </span>
                               </div>
                               <div className="flex justify-between items-center">
@@ -450,7 +597,7 @@ export default function PaymentMethodsManagement() {
                                   المبالغ:
                                 </span>
                                 <span className="font-bold text-green-700">
-                                  {formatCurrency(method.totalAmount)} ج.م
+                                  {formatCurrency(method.totalAmount || 0)} ج.م
                                 </span>
                               </div>
                             </div>
@@ -560,140 +707,129 @@ export default function PaymentMethodsManagement() {
                   </tbody>
                 </table>
               </div>
-
-              {methods.length > itemsPerPage && (
-                <div className="px-4 py-3 border-t border-gray-200">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between">
-                    <div className="text-sm text-gray-700 mb-2 md:mb-0">
-                      عرض {indexOfFirstItem + 1} -{" "}
-                      {Math.min(indexOfLastItem, methods.length)} من{" "}
-                      {methods.length} طريقة
-                    </div>
-                    <div className="flex items-center space-x-1 rtl:space-x-reverse">
-                      <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className={`px-3 py-1.5 rounded-lg text-sm ${
-                          currentPage === 1
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "text-gray-700 hover:bg-gray-100"
-                        }`}
-                      >
-                        السابق
-                      </button>
-                      {Array.from(
-                        { length: Math.min(5, totalPages) },
-                        (_, i) => {
-                          let pageNumber;
-                          if (totalPages <= 5) {
-                            pageNumber = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNumber = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNumber = totalPages - 4 + i;
-                          } else {
-                            pageNumber = currentPage - 2 + i;
-                          }
-
-                          return (
-                            <button
-                              key={pageNumber}
-                              onClick={() => handlePageChange(pageNumber)}
-                              className={`px-3 py-1.5 rounded-lg text-sm ${
-                                currentPage === pageNumber
-                                  ? "bg-blue-600 text-white"
-                                  : "text-gray-700 hover:bg-gray-100"
-                              }`}
-                            >
-                              {pageNumber}
-                            </button>
-                          );
-                        },
-                      )}
-                      <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className={`px-3 py-1.5 rounded-lg text-sm ${
-                          currentPage === totalPages
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "text-gray-700 hover:bg-gray-100"
-                        }`}
-                      >
-                        التالي
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>
       </div>
 
+      {/* Add/Edit Method Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold" style={{ color: "#193F94" }}>
-                  {editingMethod
-                    ? "تعديل بيانات طريقة الدفع"
-                    : "إضافة طريقة دفع جديدة"}
-                </h3>
+                <div>
+                  <h3
+                    className="text-2xl font-bold"
+                    style={{ color: "#193F94" }}
+                  >
+                    {editingMethod
+                      ? "تعديل بيانات طريقة الدفع"
+                      : "إضافة طريقة دفع جديدة"}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {editingMethod
+                      ? "قم بتعديل بيانات طريقة الدفع"
+                      : "أدخل بيانات طريقة الدفع الجديدة"}
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
                 >
                   ×
                 </button>
               </div>
 
               <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 gap-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      اسم طريقة الدفع *
-                    </label>
+                <div className="mb-4">
+                  <div className="relative">
                     <input
                       type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
+                      onFocus={() => handleFocus("name")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       required
                       dir="rtl"
                     />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "name" || formData.name
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                          />
+                        </svg>
+                        اسم طريقة الدفع *
+                      </span>
+                    </label>
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="isActive"
-                      checked={formData.isActive}
-                      onChange={handleFormChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="mr-2 text-sm font-medium text-gray-700">
-                      طريقة الدفع نشطة (يمكن استخدامها)
-                    </span>
-                  </label>
-                </div>
-
-                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t">
+                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t-2 border-gray-100">
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 py-3 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
                   >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
                     style={{ backgroundColor: "#193F94" }}
                   >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      {editingMethod ? (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                        />
+                      ) : (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      )}
+                    </svg>
                     {editingMethod ? "حفظ التعديلات" : "إضافة طريقة"}
                   </button>
                 </div>

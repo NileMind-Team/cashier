@@ -3,336 +3,116 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import axiosInstance from "../api/axiosInstance";
-import {
-  FaPizzaSlice,
-  FaPlus,
-  FaEdit,
-  FaTrash,
-  FaCheck,
-  FaTimes,
-} from "react-icons/fa";
 
 export default function OptionsManagement() {
   const navigate = useNavigate();
-  const [optionTypes, setOptionTypes] = useState([]);
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showOptionTypeModal, setShowOptionTypeModal] = useState(false);
-  const [showOptionModal, setShowOptionModal] = useState(false);
-  const [editingOptionType, setEditingOptionType] = useState(null);
   const [editingOption, setEditingOption] = useState(null);
-  const [selectedOptionType, setSelectedOptionType] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
   const hasFetched = useRef(false);
 
-  const [optionTypeForm, setOptionTypeForm] = useState({
-    name: "",
-    canMultiSelect: true,
-    isRequired: true,
+  const [stats, setStats] = useState({
+    totalOptions: 0,
+    activeOptions: 0,
+    inactiveOptions: 0,
+    totalValue: 0,
   });
 
-  const [optionForm, setOptionForm] = useState({
+  const [formData, setFormData] = useState({
     name: "",
     price: "",
-    optionTypeId: "",
   });
 
-  const fetchAllData = async () => {
+  const fetchOptions = async () => {
     try {
       setLoading(true);
-      const [optionTypesResponse, optionsResponse] = await Promise.all([
-        axiosInstance.get("/api/OptionTypes/GetAll"),
-        axiosInstance.get("/api/Options/GetAll"),
-      ]);
+      const response = await axiosInstance.get("/api/Options/GetAll");
 
-      if (optionTypesResponse.status === 200 && optionTypesResponse.data) {
-        setOptionTypes(optionTypesResponse.data);
-
-        if (optionTypesResponse.data.length > 0) {
-          if (selectedOptionType) {
-            const stillExists = optionTypesResponse.data.some(
-              (type) => type.id === selectedOptionType.id,
-            );
-            if (stillExists) {
-              setSelectedOptionType(
-                optionTypesResponse.data.find(
-                  (type) => type.id === selectedOptionType.id,
-                ),
-              );
-            } else {
-              setSelectedOptionType(optionTypesResponse.data[0]);
-            }
-          } else {
-            setSelectedOptionType(optionTypesResponse.data[0]);
-          }
-        } else {
-          setSelectedOptionType(null);
-        }
+      if (response.status === 200 && Array.isArray(response.data)) {
+        const formattedOptions = response.data.map((option) => ({
+          id: option.id,
+          name: option.name || "",
+          price: option.price || 0,
+          isActive: option.isActive || false,
+        }));
+        setOptions(formattedOptions);
+        calculateStats(formattedOptions);
       } else {
-        toast.error("فشل في جلب أنواع الإضافات");
-      }
-
-      if (optionsResponse.status === 200 && optionsResponse.data) {
-        setOptions(optionsResponse.data);
-      } else {
-        toast.error("فشل في جلب الإضافات");
+        setOptions([]);
       }
     } catch (error) {
-      console.error("خطأ في جلب البيانات:", error);
-      toast.error("حدث خطأ في جلب البيانات");
+      console.error("خطأ في جلب الإضافات:", error);
+      setOptions([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (!hasFetched.current) {
-      fetchAllData();
-      hasFetched.current = true;
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const calculateStats = (optionsData) => {
+    const totalOptions = optionsData.length;
+    const activeOptions = optionsData.filter((opt) => opt.isActive).length;
+    const inactiveOptions = totalOptions - activeOptions;
+    const totalValue = optionsData.reduce(
+      (sum, opt) => sum + (opt.price || 0),
+      0,
+    );
 
-  const handleAddOptionType = () => {
-    setShowOptionTypeModal(true);
-    setEditingOptionType(null);
-    setOptionTypeForm({
-      name: "",
-      canMultiSelect: true,
-      isRequired: true,
+    setStats({
+      totalOptions,
+      activeOptions,
+      inactiveOptions,
+      totalValue,
     });
-    setFocusedField(null);
   };
 
-  const handleEditOptionType = (optionType) => {
-    setEditingOptionType(optionType);
-    setShowOptionTypeModal(true);
-    setOptionTypeForm({
-      name: optionType.name,
-      canMultiSelect: optionType.canMultiSelect,
-      isRequired: optionType.isRequired,
-    });
-    setFocusedField(null);
+  useEffect(() => {
+    if (!hasFetched.current) {
+      fetchOptions();
+      hasFetched.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("ar-EG", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
   };
 
   const handleAddOption = () => {
-    if (optionTypes.length === 0) {
-      toast.error("يجب إضافة نوع إضافة أولاً");
-      return;
-    }
-    setShowOptionModal(true);
+    setShowAddModal(true);
     setEditingOption(null);
-    setOptionForm({
+    setFormData({
       name: "",
       price: "",
-      optionTypeId: selectedOptionType?.id || optionTypes[0]?.id || "",
     });
     setFocusedField(null);
   };
 
   const handleEditOption = (option) => {
     setEditingOption(option);
-    setShowOptionModal(true);
-    setOptionForm({
-      name: option.name,
-      price: option.price,
-      optionTypeId: option.optionTypeId,
+    setShowAddModal(true);
+    setFormData({
+      name: option.name || "",
+      price: option.price || "",
     });
     setFocusedField(null);
-  };
-
-  const handleOptionTypeFormChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setOptionTypeForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const handleOptionFormChange = (e) => {
-    const { name, value } = e.target;
-    setOptionForm((prev) => ({
-      ...prev,
-      [name]:
-        name === "price" ? (value === "" ? "" : parseFloat(value) || 0) : value,
-    }));
-  };
-
-  const handleFocus = (fieldName) => {
-    setFocusedField(fieldName);
-  };
-
-  const handleBlur = () => {
-    setFocusedField(null);
-  };
-
-  const handleSubmitOptionType = async (e) => {
-    e.preventDefault();
-
-    if (!optionTypeForm.name.trim()) {
-      toast.error("يرجى إدخال اسم نوع الإضافة");
-      return;
-    }
-
-    try {
-      if (editingOptionType) {
-        const response = await axiosInstance.put(
-          `/api/OptionTypes/Update/${editingOptionType.id}`,
-          {
-            name: optionTypeForm.name,
-            canMultiSelect: optionTypeForm.canMultiSelect,
-            isRequired: optionTypeForm.isRequired,
-          },
-        );
-
-        if (response.status === 200) {
-          await fetchAllData();
-          toast.success("تم تحديث نوع الإضافة بنجاح");
-          setShowOptionTypeModal(false);
-          setEditingOptionType(null);
-        } else {
-          toast.error("فشل في تحديث نوع الإضافة");
-        }
-      } else {
-        const response = await axiosInstance.post("/api/OptionTypes/Add", {
-          name: optionTypeForm.name,
-          canMultiSelect: optionTypeForm.canMultiSelect,
-          isRequired: optionTypeForm.isRequired,
-        });
-
-        if (response.status === 201) {
-          await fetchAllData();
-          toast.success("تم إضافة نوع الإضافة بنجاح");
-          setShowOptionTypeModal(false);
-          setEditingOptionType(null);
-        } else {
-          toast.error("فشل في إضافة نوع الإضافة");
-        }
-      }
-    } catch (error) {
-      console.error("خطأ في حفظ نوع الإضافة:", error);
-      if (error.response?.status === 201 || error.response?.status === 200) {
-        await fetchAllData();
-        toast.success("تم حفظ نوع الإضافة بنجاح");
-        setShowOptionTypeModal(false);
-        setEditingOptionType(null);
-      } else {
-        toast.error("حدث خطأ في حفظ نوع الإضافة");
-      }
-    }
-  };
-
-  const handleSubmitOption = async (e) => {
-    e.preventDefault();
-
-    if (!optionForm.name.trim()) {
-      toast.error("يرجى إدخال اسم الإضافة");
-      return;
-    }
-
-    if (!optionForm.optionTypeId) {
-      toast.error("يرجى اختيار نوع الإضافة");
-      return;
-    }
-
-    if (!optionForm.price || optionForm.price <= 0) {
-      toast.error("يرجى إدخال سعر صحيح للإضافة");
-      return;
-    }
-
-    try {
-      if (editingOption) {
-        const response = await axiosInstance.put(
-          `/api/Options/Update/${editingOption.id}`,
-          {
-            name: optionForm.name,
-            price: parseFloat(optionForm.price),
-            optionTypeId: parseInt(optionForm.optionTypeId),
-          },
-        );
-
-        if (response.status === 200) {
-          await fetchAllData();
-          toast.success("تم تحديث الإضافة بنجاح");
-          setShowOptionModal(false);
-          setEditingOption(null);
-        } else {
-          toast.error("فشل في تحديث الإضافة");
-        }
-      } else {
-        const response = await axiosInstance.post("/api/Options/Add", {
-          name: optionForm.name,
-          price: parseFloat(optionForm.price),
-          optionTypeId: parseInt(optionForm.optionTypeId),
-        });
-
-        if (response.status === 201) {
-          await fetchAllData();
-          toast.success("تم إضافة الإضافة بنجاح");
-          setShowOptionModal(false);
-          setEditingOption(null);
-        } else {
-          toast.error("فشل في إضافة الإضافة");
-        }
-      }
-    } catch (error) {
-      console.error("خطأ في حفظ الإضافة:", error);
-      if (error.response?.status === 201 || error.response?.status === 200) {
-        await fetchAllData();
-        toast.success("تم حفظ الإضافة بنجاح");
-        setShowOptionModal(false);
-        setEditingOption(null);
-      } else {
-        toast.error("حدث خطأ في حفظ الإضافة");
-      }
-    }
-  };
-
-  const handleDeleteOptionType = async (optionTypeId) => {
-    const hasOptions = options.some(
-      (option) => option.optionTypeId === optionTypeId,
-    );
-
-    if (hasOptions) {
-      toast.error("لا يمكن حذف نوع إضافة يحتوي على إضافات");
-      return;
-    }
-
-    const result = await Swal.fire({
-      title: "هل أنت متأكد؟",
-      text: "سيتم حذف هذا النوع بشكل نهائي",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "نعم، احذف",
-      cancelButtonText: "إلغاء",
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      reverseButtons: true,
-    });
-
-    if (result.isConfirmed) {
-      try {
-        const response = await axiosInstance.delete(
-          `/api/OptionTypes/Delete/${optionTypeId}`,
-        );
-
-        if (response.status === 200 || response.status === 204) {
-          await fetchAllData();
-          toast.success("تم حذف نوع الإضافة بنجاح");
-        } else {
-          toast.error("فشل في حذف نوع الإضافة");
-        }
-      } catch (error) {
-        console.error("خطأ في حذف نوع الإضافة:", error);
-        toast.error("حدث خطأ في حذف نوع الإضافة");
-      }
-    }
   };
 
   const handleDeleteOption = async (optionId) => {
+    const option = options.find((opt) => opt.id === optionId);
+
     const result = await Swal.fire({
-      title: "هل أنت متأكد؟",
-      text: "سيتم حذف هذه الإضافة بشكل نهائي",
+      title: "هل أنت متأكد من حذف الإضافة؟",
+      html: `
+        <div class="text-right">
+          <p class="mb-3">الإضافة: <strong>${option?.name}</strong></p>
+          <p class="text-sm text-gray-600">السعر: ${formatCurrency(option?.price || 0)} ج.م</p>
+        </div>
+      `,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "نعم، احذف",
@@ -349,7 +129,9 @@ export default function OptionsManagement() {
         );
 
         if (response.status === 200 || response.status === 204) {
-          await fetchAllData();
+          const updatedOptions = options.filter((opt) => opt.id !== optionId);
+          setOptions(updatedOptions);
+          calculateStats(updatedOptions);
           toast.success("تم حذف الإضافة بنجاح");
         } else {
           toast.error("فشل في حذف الإضافة");
@@ -361,12 +143,141 @@ export default function OptionsManagement() {
     }
   };
 
-  const getOptionsForOptionType = (optionTypeId) => {
-    return options.filter((option) => option.optionTypeId === optionTypeId);
+  const handleToggleOptionStatus = async (optionId) => {
+    const option = options.find((opt) => opt.id === optionId);
+    const action = option.isActive ? "تعطيل" : "تفعيل";
+
+    const result = await Swal.fire({
+      title: `هل أنت متأكد من ${action} الإضافة؟`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: `نعم، ${action}`,
+      cancelButtonText: "إلغاء",
+      confirmButtonColor: option.isActive ? "#F59E0B" : "#10B981",
+      cancelButtonColor: "#3085d6",
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await axiosInstance.post(
+          `/api/Options/ToggleActivation/${optionId}/toggle`,
+        );
+
+        if (response.status === 200) {
+          const updatedOptions = options.map((opt) =>
+            opt.id === optionId ? { ...opt, isActive: !opt.isActive } : opt,
+          );
+          setOptions(updatedOptions);
+          calculateStats(updatedOptions);
+          toast.success(`تم ${action} الإضافة بنجاح`);
+        } else {
+          toast.error(`فشل في ${action} الإضافة`);
+        }
+      } catch (error) {
+        console.error(`خطأ في ${action} الإضافة:`, error);
+        toast.error(`حدث خطأ في ${action} الإضافة`);
+      }
+    }
   };
 
-  const formatPrice = (price) => {
-    return Number(price).toFixed(2);
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]:
+        name === "price" ? (value === "" ? "" : parseFloat(value) || 0) : value,
+    }));
+  };
+
+  const handleFocus = (fieldName) => {
+    setFocusedField(fieldName);
+  };
+
+  const handleBlur = () => {
+    setFocusedField(null);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.name.trim()) {
+      toast.error("يرجى إدخال اسم الإضافة");
+      return;
+    }
+
+    if (!formData.price || formData.price <= 0) {
+      toast.error("يرجى إدخال سعر صحيح للإضافة");
+      return;
+    }
+
+    try {
+      const optionData = {
+        name: formData.name,
+        price: parseFloat(formData.price),
+      };
+
+      if (editingOption) {
+        const response = await axiosInstance.put(
+          `/api/Options/Update/${editingOption.id}`,
+          optionData,
+        );
+
+        if (response.status === 200) {
+          const updatedOptions = options.map((opt) =>
+            opt.id === editingOption.id
+              ? {
+                  ...opt,
+                  name: formData.name,
+                  price: parseFloat(formData.price),
+                }
+              : opt,
+          );
+          setOptions(updatedOptions);
+          calculateStats(updatedOptions);
+          toast.success("تم تحديث بيانات الإضافة بنجاح");
+        } else {
+          toast.error("فشل في تحديث بيانات الإضافة");
+        }
+      } else {
+        const response = await axiosInstance.post(
+          "/api/Options/Add",
+          optionData,
+        );
+
+        if (response.status === 201 || response.status === 200) {
+          const newOption = {
+            id: response.data.id || Date.now(),
+            name: formData.name,
+            price: parseFloat(formData.price),
+            isActive: true,
+          };
+          const updatedOptions = [...options, newOption];
+          setOptions(updatedOptions);
+          calculateStats(updatedOptions);
+          toast.success("تم إضافة الإضافة الجديدة بنجاح");
+        } else {
+          toast.error("فشل في إضافة الإضافة");
+        }
+      }
+
+      setShowAddModal(false);
+      setEditingOption(null);
+    } catch (error) {
+      console.error("خطأ في حفظ الإضافة:", error);
+      toast.error("حدث خطأ في حفظ الإضافة");
+    }
+  };
+
+  const getOptionColor = (optionId) => {
+    const colors = [
+      "bg-blue-100 text-blue-800 border-blue-200",
+      "bg-green-100 text-green-800 border-green-200",
+      "bg-purple-100 text-purple-800 border-purple-200",
+      "bg-amber-100 text-amber-800 border-amber-200",
+      "bg-red-100 text-red-800 border-red-200",
+    ];
+    return colors[optionId % colors.length];
   };
 
   return (
@@ -374,13 +285,13 @@ export default function OptionsManagement() {
       dir="rtl"
       className="min-h-screen bg-gradient-to-l from-gray-50 to-gray-100"
     >
-      {/* Header */}
+      {/* Navbar */}
       <div className="bg-white shadow-md">
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center ml-3 shadow-md">
-                <FaPizzaSlice className="text-white text-xl" />
+              <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center mr-3">
+                <span className="text-white font-bold">➕</span>
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير - إدارة الإضافات
@@ -420,385 +331,358 @@ export default function OptionsManagement() {
       </div>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Option Types Column */}
-          <div className="bg-white rounded-2xl shadow-lg p-5">
-            <div className="flex justify-between items-center mb-6">
+        {/* Professional Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Total Options Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold" style={{ color: "#193F94" }}>
-                  أنواع الإضافات
-                </h3>
-                <p className="text-sm text-gray-600">
-                  إضافة وتعديل أنواع الإضافات (مثل: المقاسات - الإضافات
-                  الإضافية)
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  إجمالي الإضافات
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
+                  {stats.totalOptions}
+                </p>
+                <p className="text-xs text-gray-500 mt-2 flex items-center">
+                  <span className="text-green-600 font-medium ml-1">
+                    {stats.activeOptions} نشط
+                  </span>
+                  <span className="mx-1">•</span>
+                  <span className="text-red-500 font-medium">
+                    {stats.inactiveOptions} غير نشط
+                  </span>
                 </p>
               </div>
-              <button
-                onClick={handleAddOptionType}
-                className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center shadow-md"
-              >
-                <FaPlus className="h-4 w-4 ml-2" />
-                إضافة نوع
-              </button>
+              <div className="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
+              </div>
             </div>
-
-            {loading ? (
-              <div className="p-8 flex flex-col items-center justify-center">
-                <div className="w-12 h-12 border-t-4 border-orange-600 border-solid rounded-full animate-spin"></div>
-                <p className="text-gray-600 mt-4">
-                  جاري تحميل أنواع الإضافات...
-                </p>
-              </div>
-            ) : optionTypes.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-gray-400 mb-3">
-                  <FaPizzaSlice className="h-16 w-16 mx-auto" />
-                </div>
-                <p className="text-gray-500">لا توجد أنواع إضافات</p>
-                <p className="text-sm text-gray-400 mt-1">
-                  قم بإضافة نوع إضافة جديد لبدء التصنيف
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {optionTypes.map((type) => (
-                  <div
-                    key={type.id}
-                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
-                      selectedOptionType?.id === type.id
-                        ? "border-orange-500 bg-gradient-to-br from-orange-50 to-orange-100 shadow-md"
-                        : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
-                    }`}
-                    onClick={() => setSelectedOptionType(type)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center ml-3 bg-gradient-to-br from-orange-400 to-orange-600 text-white font-bold text-lg shadow-md">
-                          {type.name.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="font-bold text-gray-900">
-                            {type.name}
-                          </div>
-                          <div className="text-xs text-gray-500 flex items-center space-x-2 rtl:space-x-reverse">
-                            <span
-                              className={`flex items-center ${type.canMultiSelect ? "text-green-600" : "text-red-600"}`}
-                            >
-                              {type.canMultiSelect ? (
-                                <>
-                                  <FaCheck className="h-2 w-2 ml-1" />
-                                  اختيار متعدد
-                                </>
-                              ) : (
-                                <>
-                                  <FaTimes className="h-2 w-2 ml-1" />
-                                  اختيار واحد
-                                </>
-                              )}
-                            </span>
-                            <span className="mx-1">•</span>
-                            <span
-                              className={`flex items-center ${type.isRequired ? "text-blue-600" : "text-gray-500"}`}
-                            >
-                              {type.isRequired ? "إجباري" : "اختياري"}
-                            </span>
-                            <span className="mx-1">•</span>
-                            <span>
-                              {getOptionsForOptionType(type.id).length} إضافة
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-end space-x-2 rtl:space-x-reverse mt-3">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditOptionType(type);
-                        }}
-                        className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-blue-200"
-                      >
-                        <FaEdit className="h-3 w-3 ml-1" />
-                        تعديل
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteOptionType(type.id);
-                        }}
-                        className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200"
-                      >
-                        <FaTrash className="h-3 w-3 ml-1" />
-                        حذف
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
-          {/* Options Column */}
-          <div className="bg-white rounded-2xl shadow-lg p-5">
-            <div className="flex justify-between items-center mb-6">
+          {/* Active Options Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold" style={{ color: "#193F94" }}>
-                  الإضافات
-                </h3>
-                <p className="text-sm text-gray-600">
-                  إضافة وتعديل الإضافات داخل كل نوع
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  الإضافات النشطة
                 </p>
-                {selectedOptionType && (
-                  <div className="mt-2 flex items-center bg-gradient-to-l from-orange-50 to-transparent p-2 rounded-lg">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center ml-2 bg-gradient-to-br from-orange-400 to-orange-600 text-white text-sm font-bold shadow-md">
-                      {selectedOptionType.name.charAt(0)}
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">
-                      {selectedOptionType.name}
-                    </span>
-                  </div>
-                )}
+                <p className="text-3xl font-bold text-gray-800">
+                  {stats.activeOptions}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  المتاحة للاستخدام حالياً
+                </p>
               </div>
-              <button
-                onClick={handleAddOption}
-                className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center shadow-md"
-              >
-                <FaPlus className="h-4 w-4 ml-2" />
-                إضافة إضافة
-              </button>
+              <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Total Value Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  القيمة الإجمالية
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
+                  {formatCurrency(stats.totalValue)} ج.م
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  مجموع أسعار الإضافات
+                </p>
+              </div>
+              <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Header Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold" style={{ color: "#193F94" }}>
+                قائمة الإضافات
+              </h3>
+              <p className="text-sm text-gray-600">إدارة الإضافات في النظام</p>
             </div>
 
-            {loading ? (
-              <div className="p-8 flex flex-col items-center justify-center">
-                <div className="w-12 h-12 border-t-4 border-green-600 border-solid rounded-full animate-spin"></div>
-                <p className="text-gray-600 mt-4">جاري تحميل الإضافات...</p>
-              </div>
-            ) : (
-              <>
-                {selectedOptionType ? (
-                  getOptionsForOptionType(selectedOptionType.id).length ===
-                  0 ? (
-                    <div className="text-center py-8">
-                      <div className="text-gray-400 mb-3">
-                        <FaPizzaSlice className="h-16 w-16 mx-auto" />
-                      </div>
-                      <p className="text-gray-500">لا توجد إضافات</p>
-                      <p className="text-sm text-gray-400 mt-1">
-                        قم بإضافة إضافات داخل {selectedOptionType.name}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {getOptionsForOptionType(selectedOptionType.id).map(
-                        (option) => (
-                          <div
-                            key={option.id}
-                            className="p-4 rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center">
-                                <div className="w-10 h-10 rounded-lg flex items-center justify-center ml-3 bg-gradient-to-br from-purple-400 to-purple-600 text-white font-bold text-lg shadow-md">
-                                  {option.name.charAt(0)}
-                                </div>
-                                <div>
-                                  <div className="font-bold text-gray-900">
-                                    {option.name}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    السعر:{" "}
-                                    <span className="font-medium text-green-600">
-                                      {formatPrice(option.price)} ج.م
-                                    </span>
-                                  </div>
+            <button
+              onClick={handleAddOption}
+              className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center whitespace-nowrap shadow-md"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 ml-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+              إضافة إضافة جديدة
+            </button>
+          </div>
+        </div>
+
+        {/* Options Table */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          {loading ? (
+            <div className="p-8 flex flex-col items-center justify-center">
+              <div className="w-16 h-16 border-t-4 border-orange-600 border-solid rounded-full animate-spin mb-4"></div>
+              <p className="text-gray-600">جاري تحميل بيانات الإضافات...</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="py-4 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
+                        الإضافة
+                      </th>
+                      <th className="py-4 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
+                        السعر
+                      </th>
+                      <th className="py-4 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
+                        الحالة
+                      </th>
+                      <th className="py-4 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
+                        الإجراءات
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {options.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan="4"
+                          className="py-8 px-4 text-center text-gray-500"
+                        >
+                          <div className="flex flex-col items-center justify-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-12 w-12 text-gray-300 mb-3"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1}
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                              />
+                            </svg>
+                            <p className="text-lg font-medium text-gray-400">
+                              لا يوجد إضافات
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1">
+                              قم بإضافة إضافة جديدة لبدء العمل
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      options.map((option) => (
+                        <tr
+                          key={option.id}
+                          className="hover:bg-gray-50 transition-colors border-b border-gray-100"
+                        >
+                          <td className="py-4 px-4 text-right">
+                            <div className="flex items-center">
+                              <div
+                                className={`w-10 h-10 rounded-full flex items-center justify-center ml-3 ${getOptionColor(
+                                  option.id,
+                                )} border`}
+                              >
+                                <span className="font-bold text-lg">
+                                  {option.name?.charAt(0) || "?"}
+                                </span>
+                              </div>
+                              <div>
+                                <div className="font-bold text-gray-900">
+                                  {option.name}
                                 </div>
                               </div>
                             </div>
-                            <div className="flex justify-end space-x-2 rtl:space-x-reverse mt-3">
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <span className="font-bold text-green-700">
+                              {formatCurrency(option.price)} ج.م
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="flex items-center">
+                              <div
+                                className={`w-3 h-3 rounded-full ml-2 ${
+                                  option.isActive
+                                    ? "bg-green-500 animate-pulse"
+                                    : "bg-red-500"
+                                }`}
+                              ></div>
+                              <span
+                                className={`font-medium ${
+                                  option.isActive
+                                    ? "text-green-700"
+                                    : "text-red-700"
+                                }`}
+                              >
+                                {option.isActive ? "نشط" : "معطل"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="flex flex-col space-y-2">
                               <button
                                 onClick={() => handleEditOption(option)}
-                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-blue-200"
+                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-blue-200"
                               >
-                                <FaEdit className="h-3 w-3 ml-1" />
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-3 w-3 ml-1"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                  />
+                                </svg>
                                 تعديل
                               </button>
                               <button
-                                onClick={() => handleDeleteOption(option.id)}
-                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200"
+                                onClick={() =>
+                                  handleToggleOptionStatus(option.id)
+                                }
+                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border ${
+                                  option.isActive
+                                    ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
+                                    : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                                }`}
                               >
-                                <FaTrash className="h-3 w-3 ml-1" />
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-3 w-3 ml-1"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  {option.isActive ? (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                                    />
+                                  ) : (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                                    />
+                                  )}
+                                </svg>
+                                {option.isActive ? "تعطيل" : "تفعيل"}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteOption(option.id)}
+                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-3 w-3 ml-1"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
                                 حذف
                               </button>
                             </div>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  )
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="text-gray-400 mb-3">
-                      <FaPizzaSlice className="h-16 w-16 mx-auto" />
-                    </div>
-                    <p className="text-gray-500">اختر نوع إضافة</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      اختر نوع إضافة لعرض الإضافات التابعة له
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Option Type Modal */}
-      {showOptionTypeModal && (
+      {/* Add/Edit Option Modal */}
+      {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h3 className="text-2xl font-bold text-orange-600">
-                    {editingOptionType ? "تعديل نوع إضافة" : "إضافة نوع إضافة"}
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {editingOptionType
-                      ? "قم بتعديل بيانات نوع الإضافة"
-                      : "أدخل بيانات نوع الإضافة الجديد"}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowOptionTypeModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
-                >
-                  ×
-                </button>
-              </div>
-
-              <form onSubmit={handleSubmitOptionType}>
-                <div className="mb-4">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="name"
-                      value={optionTypeForm.name}
-                      onChange={handleOptionTypeFormChange}
-                      onFocus={() => handleFocus("optionTypeName")}
-                      onBlur={handleBlur}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all text-sm bg-white"
-                      required
-                      dir="rtl"
-                    />
-                    <label
-                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                        focusedField === "optionTypeName" || optionTypeForm.name
-                          ? "-top-2.5 text-xs text-orange-500 font-medium"
-                          : "top-3 text-gray-400 text-sm"
-                      }`}
-                    >
-                      <span className="flex items-center">
-                        <FaPizzaSlice className="w-4 h-4 ml-1" />
-                        اسم نوع الإضافة *
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <label className="flex items-center cursor-pointer p-3 border-2 border-gray-200 rounded-xl hover:border-orange-300 transition-all">
-                    <input
-                      type="checkbox"
-                      name="canMultiSelect"
-                      checked={optionTypeForm.canMultiSelect}
-                      onChange={handleOptionTypeFormChange}
-                      className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                    />
-                    <span className="mr-2 text-sm font-medium text-gray-700">
-                      يمكن اختيار أكثر من إضافة (اختيار متعدد)
-                    </span>
-                  </label>
-                </div>
-
-                <div className="mb-6">
-                  <label className="flex items-center cursor-pointer p-3 border-2 border-gray-200 rounded-xl hover:border-orange-300 transition-all">
-                    <input
-                      type="checkbox"
-                      name="isRequired"
-                      checked={optionTypeForm.isRequired}
-                      onChange={handleOptionTypeFormChange}
-                      className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                    />
-                    <span className="mr-2 text-sm font-medium text-gray-700">
-                      هذا النوع إجباري (يجب اختيار إضافة واحدة على الأقل)
-                    </span>
-                  </label>
-                </div>
-
-                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t-2 border-gray-100">
-                  <button
-                    type="button"
-                    onClick={() => setShowOptionTypeModal(false)}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                  <h3
+                    className="text-2xl font-bold"
+                    style={{ color: "#193F94" }}
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                    إلغاء
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
-                  >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      {editingOptionType ? (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                        />
-                      ) : (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      )}
-                    </svg>
-                    {editingOptionType ? "حفظ التعديلات" : "إضافة نوع"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Option Modal */}
-      {showOptionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-2xl font-bold text-green-600">
-                    {editingOption ? "تعديل إضافة" : "إضافة إضافة جديدة"}
+                    {editingOption
+                      ? "تعديل بيانات الإضافة"
+                      : "إضافة إضافة جديدة"}
                   </h3>
                   <p className="text-sm text-gray-500 mt-1">
                     {editingOption
@@ -807,80 +691,31 @@ export default function OptionsManagement() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setShowOptionModal(false)}
+                  onClick={() => setShowAddModal(false)}
                   className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
                 >
                   ×
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitOption}>
-                <div className="mb-4">
-                  <div className="relative">
-                    <select
-                      name="optionTypeId"
-                      value={optionForm.optionTypeId}
-                      onChange={handleOptionFormChange}
-                      onFocus={() => handleFocus("optionTypeSelect")}
-                      onBlur={handleBlur}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all text-sm bg-white appearance-none"
-                      required
-                    >
-                      <option value="">اختر نوع الإضافة</option>
-                      {optionTypes.map((type) => (
-                        <option key={type.id} value={type.id}>
-                          {type.name}
-                        </option>
-                      ))}
-                    </select>
-                    <label
-                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                        focusedField === "optionTypeSelect" ||
-                        optionForm.optionTypeId
-                          ? "-top-2.5 text-xs text-green-500 font-medium"
-                          : "top-3 text-gray-400 text-sm"
-                      }`}
-                    >
-                      <span className="flex items-center">
-                        <FaPizzaSlice className="w-4 h-4 ml-1" />
-                        نوع الإضافة *
-                      </span>
-                    </label>
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
+              <form onSubmit={handleSubmit}>
                 <div className="mb-4">
                   <div className="relative">
                     <input
                       type="text"
                       name="name"
-                      value={optionForm.name}
-                      onChange={handleOptionFormChange}
-                      onFocus={() => handleFocus("optionName")}
+                      value={formData.name}
+                      onChange={handleFormChange}
+                      onFocus={() => handleFocus("name")}
                       onBlur={handleBlur}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all text-sm bg-white"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all text-sm bg-white"
                       required
                       dir="rtl"
                     />
                     <label
                       className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                        focusedField === "optionName" || optionForm.name
-                          ? "-top-2.5 text-xs text-green-500 font-medium"
+                        focusedField === "name" || formData.name
+                          ? "-top-2.5 text-xs text-orange-500 font-medium"
                           : "top-3 text-gray-400 text-sm"
                       }`}
                     >
@@ -904,16 +739,16 @@ export default function OptionsManagement() {
                   </div>
                 </div>
 
-                <div className="mb-6">
+                <div className="mb-4">
                   <div className="relative">
                     <input
                       type="text"
                       name="price"
-                      value={optionForm.price}
-                      onChange={handleOptionFormChange}
-                      onFocus={() => handleFocus("optionPrice")}
+                      value={formData.price}
+                      onChange={handleFormChange}
+                      onFocus={() => handleFocus("price")}
                       onBlur={handleBlur}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all text-sm bg-white"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all text-sm bg-white"
                       required
                       dir="ltr"
                       inputMode="numeric"
@@ -923,8 +758,8 @@ export default function OptionsManagement() {
                     />
                     <label
                       className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                        focusedField === "optionPrice" || optionForm.price
-                          ? "-top-2.5 text-xs text-green-500 font-medium"
+                        focusedField === "price" || formData.price
+                          ? "-top-2.5 text-xs text-orange-500 font-medium"
                           : "top-3 text-gray-400 text-sm"
                       }`}
                     >
@@ -951,7 +786,7 @@ export default function OptionsManagement() {
                 <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t-2 border-gray-100">
                   <button
                     type="button"
-                    onClick={() => setShowOptionModal(false)}
+                    onClick={() => setShowAddModal(false)}
                     className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
                   >
                     <svg
@@ -971,7 +806,7 @@ export default function OptionsManagement() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
                   >
                     <svg
                       className="w-4 h-4 ml-2"

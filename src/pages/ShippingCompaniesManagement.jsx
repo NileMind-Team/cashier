@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
+import axiosInstance from "../api/axiosInstance";
 
 export default function ShippingCompaniesManagement() {
   const navigate = useNavigate();
@@ -9,90 +10,84 @@ export default function ShippingCompaniesManagement() {
   const [loading, setLoading] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [focusedField, setFocusedField] = useState(null);
+  const hasFetched = useRef(false);
+
+  const [stats, setStats] = useState({
+    totalCompanies: 0,
+    activeCompanies: 0,
+    averageDeliveryPrice: 0,
+    totalShipments: 0,
+    bestCompanyName: "",
+  });
 
   const [formData, setFormData] = useState({
     name: "",
-    phone: "",
-    deliveryRate: "",
-    isActive: true,
+    imgUrl: "",
+    deliveryCost: "",
+    contactNumber: "",
+    websiteUrl: "",
+    commercialRegistrationNumber: "",
+    taxRegisterNumber: "",
   });
 
-  const initialCompanies = [
-    {
-      id: 1,
-      name: "أرامكس",
-      phone: "01157437755",
-      deliveryRate: 25.0,
-      isActive: true,
-      totalDeliveries: 1250,
-    },
-    {
-      id: 2,
-      name: "دي إتش إل",
-      phone: "01176348844",
-      deliveryRate: 30.0,
-      isActive: true,
-      totalDeliveries: 850,
-    },
-    {
-      id: 3,
-      name: "ماكسيم",
-      phone: "01096438648",
-      deliveryRate: 15.0,
-      isActive: true,
-      totalDeliveries: 3200,
-    },
-    {
-      id: 4,
-      name: "بوسطة",
-      phone: "01087634969",
-      deliveryRate: 20.0,
-      isActive: true,
-      totalDeliveries: 1800,
-    },
-    {
-      id: 5,
-      name: "واصل",
-      phone: "01067546789",
-      deliveryRate: 18.0,
-      isActive: false,
-      totalDeliveries: 950,
-    },
-    {
-      id: 6,
-      name: "شايني",
-      phone: "01098765432",
-      deliveryRate: 22.0,
-      isActive: true,
-      totalDeliveries: 1200,
-    },
-    {
-      id: 7,
-      name: "فلاي فاي",
-      phone: "01005556677",
-      deliveryRate: 35.0,
-      isActive: true,
-      totalDeliveries: 2800,
-    },
-    {
-      id: 8,
-      name: "كارجو",
-      phone: "01122334455",
-      deliveryRate: 40.0,
-      isActive: true,
-      totalDeliveries: 750,
-    },
-  ];
+  const fetchCompanies = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get("/api/DeliveryCompany/GetAll");
+
+      if (response.status === 200 && Array.isArray(response.data)) {
+        const formattedCompanies = response.data.map((company) => ({
+          id: company.id,
+          name: company.name || "",
+          phone: company.contactNumber || "",
+          deliveryRate: company.deliveryCost || 0,
+          isActive: company.isActive || false,
+          totalDeliveries: 0,
+          imgUrl: company.imgUrl || "",
+          websiteUrl: company.websiteUrl || "",
+          commercialRegistrationNumber:
+            company.commercialRegistrationNumber || "",
+          taxRegisterNumber: company.taxRegisterNumber || "",
+        }));
+        setCompanies(formattedCompanies);
+      } else {
+        setCompanies([]);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب شركات التوصيل:", error);
+      setCompanies([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStatistics = async () => {
+    try {
+      const response = await axiosInstance.get(
+        "/api/DeliveryCompany/GetStatistics/stats",
+      );
+
+      if (response.status === 200) {
+        setStats({
+          totalCompanies: response.data.totalCompanies || 0,
+          activeCompanies: response.data.activeCompanies || 0,
+          averageDeliveryPrice: response.data.averageDeliveryPrice || 0,
+          totalShipments: response.data.totalShipments || 0,
+          bestCompanyName: response.data.bestCompanyName || "لا يوجد",
+        });
+      }
+    } catch (error) {
+      console.error("خطأ في جلب الإحصائيات:", error);
+    }
+  };
 
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setCompanies(initialCompanies);
-      setLoading(false);
-    }, 500);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!hasFetched.current) {
+      fetchCompanies();
+      fetchStatistics();
+      hasFetched.current = true;
+    }
   }, []);
 
   const formatCurrency = (amount) => {
@@ -107,21 +102,29 @@ export default function ShippingCompaniesManagement() {
     setEditingCompany(null);
     setFormData({
       name: "",
-      phone: "",
-      deliveryRate: "",
-      isActive: true,
+      imgUrl: "",
+      deliveryCost: "",
+      contactNumber: "",
+      websiteUrl: "",
+      commercialRegistrationNumber: "",
+      taxRegisterNumber: "",
     });
+    setFocusedField(null);
   };
 
   const handleEditCompany = (company) => {
     setEditingCompany(company);
     setShowAddModal(true);
     setFormData({
-      name: company.name,
-      phone: company.phone,
-      deliveryRate: company.deliveryRate,
-      isActive: company.isActive,
+      name: company.name || "",
+      imgUrl: company.imgUrl || "",
+      deliveryCost: company.deliveryRate || "",
+      contactNumber: company.phone || "",
+      websiteUrl: company.websiteUrl || "",
+      commercialRegistrationNumber: company.commercialRegistrationNumber || "",
+      taxRegisterNumber: company.taxRegisterNumber || "",
     });
+    setFocusedField(null);
   };
 
   const handleDeleteCompany = async (companyId) => {
@@ -131,8 +134,8 @@ export default function ShippingCompaniesManagement() {
       title: "هل أنت متأكد من حذف شركة التوصيل؟",
       html: `
         <div class="text-right">
-          <p class="mb-3">الشركة: <strong>${company.name}</strong></p>
-          <p class="mb-3">هاتف: <strong>${company.phone}</strong></p>
+          <p class="mb-3">الشركة: <strong>${company?.name}</strong></p>
+          <p class="mb-3">هاتف: <strong>${company?.phone}</strong></p>
         </div>
       `,
       icon: "warning",
@@ -145,8 +148,22 @@ export default function ShippingCompaniesManagement() {
     });
 
     if (result.isConfirmed) {
-      setCompanies(companies.filter((company) => company.id !== companyId));
-      toast.success("تم حذف شركة التوصيل بنجاح");
+      try {
+        const response = await axiosInstance.delete(
+          `/api/DeliveryCompany/Delete/${companyId}`,
+        );
+
+        if (response.status === 200 || response.status === 204) {
+          setCompanies(companies.filter((company) => company.id !== companyId));
+          toast.success("تم حذف شركة التوصيل بنجاح");
+          fetchStatistics();
+        } else {
+          toast.error("فشل في حذف شركة التوصيل");
+        }
+      } catch (error) {
+        console.error("خطأ في حذف شركة التوصيل:", error);
+        toast.error("حدث خطأ في حذف شركة التوصيل");
+      }
     }
   };
 
@@ -169,26 +186,53 @@ export default function ShippingCompaniesManagement() {
     });
 
     if (result.isConfirmed) {
-      setCompanies(
-        companies.map((company) =>
-          company.id === companyId
-            ? { ...company, isActive: !company.isActive }
-            : company,
-        ),
-      );
-      toast.success(`تم ${action} شركة التوصيل بنجاح`);
+      try {
+        const response = await axiosInstance.patch(
+          `/api/DeliveryCompany/ToggleActivation/${companyId}/toggle`,
+        );
+
+        if (response.status === 200) {
+          setCompanies(
+            companies.map((company) =>
+              company.id === companyId
+                ? { ...company, isActive: !company.isActive }
+                : company,
+            ),
+          );
+          toast.success(`تم ${action} شركة التوصيل بنجاح`);
+          fetchStatistics();
+        } else {
+          toast.error(`فشل في ${action} شركة التوصيل`);
+        }
+      } catch (error) {
+        console.error(`خطأ في ${action} شركة التوصيل:`, error);
+        toast.error(`حدث خطأ في ${action} شركة التوصيل`);
+      }
     }
   };
 
   const handleFormChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        name === "deliveryCost"
+          ? value === ""
+            ? ""
+            : parseFloat(value)
+          : value,
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleFocus = (fieldName) => {
+    setFocusedField(fieldName);
+  };
+
+  const handleBlur = () => {
+    setFocusedField(null);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
@@ -196,66 +240,89 @@ export default function ShippingCompaniesManagement() {
       return;
     }
 
-    if (!formData.phone.trim()) {
+    if (!formData.contactNumber.trim()) {
       toast.error("يرجى إدخال رقم الهاتف");
       return;
     }
 
-    if (!formData.deliveryRate || parseFloat(formData.deliveryRate) <= 0) {
+    if (!formData.deliveryCost || parseFloat(formData.deliveryCost) <= 0) {
       toast.error("يرجى إدخال سعر التوصيل صحيح");
       return;
     }
 
-    if (editingCompany) {
-      const updatedCompanies = companies.map((company) =>
-        company.id === editingCompany.id
-          ? {
-              ...company,
-              name: formData.name,
-              phone: formData.phone,
-              deliveryRate: parseFloat(formData.deliveryRate),
-              isActive: formData.isActive,
-            }
-          : company,
-      );
-      setCompanies(updatedCompanies);
-      toast.success("تم تحديث بيانات الشركة بنجاح");
-    } else {
-      const newCompany = {
-        id: companies.length + 1,
+    try {
+      const companyData = {
         name: formData.name,
-        phone: formData.phone,
-        deliveryRate: parseFloat(formData.deliveryRate),
-        isActive: formData.isActive,
-        totalDeliveries: 0,
+        imgUrl: formData.imgUrl || null,
+        deliveryCost: parseFloat(formData.deliveryCost),
+        contactNumber: formData.contactNumber,
+        websiteUrl: formData.websiteUrl || null,
+        commercialRegistrationNumber:
+          formData.commercialRegistrationNumber || null,
+        taxRegisterNumber: formData.taxRegisterNumber || null,
       };
-      setCompanies([...companies, newCompany]);
-      toast.success("تم إضافة شركة التوصيل الجديدة بنجاح");
+
+      if (editingCompany) {
+        const response = await axiosInstance.put(
+          `/api/DeliveryCompany/Update/${editingCompany.id}`,
+          companyData,
+        );
+
+        if (response.status === 200) {
+          setCompanies(
+            companies.map((company) =>
+              company.id === editingCompany.id
+                ? {
+                    ...company,
+                    name: formData.name,
+                    phone: formData.contactNumber,
+                    deliveryRate: parseFloat(formData.deliveryCost),
+                    imgUrl: formData.imgUrl,
+                    websiteUrl: formData.websiteUrl,
+                    commercialRegistrationNumber:
+                      formData.commercialRegistrationNumber,
+                    taxRegisterNumber: formData.taxRegisterNumber,
+                  }
+                : company,
+            ),
+          );
+          toast.success("تم تحديث بيانات الشركة بنجاح");
+        } else {
+          toast.error("فشل في تحديث بيانات الشركة");
+        }
+      } else {
+        const response = await axiosInstance.post(
+          "/api/DeliveryCompany/Add",
+          companyData,
+        );
+
+        if (response.status === 201 || response.status === 200) {
+          const newCompany = {
+            id: response.data.id || Date.now(),
+            name: formData.name,
+            phone: formData.contactNumber,
+            deliveryRate: parseFloat(formData.deliveryCost),
+            isActive: true,
+            totalDeliveries: 0,
+            imgUrl: formData.imgUrl,
+            websiteUrl: formData.websiteUrl,
+            commercialRegistrationNumber: formData.commercialRegistrationNumber,
+            taxRegisterNumber: formData.taxRegisterNumber,
+          };
+          setCompanies([...companies, newCompany]);
+          toast.success("تم إضافة شركة التوصيل الجديدة بنجاح");
+        } else {
+          toast.error("فشل في إضافة الشركة");
+        }
+      }
+
+      fetchStatistics();
+      setShowAddModal(false);
+      setEditingCompany(null);
+    } catch (error) {
+      console.error("خطأ في حفظ شركة التوصيل:", error);
+      toast.error("حدث خطأ في حفظ شركة التوصيل");
     }
-
-    setShowAddModal(false);
-    setEditingCompany(null);
-  };
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentCompanies = companies.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(companies.length / itemsPerPage);
-
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
-
-  const stats = {
-    totalCompanies: companies.length,
-    activeCompanies: companies.filter((c) => c.isActive).length,
-    averageDeliveryRate:
-      companies.reduce((sum, company) => sum + company.deliveryRate, 0) /
-      companies.length,
-    totalDeliveries: companies.reduce(
-      (sum, company) => sum + company.totalDeliveries,
-      0,
-    ),
   };
 
   return (
@@ -263,6 +330,7 @@ export default function ShippingCompaniesManagement() {
       dir="rtl"
       className="min-h-screen bg-gradient-to-l from-gray-50 to-gray-100"
     >
+      {/* Navbar */}
       <div className="bg-white shadow-md">
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
@@ -274,6 +342,7 @@ export default function ShippingCompaniesManagement() {
                 نظام الكاشير - إدارة شركات التوصيل
               </h1>
             </div>
+
             <button
               onClick={() => navigate("/")}
               className="px-4 py-2 rounded-lg font-medium border transition-all flex items-center"
@@ -308,85 +377,148 @@ export default function ShippingCompaniesManagement() {
       </div>
 
       <div className="container mx-auto px-4 py-6">
+        {/* Professional Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+          {/* Total Companies Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-800">إجمالي شركات التوصيل</p>
-                <p className="text-2xl font-bold text-blue-900 mt-1">
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  إجمالي شركات التوصيل
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
                   {stats.totalCompanies}
                 </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  {stats.activeCompanies} نشط •{" "}
-                  {stats.totalCompanies - stats.activeCompanies} غير نشط
+                <p className="text-xs text-gray-500 mt-2 flex items-center">
+                  <span className="text-green-600 font-medium ml-1">
+                    {stats.activeCompanies} نشط
+                  </span>
+                  <span className="mx-1">•</span>
+                  <span className="text-red-500 font-medium">
+                    {stats.totalCompanies - stats.activeCompanies} غير نشط
+                  </span>
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                <span className="text-blue-700 font-bold">🚚</span>
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM12 8h4l2 5h2a2 2 0 012 2v3a2 2 0 01-2 2h-2.5M7 14h.01M9.5 19H7a2 2 0 01-2-2v-3a2 2 0 012-2h2.5"
+                  />
+                </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+          {/* Average Delivery Price Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-green-800">متوسط سعر التوصيل</p>
-                <p className="text-2xl font-bold text-green-900 mt-1">
-                  {formatCurrency(stats.averageDeliveryRate || 0)} ج.م
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  متوسط سعر التوصيل
                 </p>
-                <p className="text-xs text-green-600 mt-1">
-                  جميع شركات التوصيل
+                <p className="text-3xl font-bold text-gray-800">
+                  {formatCurrency(stats.averageDeliveryPrice)} ج.م
                 </p>
+                <p className="text-xs text-gray-500 mt-2">جميع شركات التوصيل</p>
               </div>
-              <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                <span className="text-green-700 font-bold">💰</span>
+              <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+          {/* Total Shipments Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-purple-800">إجمالي عمليات التوصيل</p>
-                <p className="text-2xl font-bold text-purple-900 mt-1">
-                  {stats.totalDeliveries.toLocaleString()}
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  إجمالي عمليات التوصيل
                 </p>
-                <p className="text-xs text-purple-600 mt-1">
+                <p className="text-3xl font-bold text-gray-800">
+                  {stats.totalShipments.toLocaleString()}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
                   جميع الشركات مجتمعة
                 </p>
               </div>
-              <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                <span className="text-purple-700 font-bold">📦</span>
+              <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                  />
+                </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
+          {/* Best Company Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-amber-800">أفضل شركة</p>
-                <p className="text-2xl font-bold text-amber-900 mt-1">
-                  {companies.length > 0
-                    ? companies.reduce((prev, current) =>
-                        prev.totalDeliveries > current.totalDeliveries
-                          ? prev
-                          : current,
-                      ).name
-                    : "لا يوجد"}
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  أفضل شركة
                 </p>
-                <p className="text-xs text-amber-600 mt-1">
+                <p className="text-3xl font-bold text-gray-800">
+                  {stats.bestCompanyName || "لا يوجد"}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
                   أعلى عدد عمليات توصيل
                 </p>
               </div>
-              <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
-                <span className="text-amber-700 font-bold">🏆</span>
+              <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                  />
+                </svg>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Header Section */}
         <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold" style={{ color: "#193F94" }}>
                 قائمة شركات التوصيل
@@ -420,6 +552,7 @@ export default function ShippingCompaniesManagement() {
           </div>
         </div>
 
+        {/* Companies Table */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           {loading ? (
             <div className="p-8 flex flex-col items-center justify-center">
@@ -455,7 +588,7 @@ export default function ShippingCompaniesManagement() {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentCompanies.length === 0 ? (
+                    {companies.length === 0 ? (
                       <tr>
                         <td
                           colSpan="6"
@@ -486,16 +619,31 @@ export default function ShippingCompaniesManagement() {
                         </td>
                       </tr>
                     ) : (
-                      currentCompanies.map((company) => (
+                      companies.map((company) => (
                         <tr
                           key={company.id}
                           className="hover:bg-gray-50 transition-colors border-b border-gray-100"
                         >
                           <td className="py-4 px-4 text-right">
                             <div className="flex items-center">
-                              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center ml-3 text-blue-700 font-bold text-lg">
-                                {company.name.charAt(0)}
-                              </div>
+                              {company.imgUrl ? (
+                                <div className="w-12 h-12 rounded-full overflow-hidden ml-3 flex-shrink-0 border-2 border-gray-200">
+                                  <img
+                                    src={company.imgUrl}
+                                    alt={company.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.style.display = "none";
+                                      e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-blue-100 text-blue-700 font-bold text-lg">${company.name?.charAt(0) || "?"}</div>`;
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center ml-3 text-blue-700 font-bold text-lg border-2 border-blue-200">
+                                  {company.name?.charAt(0) || "?"}
+                                </div>
+                              )}
                               <div>
                                 <div className="font-bold text-gray-900">
                                   {company.name}
@@ -505,33 +653,65 @@ export default function ShippingCompaniesManagement() {
                           </td>
                           <td className="py-4 px-4 text-right">
                             <div className="space-y-1">
-                              <div className="text-xs text-gray-600">
-                                📞 {company.phone}
+                              <div className="text-sm text-gray-800 flex items-center">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 w-4 ml-1 text-gray-500"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                  />
+                                </svg>
+                                {company.phone || "لا يوجد"}
                               </div>
+                              {company.websiteUrl && (
+                                <div className="text-sm text-gray-800 flex items-center">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4 ml-1 text-gray-500"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"
+                                    />
+                                  </svg>
+                                  {company.websiteUrl}
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="py-4 px-4 text-right">
                             <div className="space-y-2">
                               <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-600">
-                                  سعر التوصيل:
-                                </span>
-                                <span className="font-bold text-green-700 text-sm">
+                                <span className="text-sm font-bold text-green-700">
                                   {formatCurrency(company.deliveryRate)} ج.م
                                 </span>
                               </div>
                             </div>
                           </td>
                           <td className="py-4 px-4 text-right">
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-600">
-                                  إجمالي الشحنات:
-                                </span>
-                                <span className="font-bold">
-                                  {company.totalDeliveries.toLocaleString()}
-                                </span>
+                            <div className="space-y-1">
+                              <div className="text-sm text-gray-800">
+                                إجمالي الشحنات:{" "}
+                                {company.totalDeliveries?.toLocaleString() || 0}
                               </div>
+                              {company.commercialRegistrationNumber && (
+                                <div className="text-xs text-gray-500">
+                                  سجل تجاري:{" "}
+                                  {company.commercialRegistrationNumber}
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="py-4 px-4 text-right">
@@ -639,172 +819,389 @@ export default function ShippingCompaniesManagement() {
                   </tbody>
                 </table>
               </div>
-
-              {companies.length > itemsPerPage && (
-                <div className="px-4 py-3 border-t border-gray-200">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between">
-                    <div className="text-sm text-gray-700 mb-2 md:mb-0">
-                      عرض {indexOfFirstItem + 1} -{" "}
-                      {Math.min(indexOfLastItem, companies.length)} من{" "}
-                      {companies.length} شركة
-                    </div>
-                    <div className="flex items-center space-x-1 rtl:space-x-reverse">
-                      <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className={`px-3 py-1.5 rounded-lg text-sm ${
-                          currentPage === 1
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "text-gray-700 hover:bg-gray-100"
-                        }`}
-                      >
-                        السابق
-                      </button>
-                      {Array.from(
-                        { length: Math.min(5, totalPages) },
-                        (_, i) => {
-                          let pageNumber;
-                          if (totalPages <= 5) {
-                            pageNumber = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNumber = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNumber = totalPages - 4 + i;
-                          } else {
-                            pageNumber = currentPage - 2 + i;
-                          }
-
-                          return (
-                            <button
-                              key={pageNumber}
-                              onClick={() => handlePageChange(pageNumber)}
-                              className={`px-3 py-1.5 rounded-lg text-sm ${
-                                currentPage === pageNumber
-                                  ? "bg-blue-600 text-white"
-                                  : "text-gray-700 hover:bg-gray-100"
-                              }`}
-                            >
-                              {pageNumber}
-                            </button>
-                          );
-                        },
-                      )}
-                      <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className={`px-3 py-1.5 rounded-lg text-sm ${
-                          currentPage === totalPages
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "text-gray-700 hover:bg-gray-100"
-                        }`}
-                      >
-                        التالي
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>
       </div>
 
+      {/* Add/Edit Company Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold" style={{ color: "#193F94" }}>
-                  {editingCompany
-                    ? "تعديل بيانات شركة التوصيل"
-                    : "إضافة شركة توصيل جديدة"}
-                </h3>
+                <div>
+                  <h3
+                    className="text-2xl font-bold"
+                    style={{ color: "#193F94" }}
+                  >
+                    {editingCompany
+                      ? "تعديل بيانات شركة التوصيل"
+                      : "إضافة شركة توصيل جديدة"}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {editingCompany
+                      ? "قم بتعديل بيانات شركة التوصيل"
+                      : "أدخل بيانات شركة التوصيل الجديدة"}
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
                 >
                   ×
                 </button>
               </div>
 
               <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 gap-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      اسم الشركة *
-                    </label>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="relative">
                     <input
                       type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
+                      onFocus={() => handleFocus("name")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       required
                       dir="rtl"
                     />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "name" || formData.name
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                          />
+                        </svg>
+                        اسم الشركة *
+                      </span>
+                    </label>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      رقم الهاتف *
-                    </label>
+                  <div className="relative">
                     <input
                       type="tel"
-                      name="phone"
-                      value={formData.phone}
+                      name="contactNumber"
+                      value={formData.contactNumber}
                       onChange={handleFormChange}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
+                      onFocus={() => handleFocus("contactNumber")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       required
                       dir="rtl"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      سعر التوصيل (ج.م) *
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "contactNumber" ||
+                        formData.contactNumber
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                          />
+                        </svg>
+                        رقم الهاتف *
+                      </span>
                     </label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="relative">
                     <input
                       type="number"
-                      name="deliveryRate"
-                      value={formData.deliveryRate}
+                      name="deliveryCost"
+                      value={formData.deliveryCost}
                       onChange={handleFormChange}
-                      min="0"
-                      step="0.01"
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right"
+                      onFocus={() => handleFocus("deliveryCost")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       required
                       dir="rtl"
+                      min="0"
+                      step="0.01"
                     />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "deliveryCost" || formData.deliveryCost
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        سعر التوصيل (ج.م) *
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="url"
+                      name="websiteUrl"
+                      value={formData.websiteUrl}
+                      onChange={handleFormChange}
+                      onFocus={() => handleFocus("websiteUrl")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      dir="ltr"
+                      placeholder="https://example.com"
+                    />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "websiteUrl" || formData.websiteUrl
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"
+                          />
+                        </svg>
+                        الموقع الإلكتروني
+                      </span>
+                    </label>
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <label className="flex items-center cursor-pointer">
+                {/* Image URL Field - Full Width with Preview */}
+                <div className="mb-4">
+                  <div className="relative">
                     <input
-                      type="checkbox"
-                      name="isActive"
-                      checked={formData.isActive}
+                      type="url"
+                      name="imgUrl"
+                      value={formData.imgUrl}
                       onChange={handleFormChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      onFocus={() => handleFocus("imgUrl")}
+                      onBlur={handleBlur}
+                      placeholder="https://example.com/logo.jpg"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      dir="ltr"
                     />
-                    <span className="mr-2 text-sm font-medium text-gray-700">
-                      الشركة نشطة (يمكن استخدامها في التوصيل)
-                    </span>
-                  </label>
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "imgUrl" || formData.imgUrl
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                        رابط الصورة
+                      </span>
+                    </label>
+                  </div>
+                  {formData.imgUrl && (
+                    <div className="mt-2">
+                      <div className="text-xs text-gray-500 mb-1">
+                        معاينة الصورة:
+                      </div>
+                      <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200">
+                        <img
+                          src={formData.imgUrl}
+                          alt="معاينة"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.style.display = "none";
+                            e.target.parentElement.innerHTML =
+                              '<div class="w-full h-full flex items-center justify-center bg-blue-100 text-blue-700 font-bold text-lg">?</div>';
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t">
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="commercialRegistrationNumber"
+                      value={formData.commercialRegistrationNumber}
+                      onChange={handleFormChange}
+                      onFocus={() =>
+                        handleFocus("commercialRegistrationNumber")
+                      }
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      dir="rtl"
+                    />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "commercialRegistrationNumber" ||
+                        formData.commercialRegistrationNumber
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        رقم السجل التجاري
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="taxRegisterNumber"
+                      value={formData.taxRegisterNumber}
+                      onChange={handleFormChange}
+                      onFocus={() => handleFocus("taxRegisterNumber")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      dir="rtl"
+                    />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "taxRegisterNumber" ||
+                        formData.taxRegisterNumber
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"
+                          />
+                        </svg>
+                        الرقم الضريبي
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t-2 border-gray-100">
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 py-3 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
                   >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
                     style={{ backgroundColor: "#193F94" }}
                   >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      {editingCompany ? (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                        />
+                      ) : (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      )}
+                    </svg>
                     {editingCompany ? "حفظ التعديلات" : "إضافة شركة"}
                   </button>
                 </div>
