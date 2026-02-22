@@ -26,6 +26,7 @@ import {
   FaUser,
   FaShieldAlt,
   FaPizzaSlice,
+  FaPercentage,
 } from "react-icons/fa";
 
 export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
@@ -199,6 +200,10 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
     navigate("/options");
   };
 
+  const handleDiscountsNavigation = () => {
+    navigate("/discounts");
+  };
+
   const isReportsActive = location.pathname.startsWith("/reports");
   const isUsersActive = location.pathname === "/users";
   const isPermissionsActive = location.pathname === "/permissions";
@@ -210,6 +215,7 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
   const isPaymentMethodsActive = location.pathname === "/payment-methods";
   const isHallsActive = location.pathname === "/halls";
   const isOptionsActive = location.pathname === "/options";
+  const isDiscountsActive = location.pathname === "/discounts";
 
   return (
     <div className="bg-gradient-to-r from-white to-gray-50/80 shadow-lg backdrop-blur-sm border-b border-gray-200/80 sticky top-0 z-50">
@@ -351,6 +357,21 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
                 className={`h-4 w-4 ml-1.5 ${isPaymentMethodsActive ? "text-white" : "text-blue-700"}`}
               />
               <span className="relative">طرق الدفع</span>
+            </button>
+
+            <button
+              onClick={handleDiscountsNavigation}
+              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
+                isDiscountsActive
+                  ? "text-white bg-gradient-to-r from-purple-900 to-purple-700 shadow-md shadow-purple-900/30"
+                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-purple-300 hover:shadow-md hover:shadow-purple-900/10"
+              }`}
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-purple-600/0 group-hover:from-purple-600/5 group-hover:to-purple-600/0 transition-all duration-300"></span>
+              <FaPercentage
+                className={`h-4 w-4 ml-1.5 ${isDiscountsActive ? "text-white" : "text-purple-700"}`}
+              />
+              <span className="relative">إدارة الخصومات</span>
             </button>
 
             {/* Users Management */}

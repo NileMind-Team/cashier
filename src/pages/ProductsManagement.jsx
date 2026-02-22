@@ -26,8 +26,6 @@ export default function ProductsManagement() {
     isAvailable: true,
     valueAddedTax: null,
     isVatIncluded: true,
-    discountValue: null,
-    isPercentage: true,
   });
 
   const fetchProducts = async () => {
@@ -147,8 +145,6 @@ export default function ProductsManagement() {
       isAvailable: true,
       valueAddedTax: null,
       isVatIncluded: true,
-      discountValue: null,
-      isPercentage: true,
     });
     setFocusedField(null);
   };
@@ -167,8 +163,6 @@ export default function ProductsManagement() {
       isAvailable: product.isAvailable ?? true,
       valueAddedTax: product.valueAddedTax || null,
       isVatIncluded: product.isVatIncluded ?? true,
-      discountValue: product.discountValue || null,
-      isPercentage: product.isPercentage ?? true,
     });
     setFocusedField(null);
   };
@@ -248,10 +242,6 @@ export default function ProductsManagement() {
         name: productForm.name,
         imgUrl: productForm.imgUrl || "",
         price: parseFloat(productForm.price),
-        discountValue: productForm.discountValue
-          ? parseFloat(productForm.discountValue)
-          : null,
-        isPercentage: productForm.isPercentage,
         stockQuantity: null,
         isAvailable: productForm.isAvailable,
         valueAddedTax: parseFloat(productForm.valueAddedTax) || null,
@@ -312,8 +302,6 @@ export default function ProductsManagement() {
         isAvailable: true,
         valueAddedTax: null,
         isVatIncluded: true,
-        discountValue: null,
-        isPercentage: true,
       });
     } catch (error) {
       console.error("خطأ في حفظ المنتج:", error);
@@ -1225,50 +1213,9 @@ export default function ProductsManagement() {
                       </span>
                     </label>
                   </div>
-
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="discountValue"
-                      value={productForm.discountValue || ""}
-                      onChange={handleProductFormChange}
-                      onFocus={() => handleFocus("discount")}
-                      onBlur={handleBlur}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
-                      dir="ltr"
-                      inputMode="numeric"
-                      pattern="\d*\.?\d*"
-                      onWheel={(e) => e.target.blur()}
-                      style={{ MozAppearance: "textfield" }}
-                    />
-                    <label
-                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                        focusedField === "discount" || productForm.discountValue
-                          ? "-top-2.5 text-xs text-blue-500 font-medium"
-                          : "top-3 text-gray-400 text-sm"
-                      }`}
-                    >
-                      <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M20 12H4M4 12l3-3m-3 3l3 3"
-                          />
-                        </svg>
-                        قيمة الخصم
-                      </span>
-                    </label>
-                  </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-2 gap-4 mb-6">
                   <label className="flex items-center cursor-pointer p-3 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-all">
                     <input
                       type="checkbox"
@@ -1292,19 +1239,6 @@ export default function ProductsManagement() {
                     />
                     <span className="mr-2 text-sm font-medium text-gray-700">
                       الضريبة مضمنة
-                    </span>
-                  </label>
-
-                  <label className="flex items-center cursor-pointer p-3 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-all">
-                    <input
-                      type="checkbox"
-                      name="isPercentage"
-                      checked={productForm.isPercentage}
-                      onChange={handleProductFormChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="mr-2 text-sm font-medium text-gray-700">
-                      خصم نسبة مئوية
                     </span>
                   </label>
                 </div>

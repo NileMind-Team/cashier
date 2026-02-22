@@ -20,14 +20,12 @@ export default function CategoriesManagement() {
   const [mainCategoryForm, setMainCategoryForm] = useState({
     name: "",
     isActive: true,
-    percentageDiscount: null,
   });
 
   const [subCategoryForm, setSubCategoryForm] = useState({
     name: "",
     mainCategoryId: "",
     isActive: true,
-    percentageDiscount: null,
     printIP: "",
   });
 
@@ -98,7 +96,6 @@ export default function CategoriesManagement() {
     setMainCategoryForm({
       name: "",
       isActive: true,
-      percentageDiscount: null,
     });
     setFocusedField(null);
   };
@@ -109,7 +106,6 @@ export default function CategoriesManagement() {
     setMainCategoryForm({
       name: category.name,
       isActive: category.isActive,
-      percentageDiscount: category.percentageDiscount || null,
     });
     setFocusedField(null);
   };
@@ -125,7 +121,6 @@ export default function CategoriesManagement() {
       name: "",
       mainCategoryId: selectedMainCategory?.id || mainCategories[0]?.id || "",
       isActive: true,
-      percentageDiscount: null,
       printIP: "",
     });
     setFocusedField(null);
@@ -138,7 +133,6 @@ export default function CategoriesManagement() {
       name: subCategory.name,
       mainCategoryId: subCategory.mainCategoryId,
       isActive: subCategory.isActive,
-      percentageDiscount: subCategory.percentageDiscount || null,
       printIP: subCategory.printIP || "",
     });
     setFocusedField(null);
@@ -148,12 +142,7 @@ export default function CategoriesManagement() {
     const { name, value, type, checked } = e.target;
     setMainCategoryForm((prev) => ({
       ...prev,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : name === "percentageDiscount"
-            ? value
-            : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -161,12 +150,7 @@ export default function CategoriesManagement() {
     const { name, value, type, checked } = e.target;
     setSubCategoryForm((prev) => ({
       ...prev,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : name === "percentageDiscount" || name === "mainCategoryId"
-            ? value
-            : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -209,8 +193,6 @@ export default function CategoriesManagement() {
           name: mainCategoryForm.name,
           iconName: null,
           isActive: mainCategoryForm.isActive,
-          percentageDiscount:
-            parseFloat(mainCategoryForm.percentageDiscount) || null,
         });
 
         if (response.status === 201) {
@@ -271,8 +253,6 @@ export default function CategoriesManagement() {
           name: subCategoryForm.name,
           mainCategoryId: parseInt(subCategoryForm.mainCategoryId),
           isActive: subCategoryForm.isActive,
-          percentageDiscount:
-            parseFloat(subCategoryForm.percentageDiscount) || null,
           printIP: subCategoryForm.printIP || "",
         });
 
@@ -503,7 +483,6 @@ export default function CategoriesManagement() {
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
           <div className="bg-white rounded-2xl shadow-lg p-5">
             <div className="flex justify-between items-center mb-6">
               <div>
@@ -587,11 +566,6 @@ export default function CategoriesManagement() {
                             {category.name}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {category.percentageDiscount > 0 && (
-                              <span className="text-green-600 font-medium ml-1">
-                                خصم {category.percentageDiscount}% •
-                              </span>
-                            )}{" "}
                             {
                               getSubCategoriesForMainCategory(category.id)
                                 .length
@@ -816,11 +790,6 @@ export default function CategoriesManagement() {
                                         • IP: {subCategory.printIP}
                                       </span>
                                     )}
-                                    {subCategory.percentageDiscount > 0 && (
-                                      <span className="text-green-600 mr-1">
-                                        • خصم {subCategory.percentageDiscount}%
-                                      </span>
-                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1022,50 +991,6 @@ export default function CategoriesManagement() {
                           />
                         </svg>
                         اسم الفئة الرئيسية *
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="percentageDiscount"
-                      value={mainCategoryForm.percentageDiscount}
-                      onChange={handleMainCategoryFormChange}
-                      onFocus={() => handleFocus("mainCategoryDiscount")}
-                      onBlur={handleBlur}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
-                      dir="ltr"
-                      inputMode="numeric"
-                      pattern="\d*\.?\d*"
-                      onWheel={(e) => e.target.blur()}
-                      style={{ MozAppearance: "textfield" }}
-                    />
-                    <label
-                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                        focusedField === "mainCategoryDiscount" ||
-                        mainCategoryForm.percentageDiscount
-                          ? "-top-2.5 text-xs text-blue-500 font-medium"
-                          : "top-3 text-gray-400 text-sm"
-                      }`}
-                    >
-                      <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M20 12H4M4 12l3-3m-3 3l3 3"
-                          />
-                        </svg>
-                        نسبة الخصم (%)
                       </span>
                     </label>
                   </div>
@@ -1307,50 +1232,6 @@ export default function CategoriesManagement() {
                           />
                         </svg>
                         عنوان IP للطابعة
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="percentageDiscount"
-                      value={subCategoryForm.percentageDiscount}
-                      onChange={handleSubCategoryFormChange}
-                      onFocus={() => handleFocus("subCategoryDiscount")}
-                      onBlur={handleBlur}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all text-sm bg-white"
-                      dir="ltr"
-                      inputMode="numeric"
-                      pattern="\d*\.?\d*"
-                      onWheel={(e) => e.target.blur()}
-                      style={{ MozAppearance: "textfield" }}
-                    />
-                    <label
-                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                        focusedField === "subCategoryDiscount" ||
-                        subCategoryForm.percentageDiscount
-                          ? "-top-2.5 text-xs text-green-500 font-medium"
-                          : "top-3 text-gray-400 text-sm"
-                      }`}
-                    >
-                      <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M20 12H4M4 12l3-3m-3 3l3 3"
-                          />
-                        </svg>
-                        نسبة الخصم (%)
                       </span>
                     </label>
                   </div>
