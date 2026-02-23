@@ -206,7 +206,25 @@ export default function CategoriesManagement() {
       }
     } catch (error) {
       console.error("خطأ في حفظ الفئة الرئيسية:", error);
-      if (error.response?.status === 201 || error.response?.status === 200) {
+
+      if (error.response?.status === 409) {
+        const errors = error.response?.data?.errors;
+        if (errors && errors.length > 0) {
+          const errorCode = errors[0].code;
+          if (errorCode === "MainCategory.DuplicatedName") {
+            toast.error("هذا الاسم موجود بالفعل. الرجاء استخدام اسم آخر");
+          } else {
+            toast.error(
+              errors[0].description || "حدث خطأ في حفظ الفئة الرئيسية",
+            );
+          }
+        } else {
+          toast.error("حدث خطأ في حفظ الفئة الرئيسية");
+        }
+      } else if (
+        error.response?.status === 201 ||
+        error.response?.status === 200
+      ) {
         await fetchAllData();
         toast.success("تم حفظ الفئة الرئيسية بنجاح");
         setShowMainCategoryModal(false);
@@ -261,17 +279,49 @@ export default function CategoriesManagement() {
           toast.success("تم إضافة الفئة الفرعية بنجاح");
           setShowSubCategoryModal(false);
           setEditingSubCategory(null);
+
+          const addedMainCategory = mainCategories.find(
+            (cat) => cat.id === parseInt(subCategoryForm.mainCategoryId),
+          );
+          if (addedMainCategory) {
+            setSelectedMainCategory(addedMainCategory);
+          }
         } else {
           toast.error("فشل في إضافة الفئة الفرعية");
         }
       }
     } catch (error) {
       console.error("خطأ في حفظ الفئة الفرعية:", error);
-      if (error.response?.status === 201 || error.response?.status === 200) {
+
+      if (error.response?.status === 409) {
+        const errors = error.response?.data?.errors;
+        if (errors && errors.length > 0) {
+          const errorCode = errors[0].code;
+          if (errorCode === "subCategory.DuplicatedName") {
+            toast.error("هذا الاسم موجود بالفعل. الرجاء استخدام اسم آخر");
+          } else {
+            toast.error(
+              errors[0].description || "حدث خطأ في حفظ الفئة الفرعية",
+            );
+          }
+        } else {
+          toast.error("حدث خطأ في حفظ الفئة الفرعية");
+        }
+      } else if (
+        error.response?.status === 201 ||
+        error.response?.status === 200
+      ) {
         await fetchAllData();
         toast.success("تم حفظ الفئة الفرعية بنجاح");
         setShowSubCategoryModal(false);
         setEditingSubCategory(null);
+
+        const addedMainCategory = mainCategories.find(
+          (cat) => cat.id === parseInt(subCategoryForm.mainCategoryId),
+        );
+        if (addedMainCategory) {
+          setSelectedMainCategory(addedMainCategory);
+        }
       } else {
         toast.error("حدث خطأ في حفظ الفئة الفرعية");
       }
@@ -996,21 +1046,6 @@ export default function CategoriesManagement() {
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <label className="flex items-center cursor-pointer p-3 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-all">
-                    <input
-                      type="checkbox"
-                      name="isActive"
-                      checked={mainCategoryForm.isActive}
-                      onChange={handleMainCategoryFormChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="mr-2 text-sm font-medium text-gray-700">
-                      الفئة نشطة (ستظهر في النظام)
-                    </span>
-                  </label>
-                </div>
-
                 <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t-2 border-gray-100">
                   <button
                     type="button"
@@ -1195,61 +1230,6 @@ export default function CategoriesManagement() {
                       </svg>
                     </div>
                   </div>
-                </div>
-
-                <div className="mb-4">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="printIP"
-                      value={subCategoryForm.printIP}
-                      onChange={handleSubCategoryFormChange}
-                      onFocus={() => handleFocus("printIP")}
-                      onBlur={handleBlur}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all text-sm bg-white"
-                      placeholder="مثال: 192.168.1.100"
-                      dir="ltr"
-                    />
-                    <label
-                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                        focusedField === "printIP" || subCategoryForm.printIP
-                          ? "-top-2.5 text-xs text-green-500 font-medium"
-                          : "top-3 text-gray-400 text-sm"
-                      }`}
-                    >
-                      <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                        عنوان IP للطابعة
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <label className="flex items-center cursor-pointer p-3 border-2 border-gray-200 rounded-xl hover:border-green-300 transition-all">
-                    <input
-                      type="checkbox"
-                      name="isActive"
-                      checked={subCategoryForm.isActive}
-                      onChange={handleSubCategoryFormChange}
-                      className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                    />
-                    <span className="mr-2 text-sm font-medium text-gray-700">
-                      الفئة الفرعية نشطة (ستظهر في النظام)
-                    </span>
-                  </label>
                 </div>
 
                 <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t-2 border-gray-100">

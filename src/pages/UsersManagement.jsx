@@ -18,6 +18,8 @@ export default function UsersManagement() {
   const hasFetchedCurrentUser = useRef(false);
   const hasFetchedUsers = useRef(false);
   const hasReorderedUsers = useRef(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     userName: "",
@@ -133,6 +135,8 @@ export default function UsersManagement() {
       confirmPassword: "",
       roles: ["Cashier"],
     });
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setFocusedField(null);
   };
 
@@ -159,34 +163,14 @@ export default function UsersManagement() {
   };
 
   const handleRoleToggle = (roleId) => {
-    setFormData((prev) => {
-      const newRoles = prev.roles.includes(roleId)
-        ? prev.roles.filter((r) => r !== roleId)
-        : [...prev.roles, roleId];
-
-      if (newRoles.length === 0) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        roles: newRoles,
-      };
-    });
+    setFormData((prev) => ({
+      ...prev,
+      roles: [roleId],
+    }));
   };
 
   const handleUserRoleToggle = (roleId) => {
-    setSelectedRoles((prev) => {
-      const newRoles = prev.includes(roleId)
-        ? prev.filter((r) => r !== roleId)
-        : [...prev, roleId];
-
-      if (newRoles.length === 0) {
-        return prev;
-      }
-
-      return newRoles;
-    });
+    setSelectedRoles([roleId]);
   };
 
   const handleSubmit = async (e) => {
@@ -252,6 +236,8 @@ export default function UsersManagement() {
           confirmPassword: "",
           roles: ["Cashier"],
         });
+        setShowPassword(false);
+        setShowConfirmPassword(false);
       } else {
         toast.error(response.data.error?.description || "فشل في إضافة الموظف");
       }
@@ -387,52 +373,6 @@ export default function UsersManagement() {
     }
   };
 
-  const handleToggleUserStatus = async (userId) => {
-    const user = users.find((u) => u.id === userId);
-    const action = user.isLocked ? "تفعيل" : "تعطيل";
-
-    const result = await Swal.fire({
-      title: `هل أنت متأكد من ${action} هذا الموظف؟`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonColor: user.isLocked ? "#10b981" : "#f59e0b",
-      cancelButtonColor: "#6B7280",
-      confirmButtonText: `نعم، ${action}`,
-      cancelButtonText: "إلغاء",
-      reverseButtons: true,
-    });
-
-    if (result.isConfirmed) {
-      try {
-        const response = await axiosInstance.put(
-          `/api/Users/ToggleBlock/${userId}`,
-        );
-
-        if (response.status === 200) {
-          setUsers((prevUsers) => {
-            const updatedUsers = prevUsers.map((u) =>
-              u.id === userId ? { ...u, isLocked: !u.isLocked } : u,
-            );
-            if (currentEmployee) {
-              const otherUsers = updatedUsers.filter(
-                (u) => u.id !== currentEmployee.id,
-              );
-              return [currentEmployee, ...otherUsers];
-            }
-            return updatedUsers;
-          });
-
-          toast.success(`تم ${action} الموظف بنجاح`);
-        } else {
-          toast.error(`فشل في ${action} الموظف`);
-        }
-      } catch (error) {
-        console.error(`خطأ في ${action} الموظف:`, error);
-        toast.error(`حدث خطأ في ${action} الموظف`);
-      }
-    }
-  };
-
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentUsers = users.slice(indexOfFirstItem, indexOfLastItem);
@@ -501,7 +441,7 @@ export default function UsersManagement() {
 
       <div className="container mx-auto px-4 py-6">
         {/* Professional Stats Cards with Modern Icons */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-6">
           {/* Total Users Card */}
           <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
@@ -511,15 +451,6 @@ export default function UsersManagement() {
                 </p>
                 <p className="text-3xl font-bold text-gray-800">
                   {stats.totalUsers}
-                </p>
-                <p className="text-xs text-gray-500 mt-2 flex items-center">
-                  <span className="text-green-600 font-medium ml-1">
-                    {stats.activeUsers} نشط
-                  </span>
-                  <span className="mx-1">•</span>
-                  <span className="text-red-500 font-medium">
-                    {stats.inactiveUsers} غير نشط
-                  </span>
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
@@ -535,47 +466,6 @@ export default function UsersManagement() {
                     strokeLinejoin="round"
                     strokeWidth={1.5}
                     d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          {/* Active Users Card */}
-          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">
-                  الموظفين النشطين
-                </p>
-                <p className="text-3xl font-bold text-gray-800">
-                  {stats.activeUsers}
-                </p>
-                <p className="text-xs text-gray-500 mt-2">
-                  <span className="text-blue-600 font-medium">
-                    {stats.totalUsers > 0
-                      ? ((stats.activeUsers / stats.totalUsers) * 100).toFixed(
-                          1,
-                        )
-                      : 0}
-                    %
-                  </span>{" "}
-                  من إجمالي الموظفين
-                </p>
-              </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
                   />
                 </svg>
               </div>
@@ -677,9 +567,6 @@ export default function UsersManagement() {
                       </th>
                       <th className="py-4 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
                         الصلاحيات
-                      </th>
-                      <th className="py-4 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                        الحالة
                       </th>
                       <th className="py-4 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
                         الإجراءات
@@ -786,119 +673,67 @@ export default function UsersManagement() {
                               </div>
                             </td>
                             <td className="py-4 px-4 text-right">
-                              <div className="flex items-center">
-                                <div
-                                  className={`w-3 h-3 rounded-full ml-2 ${!user.isLocked ? "bg-green-500" : "bg-red-500"}`}
-                                ></div>
-                                <span
-                                  className={`font-medium ${!user.isLocked ? "text-green-700" : "text-red-700"}`}
+                              <div className="flex flex-col space-y-2">
+                                <button
+                                  onClick={() => handleOpenRoleModal(user)}
+                                  className="text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-purple-200"
                                 >
-                                  {!user.isLocked ? "نشط" : "معطل"}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="py-4 px-4 text-right">
-                              <div className="flex flex-col gap-2">
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => handleOpenRoleModal(user)}
-                                    className="flex-1 text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 px-2 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-purple-200 whitespace-nowrap"
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-3 w-3 ml-1"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
                                   >
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      className="h-3 w-3 ml-1"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                      stroke="currentColor"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                      />
-                                    </svg>
-                                    الصلاحيات
-                                  </button>
-                                  <button
-                                    onClick={() => handleResetPassword(user.id)}
-                                    className="flex-1 text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 px-2 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-gray-300 whitespace-nowrap"
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                    />
+                                  </svg>
+                                  الصلاحيات
+                                </button>
+                                <button
+                                  onClick={() => handleResetPassword(user.id)}
+                                  className="text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-gray-300"
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-3 w-3 ml-1"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
                                   >
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      className="h-3 w-3 ml-1"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                      stroke="currentColor"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                                      />
-                                    </svg>
-                                    كلمة المرور
-                                  </button>
-                                </div>
-
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() =>
-                                      handleToggleUserStatus(user.id)
-                                    }
-                                    className={`flex-1 text-xs px-2 py-1.5 rounded-lg transition-colors flex items-center justify-center border whitespace-nowrap ${
-                                      !user.isLocked
-                                        ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
-                                        : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                                    }`}
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                    />
+                                  </svg>
+                                  كلمة المرور
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200"
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-3 w-3 ml-1"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
                                   >
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      className="h-3 w-3 ml-1"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                      stroke="currentColor"
-                                    >
-                                      {!user.isLocked ? (
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                        />
-                                      ) : (
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M13 10V3L4 14h7v7l9-11h-7z"
-                                        />
-                                      )}
-                                    </svg>
-                                    {!user.isLocked ? "تعطيل" : "تفعيل"}
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteUser(user.id)}
-                                    className="flex-1 text-xs bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200 whitespace-nowrap"
-                                  >
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      className="h-3 w-3 ml-1"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                      stroke="currentColor"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                      />
-                                    </svg>
-                                    حذف
-                                  </button>
-                                </div>
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+                                  حذف
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -1015,7 +850,7 @@ export default function UsersManagement() {
                       onBlur={handleBlur}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       required
-                      dir="ltr"
+                      dir="rtl"
                     />
                     <label
                       className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
@@ -1047,7 +882,7 @@ export default function UsersManagement() {
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div className="relative">
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       name="password"
                       value={formData.password}
                       onChange={handleFormChange}
@@ -1055,7 +890,7 @@ export default function UsersManagement() {
                       onBlur={handleBlur}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       required
-                      dir="ltr"
+                      dir="rtl"
                     />
                     <label
                       className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
@@ -1081,11 +916,54 @@ export default function UsersManagement() {
                         كلمة المرور *
                       </span>
                     </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    >
+                      {showPassword ? (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      )}
+                    </button>
                   </div>
 
                   <div className="relative">
                     <input
-                      type="password"
+                      type={showConfirmPassword ? "text" : "password"}
                       name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={handleFormChange}
@@ -1093,7 +971,7 @@ export default function UsersManagement() {
                       onBlur={handleBlur}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                       required
-                      dir="ltr"
+                      dir="rtl"
                     />
                     <label
                       className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
@@ -1120,6 +998,51 @@ export default function UsersManagement() {
                         تأكيد كلمة المرور *
                       </span>
                     </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    >
+                      {showConfirmPassword ? (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 </div>
 
@@ -1129,9 +1052,6 @@ export default function UsersManagement() {
                     <label className="text-sm font-medium text-gray-700">
                       الصلاحيات *
                     </label>
-                    <span className="mr-2 text-xs text-gray-500">
-                      (يمكن اختيار أكثر من صلاحية)
-                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {rolesList.map((role) => (
@@ -1269,11 +1189,8 @@ export default function UsersManagement() {
                 <div className="flex items-center mb-3">
                   <div className="w-1 h-6 bg-purple-500 rounded-full ml-2"></div>
                   <label className="text-sm font-medium text-gray-700">
-                    اختر الصلاحيات الجديدة
+                    اختر الصلاحية الجديدة
                   </label>
-                  <span className="mr-2 text-xs text-gray-500">
-                    (يمكن اختيار أكثر من صلاحية)
-                  </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {rolesList.map((role) => (

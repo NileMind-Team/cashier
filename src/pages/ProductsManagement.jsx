@@ -462,7 +462,7 @@ export default function ProductsManagement() {
 
       <div className="container mx-auto px-4 py-6">
         {/* Professional Stats Cards with Modern Icons */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {/* Total Products Card */}
           <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
@@ -538,42 +538,6 @@ export default function ProductsManagement() {
                     strokeLinejoin="round"
                     strokeWidth={1.5}
                     d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          {/* Total Value Card */}
-          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">
-                  القيمة الإجمالية
-                </p>
-                <p className="text-3xl font-bold text-gray-800">
-                  {formatCurrency(
-                    products.reduce((sum, prod) => sum + (prod.price || 0), 0),
-                  )}
-                </p>
-                <p className="text-xs text-gray-500 mt-2">
-                  <span className="text-purple-600 font-medium">ج.م</span>{" "}
-                  إجمالي قيمة المنتجات
-                </p>
-              </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
               </div>
@@ -1170,77 +1134,6 @@ export default function ProductsManagement() {
                       </svg>
                     </div>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="valueAddedTax"
-                      value={productForm.valueAddedTax}
-                      onChange={handleProductFormChange}
-                      onFocus={() => handleFocus("tax")}
-                      onBlur={handleBlur}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
-                      dir="ltr"
-                      inputMode="numeric"
-                      pattern="\d*\.?\d*"
-                      onWheel={(e) => e.target.blur()}
-                      style={{ MozAppearance: "textfield" }}
-                    />
-                    <label
-                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                        focusedField === "tax" || productForm.valueAddedTax
-                          ? "-top-2.5 text-xs text-blue-500 font-medium"
-                          : "top-3 text-gray-400 text-sm"
-                      }`}
-                    >
-                      <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                        ضريبة القيمة المضافة (%)
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <label className="flex items-center cursor-pointer p-3 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-all">
-                    <input
-                      type="checkbox"
-                      name="isAvailable"
-                      checked={productForm.isAvailable}
-                      onChange={handleProductFormChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="mr-2 text-sm font-medium text-gray-700">
-                      المنتج متاح
-                    </span>
-                  </label>
-
-                  <label className="flex items-center cursor-pointer p-3 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-all">
-                    <input
-                      type="checkbox"
-                      name="isVatIncluded"
-                      checked={productForm.isVatIncluded}
-                      onChange={handleProductFormChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="mr-2 text-sm font-medium text-gray-700">
-                      الضريبة مضمنة
-                    </span>
-                  </label>
                 </div>
 
                 <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t-2 border-gray-100">

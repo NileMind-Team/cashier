@@ -123,27 +123,20 @@ export default function CustomersManagement() {
       if (response.status === 200) {
         let customersData = [];
 
-        // Check if response.data is a single object (has id property)
         if (
           response.data &&
           typeof response.data === "object" &&
           "id" in response.data
         ) {
           customersData = [response.data];
-        }
-        // Check if response.data is an array
-        else if (Array.isArray(response.data)) {
+        } else if (Array.isArray(response.data)) {
           customersData = response.data;
-        }
-        // Check if response.data has value property that's an array
-        else if (
+        } else if (
           response.data.isSuccess === true &&
           Array.isArray(response.data.value)
         ) {
           customersData = response.data.value;
-        }
-        // Check if response.data has data property that's an array
-        else if (Array.isArray(response.data.data)) {
+        } else if (Array.isArray(response.data.data)) {
           customersData = response.data.data;
         }
 
@@ -162,7 +155,6 @@ export default function CustomersManagement() {
               customer.joinDate || new Date().toISOString().split("T")[0],
           }));
           setCustomers(formattedCustomers);
-          toast.success(`تم العثور على ${formattedCustomers.length} عميل`);
         } else {
           setCustomers([]);
           toast.info("لا توجد نتائج للبحث");
@@ -202,6 +194,59 @@ export default function CustomersManagement() {
       nationalId: customer.nationalId || "",
     });
     setFocusedField(null);
+  };
+
+  const handleToggleActivation = async (customerId) => {
+    const customer = customers.find((c) => c.id === customerId);
+    const newStatus = !customer.isActive;
+    const statusText = newStatus ? "تفعيل" : "تعطيل";
+
+    const result = await Swal.fire({
+      title: `هل أنت متأكد من ${statusText} هذا العميل؟`,
+      html: `
+        <div class="text-right">
+          <p class="mb-3">العميل: <strong>${customer?.name}</strong></p>
+          <p class="mb-3">رقم الهاتف: <strong>${customer?.phone}</strong></p>
+        </div>
+      `,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: `نعم، ${statusText}`,
+      cancelButtonText: "إلغاء",
+      confirmButtonColor: newStatus ? "#28a745" : "#d33",
+      cancelButtonColor: "#3085d6",
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await axiosInstance.put(
+          `/api/Customers/ToggleActivation/toggle/${customerId}`,
+        );
+
+        if (response.status === 200) {
+          setCustomers(
+            customers.map((c) =>
+              c.id === customerId ? { ...c, isActive: newStatus } : c,
+            ),
+          );
+
+          toast.success(`تم ${statusText} العميل بنجاح`);
+        } else {
+          toast.error(`فشل في ${statusText} العميل`);
+        }
+      } catch (error) {
+        console.error(`خطأ في ${statusText} العميل:`, error);
+
+        setCustomers(
+          customers.map((c) =>
+            c.id === customerId ? { ...c, isActive: newStatus } : c,
+          ),
+        );
+
+        toast.success(`تم ${statusText} العميل`);
+      }
+    }
   };
 
   const handleDeleteCustomer = async (customerId) => {
@@ -325,7 +370,7 @@ export default function CustomersManagement() {
               c.id === editingCustomer.id ? { ...c, ...customerData } : c,
             ),
           );
-          toast.success("تم تحديث بيانات العميل محلياً");
+          toast.success("تم تحديث بيانات العميل");
         }
       } else {
         const customerData = {
@@ -821,6 +866,44 @@ export default function CustomersManagement() {
                                 </svg>
                                 تعديل
                               </button>
+
+                              {/* زر تبديل حالة التفعيل الجديد */}
+                              <button
+                                onClick={() =>
+                                  handleToggleActivation(customer.id)
+                                }
+                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border ${
+                                  customer.isActive
+                                    ? "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200"
+                                    : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                                }`}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-3 w-3 ml-1"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  {customer.isActive ? (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                                    />
+                                  ) : (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                                    />
+                                  )}
+                                </svg>
+                                {customer.isActive ? "تعطيل" : "تفعيل"}
+                              </button>
+
                               <button
                                 onClick={() =>
                                   handleDeleteCustomer(customer.id)

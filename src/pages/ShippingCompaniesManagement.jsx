@@ -245,16 +245,13 @@ export default function ShippingCompaniesManagement() {
       return;
     }
 
-    if (!formData.deliveryCost || parseFloat(formData.deliveryCost) <= 0) {
-      toast.error("يرجى إدخال سعر التوصيل صحيح");
-      return;
-    }
-
     try {
       const companyData = {
         name: formData.name,
         imgUrl: formData.imgUrl || null,
-        deliveryCost: parseFloat(formData.deliveryCost),
+        deliveryCost: formData.deliveryCost
+          ? parseFloat(formData.deliveryCost)
+          : 0,
         contactNumber: formData.contactNumber,
         websiteUrl: formData.websiteUrl || null,
         commercialRegistrationNumber:
@@ -276,7 +273,9 @@ export default function ShippingCompaniesManagement() {
                     ...company,
                     name: formData.name,
                     phone: formData.contactNumber,
-                    deliveryRate: parseFloat(formData.deliveryCost),
+                    deliveryRate: formData.deliveryCost
+                      ? parseFloat(formData.deliveryCost)
+                      : 0,
                     imgUrl: formData.imgUrl,
                     websiteUrl: formData.websiteUrl,
                     commercialRegistrationNumber:
@@ -301,7 +300,9 @@ export default function ShippingCompaniesManagement() {
             id: response.data.id || Date.now(),
             name: formData.name,
             phone: formData.contactNumber,
-            deliveryRate: parseFloat(formData.deliveryCost),
+            deliveryRate: formData.deliveryCost
+              ? parseFloat(formData.deliveryCost)
+              : 0,
             isActive: true,
             totalDeliveries: 0,
             imgUrl: formData.imgUrl,
@@ -418,17 +419,27 @@ export default function ShippingCompaniesManagement() {
             </div>
           </div>
 
-          {/* Average Delivery Price Card */}
           <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500 mb-1">
-                  متوسط سعر التوصيل
+                  الشركات النشطة
                 </p>
                 <p className="text-3xl font-bold text-gray-800">
-                  {formatCurrency(stats.averageDeliveryPrice)} ج.م
+                  {stats.activeCompanies}
                 </p>
-                <p className="text-xs text-gray-500 mt-2">جميع شركات التوصيل</p>
+                <p className="text-xs text-gray-500 mt-2">
+                  <span className="text-blue-600 font-medium">
+                    {stats.totalCompanies > 0
+                      ? (
+                          (stats.activeCompanies / stats.totalCompanies) *
+                          100
+                        ).toFixed(1)
+                      : 0}
+                    %
+                  </span>{" "}
+                  من إجمالي الشركات
+                </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
                 <svg
@@ -442,7 +453,49 @@ export default function ShippingCompaniesManagement() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={1.5}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  الشركات الغير نشطة
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
+                  {stats.totalCompanies - stats.activeCompanies}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  <span className="text-red-600 font-medium">
+                    {stats.totalCompanies > 0
+                      ? (
+                          ((stats.totalCompanies - stats.activeCompanies) /
+                            stats.totalCompanies) *
+                          100
+                        ).toFixed(1)
+                      : 0}
+                    %
+                  </span>{" "}
+                  من إجمالي الشركات
+                </p>
+              </div>
+              <div className="w-14 h-14 bg-gradient-to-br from-red-400 to-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
                   />
                 </svg>
               </div>
@@ -476,39 +529,6 @@ export default function ShippingCompaniesManagement() {
                     strokeLinejoin="round"
                     strokeWidth={1.5}
                     d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          {/* Best Company Card */}
-          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">
-                  أفضل شركة
-                </p>
-                <p className="text-3xl font-bold text-gray-800">
-                  {stats.bestCompanyName || "لا يوجد"}
-                </p>
-                <p className="text-xs text-gray-500 mt-2">
-                  أعلى عدد عمليات توصيل
-                </p>
-              </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
                   />
                 </svg>
               </div>
@@ -710,6 +730,11 @@ export default function ShippingCompaniesManagement() {
                                 <div className="text-xs text-gray-500">
                                   سجل تجاري:{" "}
                                   {company.commercialRegistrationNumber}
+                                </div>
+                              )}
+                              {company.taxRegisterNumber && (
+                                <div className="text-xs text-gray-500">
+                                  الرقم الضريبي: {company.taxRegisterNumber}
                                 </div>
                               )}
                             </div>
@@ -943,7 +968,6 @@ export default function ShippingCompaniesManagement() {
                       onFocus={() => handleFocus("deliveryCost")}
                       onBlur={handleBlur}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
-                      required
                       dir="rtl"
                       min="0"
                       step="0.01"
@@ -969,7 +993,7 @@ export default function ShippingCompaniesManagement() {
                             d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                           />
                         </svg>
-                        سعر التوصيل (ج.م) *
+                        سعر التوصيل (ج.م)
                       </span>
                     </label>
                   </div>
