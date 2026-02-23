@@ -28,11 +28,13 @@ import {
   FaPizzaSlice,
   FaPercentage,
 } from "react-icons/fa";
+import axiosInstance from "../../api/axiosInstance"; // <--- IMPORT AXIOS INSTANCE
 
-export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
+export default function Navbar({ isShiftOpen, onShiftClose }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showReportsDropdown, setShowReportsDropdown] = useState(false);
+  const [isClosingShift, setIsClosingShift] = useState(false); // <--- STATE FOR CLOSING SHIFT LOADING
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -51,95 +53,136 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
   const handleCloseShift = () => {
     Swal.fire({
       title: "هل أنت متأكد من إغلاق الوردية؟",
+      text: "يرجى إدخال المبلغ النقدي الموجود في الدرج",
       icon: "warning",
+      input: "number",
+      inputLabel: "المبلغ النقدي الحالي",
+      inputPlaceholder: "أدخل المبلغ النقدي",
+      inputValue: 0,
+      inputAttributes: {
+        min: 0,
+        step: "0.01",
+        dir: "rtl",
+      },
       showCancelButton: true,
       confirmButtonColor: "#193F94",
       cancelButtonColor: "#d33",
       confirmButtonText: "نعم، إغلاق الوردية",
-      cancelButtonText: "البقاء في الوردية",
+      cancelButtonText: "إلغاء",
       reverseButtons: true,
       customClass: {
         confirmButton: "px-4 py-2",
         cancelButton: "px-4 py-2",
       },
-    }).then((result) => {
-      if (result.isConfirmed) {
-        if (onShiftClose) {
-          onShiftClose();
+      preConfirm: (closingCash) => {
+        if (!closingCash || closingCash < 0) {
+          Swal.showValidationMessage("يرجى إدخال مبلغ صحيح");
+          return false;
         }
+        return closingCash;
+      },
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        const closingCash = parseFloat(result.value);
+        setIsClosingShift(true);
 
-        Swal.fire({
-          title: "تم إغلاق الوردية بنجاح!",
-          html: `
-            <div dir="rtl" class="text-right">
-              <div class="mb-3">
-                <h4 class="font-bold text-lg mb-2" style="color: #193F94">تفاصيل الوردية المغلقة</h4>
-              </div>
-              
-              <div class="space-y-2">
-                <div class="flex justify-between items-center border-b pb-1">
-                  <span class="text-gray-700">عدد الفواتير:</span>
-                  <span class="font-bold">${shiftSummary?.totalBills || 0}</span>
+        try {
+          const response = await axiosInstance.post("/api/Shifts/Close", {
+            closingCash: closingCash,
+          });
+
+          if (response.status === 200 || response.status === 201) {
+            if (onShiftClose) {
+              onShiftClose();
+            }
+
+            const startTime = response.data.startTime
+              ? new Date(response.data.startTime).toLocaleString("ar-EG")
+              : "غير محدد";
+            const endTime = response.data.endTime
+              ? new Date(response.data.endTime).toLocaleString("ar-EG")
+              : new Date().toLocaleString("ar-EG");
+
+            Swal.fire({
+              title: "تم إغلاق الوردية بنجاح!",
+              html: `
+                <div dir="rtl" class="text-right">
+                  <div class="mb-3">
+                    <h4 class="font-bold text-lg mb-2" style="color: #193F94">تفاصيل الوردية المغلقة</h4>
+                  </div>
+                  
+                  <div class="space-y-2">
+                    <div class="flex justify-between items-center border-b pb-1">
+                      <span class="text-gray-700">رقم الوردية:</span>
+                      <span class="font-bold">${response.data.shiftId || 0}</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center border-b pb-1">
+                      <span class="text-gray-700">عدد الفواتير:</span>
+                      <span class="font-bold">${response.data.invoiceCount || 0}</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center border-b pb-1">
+                      <span class="text-gray-700">إجمالي المبيعات:</span>
+                      <span class="font-bold" style="color: #193F94">${(response.data.totalSales || 0).toFixed(2)} ج.م</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center border-b pb-1">
+                      <span class="text-gray-700">الرصيد الافتتاحي:</span>
+                      <span class="font-bold">${(response.data.openingCash || 0).toFixed(2)} ج.م</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center border-b pb-1">
+                      <span class="text-gray-700">الرصيد الختامي:</span>
+                      <span class="font-bold">${(response.data.closingCash || 0).toFixed(2)} ج.م</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center border-b pb-1">
+                      <span class="text-gray-700">صافي النقدية:</span>
+                      <span class="font-bold" style="color: ${response.data.netCash >= 0 ? "#10B981" : "#EF4444"}">${(response.data.netCash || 0).toFixed(2)} ج.م</span>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-4 pt-3 border-t border-gray-200">
+                    <p class="text-sm text-gray-500">
+                      وقت بداية الوردية: ${startTime}
+                    </p>
+                    <p class="text-sm text-gray-500">
+                      وقت نهاية الوردية: ${endTime}
+                    </p>
+                  </div>
                 </div>
-                
-                <div class="flex justify-between items-center border-b pb-1">
-                  <span class="text-gray-700">الفواتير المكتملة:</span>
-                  <span class="font-bold text-green-600">${shiftSummary?.completedBills || 0}</span>
-                </div>
-                
-                <div class="flex justify-between items-center border-b pb-1">
-                  <span class="text-gray-700">الفواتير المعلقة:</span>
-                  <span class="font-bold text-amber-600">${shiftSummary?.pendingBills || 0}</span>
-                </div>
-                
-                <div class="flex justify-between items-center border-b pb-1">
-                  <span class="text-gray-700">الفواتير المرتجعة:</span>
-                  <span class="font-bold text-red-600">${shiftSummary?.returnedBills || 0}</span>
-                </div>
-                
-                <div class="flex justify-between items-center border-b pb-1">
-                  <span class="text-gray-700">إجمالي المبيعات:</span>
-                  <span class="font-bold" style="color: #193F94">${shiftSummary?.totalSales?.toFixed(2) || "0.00"} ج.م</span>
-                </div>
-                
-                <div class="flex justify-between items-center border-b pb-1">
-                  <span class="text-gray-700">إجمالي الضرائب:</span>
-                  <span class="font-bold">${shiftSummary?.totalTax?.toFixed(2) || "0.00"} ج.م</span>
-                </div>
-                
-                <div class="flex justify-between items-center border-b pb-1">
-                  <span class="text-gray-700">إجمالي الخصومات:</span>
-                  <span class="font-bold text-red-600">${shiftSummary?.totalDiscount?.toFixed(2) || "0.00"} ج.م</span>
-                </div>
-                
-                <div class="flex justify-between items-center border-b pb-1 pt-2">
-                  <span class="text-gray-700 font-bold">صافي الإيرادات:</span>
-                  <span class="font-bold text-lg" style="color: #10B981">${shiftSummary?.netRevenue?.toFixed(2) || "0.00"} ج.م</span>
-                </div>
-              </div>
-              
-              <div class="mt-4 pt-3 border-t border-gray-200">
-                <p class="text-sm text-gray-500">
-                  وقت بداية الوردية: ${shiftSummary?.startTime || "غير محدد"}
-                </p>
-                <p class="text-sm text-gray-500">
-                  وقت نهاية الوردية: ${new Date().toLocaleTimeString("ar-EG")}
-                </p>
-              </div>
-            </div>
-          `,
-          icon: "success",
-          confirmButtonColor: "#193F94",
-          confirmButtonText: "موافق",
-          showConfirmButton: true,
-          showCancelButton: false,
-          allowOutsideClick: false,
-          allowEscapeKey: false,
-        }).then((result) => {
-          if (result.isConfirmed) {
-            navigate("/login");
+              `,
+              icon: "success",
+              confirmButtonColor: "#193F94",
+              confirmButtonText: "موافق",
+              showConfirmButton: true,
+              showCancelButton: false,
+              allowOutsideClick: false,
+              allowEscapeKey: false,
+            }).then((result) => {
+              if (result.isConfirmed) {
+                navigate("/login");
+              }
+            });
           }
-        });
+        } catch (error) {
+          console.error("Failed to close shift:", error);
+          const errorMessage =
+            error.response?.data?.message ||
+            error.message ||
+            "حدث خطأ أثناء إغلاق الوردية";
+
+          Swal.fire({
+            title: "خطأ في إغلاق الوردية",
+            text: errorMessage,
+            icon: "error",
+            confirmButtonColor: "#193F94",
+            confirmButtonText: "حسناً",
+          });
+        } finally {
+          setIsClosingShift(false);
+        }
       }
     });
   };
@@ -665,11 +708,44 @@ export default function Navbar({ isShiftOpen, onShiftClose, shiftSummary }) {
             {isShiftOpen && (
               <button
                 onClick={handleCloseShift}
-                className="h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/30 hover:shadow-lg hover:shadow-amber-500/40 hover:scale-105 active:scale-95"
+                disabled={isClosingShift}
+                className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
+                  isClosingShift
+                    ? "bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed opacity-50"
+                    : "bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-lg hover:shadow-amber-500/40 hover:scale-105 active:scale-95"
+                } text-white shadow-md shadow-amber-500/30`}
               >
                 <span className="absolute inset-0 bg-gradient-to-r from-white/0 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                <FaStopCircle className="h-4 w-4 ml-1.5" />
-                <span className="relative">إغلاق الوردية</span>
+                {isClosingShift ? (
+                  <>
+                    <svg
+                      className="animate-spin h-4 w-4 ml-1.5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    <span className="relative">جاري إغلاق الوردية...</span>
+                  </>
+                ) : (
+                  <>
+                    <FaStopCircle className="h-4 w-4 ml-1.5" />
+                    <span className="relative">إغلاق الوردية</span>
+                  </>
+                )}
               </button>
             )}
           </div>

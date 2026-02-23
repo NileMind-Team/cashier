@@ -4,12 +4,14 @@ import { useDispatch, useSelector } from "react-redux";
 import { loginUser, logout, clearError } from "../redux/slices/loginSlice";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import axiosInstance from "../api/axiosInstance";
 
 export default function Login() {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
+  const [isOpeningShift, setIsOpeningShift] = useState(false);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -25,7 +27,6 @@ export default function Login() {
   useEffect(() => {
     if (error) {
       toast.error(error.description || error.message || "حدث خطأ");
-
       dispatch(clearError());
     }
   }, [error, dispatch]);
@@ -69,9 +70,31 @@ export default function Login() {
     });
   };
 
-  const handleStartShift = () => {
-    toast.success("تم بدء الوردية بنجاح!");
-    navigate("/");
+  const handleStartShift = async () => {
+    setIsOpeningShift(true);
+
+    const openingCashAmount = 1;
+
+    try {
+      const response = await axiosInstance.post("/api/Shifts/Open", {
+        openingCash: openingCashAmount,
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        toast.success("تم بدء الوردية بنجاح!");
+        console.log("Shift opened successfully:", response.data);
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Failed to open shift:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "حدث خطأ أثناء بدء الوردية";
+      toast.error(`فشل بدء الوردية: ${errorMessage}`);
+    } finally {
+      setIsOpeningShift(false);
+    }
   };
 
   const isLoginDisabled = !formData.username || !formData.password || isLoading;
@@ -130,29 +153,69 @@ export default function Login() {
                 <div className="space-y-4">
                   <button
                     onClick={handleStartShift}
-                    className="w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-md"
+                    disabled={isOpeningShift}
+                    className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform ${
+                      isOpeningShift
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:scale-[1.02] active:scale-[0.98]"
+                    } shadow-md`}
                     style={{ backgroundColor: "#20A4D4" }}
-                    onMouseEnter={(e) =>
-                      (e.target.style.backgroundColor = "#1DC7E0")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.target.style.backgroundColor = "#20A4D4")
-                    }
+                    onMouseEnter={(e) => {
+                      if (!isOpeningShift) {
+                        e.target.style.backgroundColor = "#1DC7E0";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isOpeningShift) {
+                        e.target.style.backgroundColor = "#20A4D4";
+                      }
+                    }}
                   >
-                    بداية الوردية
+                    {isOpeningShift ? (
+                      <span className="flex items-center justify-center">
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        جاري بدء الوردية...
+                      </span>
+                    ) : (
+                      "بداية الوردية"
+                    )}
                   </button>
 
                   <button
                     onClick={handleLogout}
-                    className="w-full py-3 px-4 rounded-lg font-medium border transition-all duration-300"
+                    disabled={isOpeningShift}
+                    className="w-full py-3 px-4 rounded-lg font-medium border transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ borderColor: "#193F94", color: "#193F94" }}
                     onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = "#193F94";
-                      e.target.style.color = "white";
+                      if (!isOpeningShift) {
+                        e.target.style.backgroundColor = "#193F94";
+                        e.target.style.color = "white";
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = "transparent";
-                      e.target.style.color = "#193F94";
+                      if (!isOpeningShift) {
+                        e.target.style.backgroundColor = "transparent";
+                        e.target.style.color = "#193F94";
+                      }
                     }}
                   >
                     تسجيل الخروج
