@@ -268,6 +268,11 @@ export default function ProductsManagement() {
       return;
     }
 
+    if (!productForm.imgUrl.trim()) {
+      toast.error("يرجى إدخال رابط الصورة");
+      return;
+    }
+
     if (!selectedMainCategoryId) {
       toast.error("يرجى اختيار الفئة الرئيسية");
       return;
@@ -1051,6 +1056,7 @@ export default function ProductsManagement() {
                       onBlur={handleBlur}
                       placeholder="https://example.com/image.jpg"
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      required
                       dir="ltr"
                     />
                     <label
@@ -1074,7 +1080,7 @@ export default function ProductsManagement() {
                             d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                           />
                         </svg>
-                        رابط الصورة
+                        رابط الصورة *
                       </span>
                     </label>
                   </div>
