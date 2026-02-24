@@ -978,7 +978,7 @@ export default function CustomersManagement() {
               </div>
 
               {/* Enhanced Pagination with Professional Design */}
-              {!searchTerm && pagination.totalPages > 0 && (
+              {!searchTerm && pagination.totalPages > 0 && customers.length > 0 && (
                 <div className="px-4 py-4 border-t border-gray-200 bg-gray-50">
                   <div className="flex justify-end">
                     <div className="flex items-center gap-2">

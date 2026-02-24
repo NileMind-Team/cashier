@@ -953,8 +953,7 @@ export default function ProductsManagement() {
                 </table>
               </div>
 
-              {/* Enhanced Pagination with Professional Design */}
-              {pagination.totalPages > 0 && (
+              {pagination.totalPages > 0 && products.length > 0 && (
                 <div className="px-4 py-4 border-t border-gray-200 bg-gray-50">
                   <div className="flex justify-end">
                     <div className="flex items-center gap-2">
