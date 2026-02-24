@@ -12,11 +12,18 @@ export default function ProductsManagement() {
   const [loading, setLoading] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [selectedMainCategoryId, setSelectedMainCategoryId] = useState("");
   const [focusedField, setFocusedField] = useState(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    pageSize: 5,
+    totalCount: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
+
   const isFetchingProducts = useRef(false);
   const isFetchingMainCategories = useRef(false);
   const isFetchingSubCategories = useRef(false);
@@ -32,7 +39,10 @@ export default function ProductsManagement() {
     isVatIncluded: true,
   });
 
-  const fetchProducts = async (showLoading = true) => {
+  const fetchProducts = async (
+    pageNumber = pagination.currentPage,
+    showLoading = true,
+  ) => {
     if (isFetchingProducts.current) {
       console.log("هناك طلب منتجات قيد التنفيذ بالفعل، تجاهل الطلب الجديد");
       return;
@@ -42,10 +52,22 @@ export default function ProductsManagement() {
       isFetchingProducts.current = true;
       if (showLoading) setLoading(true);
 
-      const response = await axiosInstance.get("/api/Items/GetAllItems");
+      const response = await axiosInstance.post("/api/Items/GetAllItems", {
+        pageNumber: pageNumber,
+        pageSize: pagination.pageSize,
+        skip: (pageNumber - 1) * pagination.pageSize,
+      });
 
-      if (response.status === 200 && Array.isArray(response.data)) {
-        setProducts(response.data);
+      if (response.status === 200 && response.data) {
+        setProducts(response.data.items || []);
+        setPagination({
+          currentPage: response.data.pageNumber || 1,
+          pageSize: response.data.pageSize || 5,
+          totalCount: response.data.totalCount || 0,
+          totalPages: response.data.totalPages || 1,
+          hasNextPage: response.data.pageNumber < response.data.totalPages,
+          hasPreviousPage: response.data.pageNumber > 1,
+        });
       } else {
         setProducts([]);
         toast.info("لا يوجد منتجات في النظام");
@@ -119,7 +141,7 @@ export default function ProductsManagement() {
   const fetchAllData = async () => {
     setCategoriesLoading(true);
     await Promise.all([
-      fetchProducts(false),
+      fetchProducts(1, false),
       fetchMainCategories(),
       fetchSubCategories(),
     ]);
@@ -155,6 +177,18 @@ export default function ProductsManagement() {
       }
     }
   }, [selectedMainCategoryId, subCategories, productForm.subCategoryId]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination((prev) => ({ ...prev, currentPage: newPage }));
+      fetchProducts(newPage, true);
+
+      const tableElement = document.getElementById("products-table-container");
+      if (tableElement) {
+        tableElement.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
 
   const handleAddProduct = () => {
     if (mainCategories.length === 0) {
@@ -303,7 +337,7 @@ export default function ProductsManagement() {
 
         if (response.status === 200) {
           toast.success("تم تحديث المنتج بنجاح");
-          await fetchProducts(false); // نمرر false لإخفاء مؤشر التحميل
+          await fetchProducts(pagination.currentPage, false);
           setShowProductModal(false);
           setEditingProduct(null);
         } else {
@@ -317,7 +351,7 @@ export default function ProductsManagement() {
 
         if (response.status === 201 || response.status === 200) {
           toast.success("تم إضافة المنتج بنجاح");
-          await fetchProducts(false); // نمرر false لإخفاء مؤشر التحميل
+          await fetchProducts(1, false);
           setShowProductModal(false);
           setEditingProduct(null);
         } else {
@@ -353,7 +387,7 @@ export default function ProductsManagement() {
       console.error("خطأ في حفظ المنتج:", error);
       if (error.response?.status === 201 || error.response?.status === 200) {
         toast.success("تم حفظ المنتج بنجاح");
-        await fetchProducts(false); // نمرر false لإخفاء مؤشر التحميل
+        await fetchProducts(pagination.currentPage, false);
         setShowProductModal(false);
         setEditingProduct(null);
       } else {
@@ -383,7 +417,14 @@ export default function ProductsManagement() {
 
         if (response.status === 204 || response.status === 200) {
           toast.success("تم حذف المنتج بنجاح");
-          await fetchProducts(false); // نمرر false لإخفاء مؤشر التحميل
+          const newTotalCount = pagination.totalCount - 1;
+          const newTotalPages = Math.ceil(newTotalCount / pagination.pageSize);
+          const newPage =
+            pagination.currentPage > newTotalPages
+              ? newTotalPages
+              : pagination.currentPage;
+
+          await fetchProducts(newPage || 1, false);
         } else {
           toast.error("فشل في حذف المنتج");
         }
@@ -423,7 +464,7 @@ export default function ProductsManagement() {
           toast.success(
             `تم ${product.isAvailable ? "تعطيل" : "تفعيل"} المنتج بنجاح`,
           );
-          await fetchProducts(false);
+          await fetchProducts(pagination.currentPage, false);
         } else {
           toast.error("فشل في تغيير حالة المنتج");
         }
@@ -434,15 +475,6 @@ export default function ProductsManagement() {
     }
   };
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentProducts = products.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(products.length / itemsPerPage);
-
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
-
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("ar-EG", {
       minimumFractionDigits: 2,
@@ -450,8 +482,40 @@ export default function ProductsManagement() {
     }).format(amount || 0);
   };
 
+  const getPageNumbers = () => {
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+    let l;
+
+    for (let i = 1; i <= pagination.totalPages; i++) {
+      if (
+        i === 1 ||
+        i === pagination.totalPages ||
+        (i >= pagination.currentPage - delta &&
+          i <= pagination.currentPage + delta)
+      ) {
+        range.push(i);
+      }
+    }
+
+    range.forEach((i) => {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push("...");
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    });
+
+    return rangeWithDots;
+  };
+
   const stats = {
-    totalProducts: products.length,
+    totalProducts: pagination.totalCount,
     activeProducts: products.filter((p) => p.isAvailable).length,
     inactiveProducts: products.filter((p) => !p.isAvailable).length,
   };
@@ -462,11 +526,11 @@ export default function ProductsManagement() {
       className="min-h-screen bg-gradient-to-l from-gray-50 to-gray-100"
     >
       {/* Navbar */}
-      <div className="bg-white shadow-md">
+      <div className="bg-white shadow-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center mr-3">
+              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
                 <span className="text-white font-bold">$</span>
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
@@ -667,7 +731,10 @@ export default function ProductsManagement() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div
+          id="products-table-container"
+          className="bg-white rounded-2xl shadow-lg overflow-hidden"
+        >
           {loading || categoriesLoading ? (
             <div className="p-8 flex flex-col items-center justify-center">
               <div className="w-16 h-16 border-t-4 border-blue-600 border-solid rounded-full animate-spin mb-4"></div>
@@ -697,7 +764,7 @@ export default function ProductsManagement() {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentProducts.length === 0 ? (
+                    {products.length === 0 ? (
                       <tr>
                         <td
                           colSpan="5"
@@ -728,7 +795,7 @@ export default function ProductsManagement() {
                         </td>
                       </tr>
                     ) : (
-                      currentProducts.map((product) => (
+                      products.map((product) => (
                         <tr
                           key={product.id}
                           className="hover:bg-gray-50 transition-colors border-b border-gray-100"
@@ -771,6 +838,13 @@ export default function ProductsManagement() {
                               <span className="font-bold text-green-700">
                                 {formatCurrency(product.price)} ج.م
                               </span>
+                              {product.finalPrice &&
+                                product.finalPrice !== product.price && (
+                                  <div className="text-xs text-gray-500">
+                                    بعد الخصم:{" "}
+                                    {formatCurrency(product.finalPrice)} ج.م
+                                  </div>
+                                )}
                             </div>
                           </td>
                           <td className="py-4 px-4 text-right">
@@ -879,56 +953,171 @@ export default function ProductsManagement() {
                 </table>
               </div>
 
-              {products.length > itemsPerPage && (
-                <div className="px-4 py-3 border-t border-gray-200">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between">
-                    <div className="text-sm text-gray-700 mb-2 md:mb-0">
-                      عرض {indexOfFirstItem + 1} -{" "}
-                      {Math.min(indexOfLastItem, products.length)} من{" "}
-                      {products.length} منتج
-                    </div>
-                    <div className="flex items-center space-x-1 rtl:space-x-reverse">
+              {/* Enhanced Pagination with Professional Design */}
+              {pagination.totalPages > 0 && (
+                <div className="px-4 py-4 border-t border-gray-200 bg-gray-50">
+                  <div className="flex justify-end">
+                    <div className="flex items-center gap-2">
+                      {/* First Page Button */}
                       <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className={`px-3 py-1.5 rounded-lg text-sm ${currentPage === 1 ? "text-gray-400 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"}`}
+                        onClick={() => handlePageChange(1)}
+                        disabled={!pagination.hasPreviousPage}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          pagination.hasPreviousPage
+                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                            : "text-gray-300 cursor-not-allowed"
+                        }`}
+                        title="الصفحة الأولى"
                       >
-                        السابق
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                          />
+                        </svg>
                       </button>
-                      {Array.from(
-                        { length: Math.min(5, totalPages) },
-                        (_, i) => {
-                          let pageNumber;
-                          if (totalPages <= 5) {
-                            pageNumber = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNumber = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNumber = totalPages - 4 + i;
-                          } else {
-                            pageNumber = currentPage - 2 + i;
-                          }
 
-                          return (
-                            <button
-                              key={pageNumber}
-                              onClick={() => handlePageChange(pageNumber)}
-                              className={`px-3 py-1.5 rounded-lg text-sm ${currentPage === pageNumber ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-gray-100"}`}
-                            >
-                              {pageNumber}
-                            </button>
-                          );
-                        },
-                      )}
+                      {/* Previous Page Button */}
                       <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className={`px-3 py-1.5 rounded-lg text-sm ${currentPage === totalPages ? "text-gray-400 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"}`}
+                        onClick={() =>
+                          handlePageChange(pagination.currentPage - 1)
+                        }
+                        disabled={!pagination.hasPreviousPage}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          pagination.hasPreviousPage
+                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                            : "text-gray-300 cursor-not-allowed"
+                        }`}
+                        title="الصفحة السابقة"
                       >
-                        التالي
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
+
+                      {/* Page Numbers */}
+                      <div className="flex items-center gap-1">
+                        {getPageNumbers().map((page, index) =>
+                          page === "..." ? (
+                            <span
+                              key={`dots-${index}`}
+                              className="px-3 py-2 text-gray-500"
+                            >
+                              ...
+                            </span>
+                          ) : (
+                            <button
+                              key={page}
+                              onClick={() => handlePageChange(page)}
+                              className={`min-w-[40px] h-10 rounded-lg text-sm font-medium transition-all ${
+                                pagination.currentPage === page
+                                  ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:from-blue-700 hover:to-blue-800"
+                                  : "text-gray-700 hover:bg-gray-200 hover:text-gray-900 border border-gray-200"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          ),
+                        )}
+                      </div>
+
+                      {/* Next Page Button */}
+                      <button
+                        onClick={() =>
+                          handlePageChange(pagination.currentPage + 1)
+                        }
+                        disabled={!pagination.hasNextPage}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          pagination.hasNextPage
+                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                            : "text-gray-300 cursor-not-allowed"
+                        }`}
+                        title="الصفحة التالية"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
+                        </svg>
+                      </button>
+
+                      {/* Last Page Button */}
+                      <button
+                        onClick={() => handlePageChange(pagination.totalPages)}
+                        disabled={!pagination.hasNextPage}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          pagination.hasNextPage
+                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                            : "text-gray-300 cursor-not-allowed"
+                        }`}
+                        title="الصفحة الأخيرة"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                          />
+                        </svg>
                       </button>
                     </div>
                   </div>
+
+                  {/* Quick Jump to Page (for large page counts) */}
+                  {pagination.totalPages > 10 && (
+                    <div className="mt-3 flex items-center justify-end gap-2">
+                      <span className="text-sm text-gray-600">
+                        انتقل إلى صفحة:
+                      </span>
+                      <input
+                        type="number"
+                        min="1"
+                        max={pagination.totalPages}
+                        value={pagination.currentPage}
+                        onChange={(e) => {
+                          const page = parseInt(e.target.value);
+                          if (page >= 1 && page <= pagination.totalPages) {
+                            handlePageChange(page);
+                          }
+                        }}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <span className="text-sm text-gray-600">
+                        من {pagination.totalPages}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </>

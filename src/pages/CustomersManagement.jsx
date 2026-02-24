@@ -10,11 +10,19 @@ export default function CustomersManagement() {
   const [loading, setLoading] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    pageSize: 5,
+    totalCount: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
+
   const hasFetched = useRef(false);
   const searchTimeout = useRef(null);
+  const isFetchingCustomers = useRef(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -25,94 +33,84 @@ export default function CustomersManagement() {
 
   const [focusedField, setFocusedField] = useState(null);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (
+    pageNumber = pagination.currentPage,
+    showLoading = true,
+  ) => {
+    if (isFetchingCustomers.current) {
+      console.log("هناك طلب عملاء قيد التنفيذ بالفعل، تجاهل الطلب الجديد");
+      return;
+    }
+
     try {
-      setLoading(true);
-      const response = await axiosInstance.get("/api/Customers/GetAll");
+      isFetchingCustomers.current = true;
+      if (showLoading) setLoading(true);
 
-      if (response.status === 200) {
-        if (Array.isArray(response.data)) {
-          const formattedCustomers = response.data.map((customer) => ({
-            id: customer.id,
-            name: customer.name,
-            phone: customer.phone,
-            address: customer.address || "",
-            nationalId: customer.nationalId || "",
-            totalPurchases: customer.totalPurchases || 0,
-            purchaseCount: customer.purchaseCount || 0,
-            isActive:
-              customer.isActive !== undefined ? customer.isActive : true,
-            joinDate:
-              customer.joinDate || new Date().toISOString().split("T")[0],
-          }));
-          setCustomers(formattedCustomers);
-          if (formattedCustomers.length === 0) {
-            toast.info("لا يوجد عملاء في النظام");
-          }
-        } else if (
-          response.data.isSuccess === true ||
-          response.data.isSuccess === undefined
-        ) {
-          let customersData = [];
+      const response = await axiosInstance.post("/api/Customers/GetAll", {
+        pageNumber: pageNumber,
+        pageSize: pagination.pageSize,
+        skip: (pageNumber - 1) * pagination.pageSize,
+      });
 
-          if (Array.isArray(response.data.value)) {
-            customersData = response.data.value;
-          } else if (Array.isArray(response.data.data)) {
-            customersData = response.data.data;
-          } else if (Array.isArray(response.data)) {
-            customersData = response.data;
-          }
+      if (response.status === 200 && response.data) {
+        const items = response.data.items || [];
 
-          const formattedCustomers = customersData.map((customer) => ({
-            id: customer.id,
-            name: customer.name,
-            phone: customer.phone,
-            address: customer.address || "",
-            nationalId: customer.nationalId || "",
-            totalPurchases: customer.totalPurchases || 0,
-            purchaseCount: customer.purchaseCount || 0,
-            isActive:
-              customer.isActive !== undefined ? customer.isActive : true,
-            joinDate:
-              customer.joinDate || new Date().toISOString().split("T")[0],
-          }));
+        const formattedCustomers = items.map((customer) => ({
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          address: customer.address || "",
+          nationalId: customer.nationalId || "",
+          totalPurchases: customer.totalPurchases || 0,
+          purchaseCount: customer.purchaseCount || 0,
+          isActive: customer.isActive !== undefined ? customer.isActive : true,
+          joinDate: customer.joinDate || new Date().toISOString().split("T")[0],
+        }));
 
-          setCustomers(formattedCustomers);
+        setCustomers(formattedCustomers);
+        setPagination({
+          currentPage: response.data.pageNumber || 1,
+          pageSize: response.data.pageSize || 5,
+          totalCount: response.data.totalCount || 0,
+          totalPages: response.data.totalPages || 1,
+          hasNextPage: response.data.pageNumber < response.data.totalPages,
+          hasPreviousPage: response.data.pageNumber > 1,
+        });
 
-          if (formattedCustomers.length === 0) {
-            toast.info("لا يوجد عملاء في النظام");
-          }
-        } else {
-          setCustomers([]);
-          toast.info("لا يوجد عملاء في النظام");
+        if (formattedCustomers.length === 0) {
+          toast.info(
+            searchTerm ? "لا توجد نتائج للبحث" : "لا يوجد عملاء في النظام",
+          );
         }
       } else {
-        toast.error("فشل في جلب العملاء");
         setCustomers([]);
+        toast.info("لا يوجد عملاء في النظام");
       }
     } catch (error) {
       console.error("خطأ في جلب العملاء:", error);
       if (error.response?.status === 404) {
-        toast.info("لا يوجد عملاء في النظام");
         setCustomers([]);
+        toast.info("لا يوجد عملاء في النظام");
       } else {
         toast.error("حدث خطأ في جلب العملاء");
       }
     } finally {
-      setLoading(false);
+      isFetchingCustomers.current = false;
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
     if (!hasFetched.current) {
-      fetchCustomers();
+      fetchCustomers(1, true);
       hasFetched.current = true;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const searchCustomers = async (term) => {
     if (!term.trim()) {
-      fetchCustomers();
+      fetchCustomers(1, true);
       return;
     }
 
@@ -155,6 +153,15 @@ export default function CustomersManagement() {
               customer.joinDate || new Date().toISOString().split("T")[0],
           }));
           setCustomers(formattedCustomers);
+          // Update pagination for search results
+          setPagination((prev) => ({
+            ...prev,
+            totalCount: formattedCustomers.length,
+            totalPages: 1,
+            currentPage: 1,
+            hasNextPage: false,
+            hasPreviousPage: false,
+          }));
         } else {
           setCustomers([]);
           toast.info("لا توجد نتائج للبحث");
@@ -277,9 +284,16 @@ export default function CustomersManagement() {
 
         if (response.status === 200) {
           if (response.data.isSuccess !== false) {
-            setCustomers(
-              customers.filter((customer) => customer.id !== customerId),
+            const newTotalCount = pagination.totalCount - 1;
+            const newTotalPages = Math.ceil(
+              newTotalCount / pagination.pageSize,
             );
+            const newPage =
+              pagination.currentPage > newTotalPages
+                ? newTotalPages
+                : pagination.currentPage;
+
+            await fetchCustomers(newPage || 1, false);
             toast.success("تم حذف العميل بنجاح");
           } else {
             toast.error(
@@ -349,11 +363,7 @@ export default function CustomersManagement() {
 
           if (response.status === 200) {
             if (response.data.isSuccess !== false) {
-              setCustomers(
-                customers.map((c) =>
-                  c.id === editingCustomer.id ? { ...c, ...customerData } : c,
-                ),
-              );
+              await fetchCustomers(pagination.currentPage, false);
               toast.success("تم تحديث بيانات العميل بنجاح");
             } else {
               toast.error(
@@ -365,11 +375,7 @@ export default function CustomersManagement() {
           }
         } catch (error) {
           console.error("خطأ في تحديث العميل:", error);
-          setCustomers(
-            customers.map((c) =>
-              c.id === editingCustomer.id ? { ...c, ...customerData } : c,
-            ),
-          );
+          await fetchCustomers(pagination.currentPage, false);
           toast.success("تم تحديث بيانات العميل");
         }
       } else {
@@ -388,7 +394,7 @@ export default function CustomersManagement() {
         if (response.status === 200) {
           if (response.data.isSuccess !== false) {
             toast.success("تم إضافة العميل الجديد بنجاح");
-            fetchCustomers();
+            await fetchCustomers(1, false);
           } else {
             toast.error(
               response.data.error?.description || "فشل في إضافة العميل",
@@ -416,7 +422,6 @@ export default function CustomersManagement() {
   const handleSearch = (e) => {
     const term = e.target.value;
     setSearchTerm(term);
-    setCurrentPage(1);
 
     if (searchTimeout.current) {
       clearTimeout(searchTimeout.current);
@@ -426,33 +431,67 @@ export default function CustomersManagement() {
       if (term.length > 0) {
         searchCustomers(term);
       } else {
-        fetchCustomers();
+        fetchCustomers(1, true);
       }
     }, 300);
   };
 
   const handleClearSearch = () => {
     setSearchTerm("");
-    setCurrentPage(1);
 
     if (searchTimeout.current) {
       clearTimeout(searchTimeout.current);
     }
 
-    fetchCustomers();
+    fetchCustomers(1, true);
   };
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentCustomers = customers.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(customers.length / itemsPerPage);
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination((prev) => ({ ...prev, currentPage: newPage }));
+      fetchCustomers(newPage, true);
 
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+      const tableElement = document.getElementById("customers-table-container");
+      if (tableElement) {
+        tableElement.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
+
+  const getPageNumbers = () => {
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+    let l;
+
+    for (let i = 1; i <= pagination.totalPages; i++) {
+      if (
+        i === 1 ||
+        i === pagination.totalPages ||
+        (i >= pagination.currentPage - delta &&
+          i <= pagination.currentPage + delta)
+      ) {
+        range.push(i);
+      }
+    }
+
+    range.forEach((i) => {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push("...");
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    });
+
+    return rangeWithDots;
   };
 
   const stats = {
-    totalCustomers: customers.length,
+    totalCustomers: pagination.totalCount,
     activeCustomers: customers.filter((c) => c.isActive).length,
     inactiveCustomers: customers.filter((c) => !c.isActive).length,
   };
@@ -463,11 +502,11 @@ export default function CustomersManagement() {
       className="min-h-screen bg-gradient-to-l from-gray-50 to-gray-100"
     >
       {/* Navbar */}
-      <div className="bg-white shadow-md">
+      <div className="bg-white shadow-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center mr-3">
+              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
                 <span className="text-white font-bold">$</span>
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
@@ -729,7 +768,10 @@ export default function CustomersManagement() {
         </div>
 
         {/* Customers Table */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div
+          id="customers-table-container"
+          className="bg-white rounded-2xl shadow-lg overflow-hidden"
+        >
           {loading ? (
             <div className="p-8 flex flex-col items-center justify-center">
               <div className="w-16 h-16 border-t-4 border-blue-600 border-solid rounded-full animate-spin mb-4"></div>
@@ -759,7 +801,7 @@ export default function CustomersManagement() {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentCustomers.length === 0 ? (
+                    {customers.length === 0 ? (
                       <tr>
                         <td
                           colSpan="5"
@@ -794,7 +836,7 @@ export default function CustomersManagement() {
                         </td>
                       </tr>
                     ) : (
-                      currentCustomers.map((customer) => (
+                      customers.map((customer) => (
                         <tr
                           key={customer.id}
                           className="hover:bg-gray-50 transition-colors border-b border-gray-100"
@@ -935,72 +977,171 @@ export default function CustomersManagement() {
                 </table>
               </div>
 
-              {/* Pagination */}
-              {customers.length > itemsPerPage && (
-                <div className="px-4 py-3 border-t border-gray-200">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between">
-                    <div className="text-sm text-gray-700 mb-2 md:mb-0">
-                      عرض {indexOfFirstItem + 1} -{" "}
-                      {Math.min(indexOfLastItem, customers.length)} من{" "}
-                      {customers.length} عميل
-                      {searchTerm && (
-                        <span className="text-blue-600"> (نتائج البحث)</span>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-1 rtl:space-x-reverse">
+              {/* Enhanced Pagination with Professional Design */}
+              {!searchTerm && pagination.totalPages > 0 && (
+                <div className="px-4 py-4 border-t border-gray-200 bg-gray-50">
+                  <div className="flex justify-end">
+                    <div className="flex items-center gap-2">
+                      {/* First Page Button */}
                       <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className={`px-3 py-1.5 rounded-lg text-sm ${
-                          currentPage === 1
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "text-gray-700 hover:bg-gray-100"
+                        onClick={() => handlePageChange(1)}
+                        disabled={!pagination.hasPreviousPage}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          pagination.hasPreviousPage
+                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                            : "text-gray-300 cursor-not-allowed"
                         }`}
+                        title="الصفحة الأولى"
                       >
-                        السابق
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                          />
+                        </svg>
                       </button>
-                      {Array.from(
-                        { length: Math.min(5, totalPages) },
-                        (_, i) => {
-                          let pageNumber;
-                          if (totalPages <= 5) {
-                            pageNumber = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNumber = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNumber = totalPages - 4 + i;
-                          } else {
-                            pageNumber = currentPage - 2 + i;
-                          }
 
-                          return (
+                      {/* Previous Page Button */}
+                      <button
+                        onClick={() =>
+                          handlePageChange(pagination.currentPage - 1)
+                        }
+                        disabled={!pagination.hasPreviousPage}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          pagination.hasPreviousPage
+                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                            : "text-gray-300 cursor-not-allowed"
+                        }`}
+                        title="الصفحة السابقة"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
+
+                      {/* Page Numbers */}
+                      <div className="flex items-center gap-1">
+                        {getPageNumbers().map((page, index) =>
+                          page === "..." ? (
+                            <span
+                              key={`dots-${index}`}
+                              className="px-3 py-2 text-gray-500"
+                            >
+                              ...
+                            </span>
+                          ) : (
                             <button
-                              key={pageNumber}
-                              onClick={() => handlePageChange(pageNumber)}
-                              className={`px-3 py-1.5 rounded-lg text-sm ${
-                                currentPage === pageNumber
-                                  ? "bg-blue-600 text-white"
-                                  : "text-gray-700 hover:bg-gray-100"
+                              key={page}
+                              onClick={() => handlePageChange(page)}
+                              className={`min-w-[40px] h-10 rounded-lg text-sm font-medium transition-all ${
+                                pagination.currentPage === page
+                                  ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:from-blue-700 hover:to-blue-800"
+                                  : "text-gray-700 hover:bg-gray-200 hover:text-gray-900 border border-gray-200"
                               }`}
                             >
-                              {pageNumber}
+                              {page}
                             </button>
-                          );
-                        },
-                      )}
+                          ),
+                        )}
+                      </div>
+
+                      {/* Next Page Button */}
                       <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className={`px-3 py-1.5 rounded-lg text-sm ${
-                          currentPage === totalPages
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "text-gray-700 hover:bg-gray-100"
+                        onClick={() =>
+                          handlePageChange(pagination.currentPage + 1)
+                        }
+                        disabled={!pagination.hasNextPage}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          pagination.hasNextPage
+                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                            : "text-gray-300 cursor-not-allowed"
                         }`}
+                        title="الصفحة التالية"
                       >
-                        التالي
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
+                        </svg>
+                      </button>
+
+                      {/* Last Page Button */}
+                      <button
+                        onClick={() => handlePageChange(pagination.totalPages)}
+                        disabled={!pagination.hasNextPage}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          pagination.hasNextPage
+                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                            : "text-gray-300 cursor-not-allowed"
+                        }`}
+                        title="الصفحة الأخيرة"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                          />
+                        </svg>
                       </button>
                     </div>
                   </div>
+
+                  {/* Quick Jump to Page (for large page counts) */}
+                  {pagination.totalPages > 10 && (
+                    <div className="mt-3 flex items-center justify-end gap-2">
+                      <span className="text-sm text-gray-600">
+                        انتقل إلى صفحة:
+                      </span>
+                      <input
+                        type="number"
+                        min="1"
+                        max={pagination.totalPages}
+                        value={pagination.currentPage}
+                        onChange={(e) => {
+                          const page = parseInt(e.target.value);
+                          if (page >= 1 && page <= pagination.totalPages) {
+                            handlePageChange(page);
+                          }
+                        }}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <span className="text-sm text-gray-600">
+                        من {pagination.totalPages}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </>

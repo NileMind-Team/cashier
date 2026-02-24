@@ -11,7 +11,17 @@ export default function OptionsManagement() {
   const [editingOption, setEditingOption] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    pageSize: 5,
+    totalCount: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
+
   const hasFetched = useRef(false);
+  const isFetchingOptions = useRef(false);
 
   const [stats, setStats] = useState({
     totalOptions: 0,
@@ -25,33 +35,62 @@ export default function OptionsManagement() {
     price: "",
   });
 
-  const fetchOptions = async () => {
-    try {
-      setLoading(true);
-      const response = await axiosInstance.get("/api/Options/GetAll");
+  const fetchOptions = async (
+    pageNumber = pagination.currentPage,
+    showLoading = true,
+  ) => {
+    if (isFetchingOptions.current) {
+      console.log("هناك طلب إضافات قيد التنفيذ بالفعل، تجاهل الطلب الجديد");
+      return;
+    }
 
-      if (response.status === 200 && Array.isArray(response.data)) {
-        const formattedOptions = response.data.map((option) => ({
+    try {
+      isFetchingOptions.current = true;
+      if (showLoading) setLoading(true);
+
+      const response = await axiosInstance.post("/api/Options/GetAll", {
+        pageNumber: pageNumber,
+        pageSize: pagination.pageSize,
+        skip: (pageNumber - 1) * pagination.pageSize,
+      });
+
+      if (response.status === 200 && response.data) {
+        const items = response.data.items || [];
+
+        const formattedOptions = items.map((option) => ({
           id: option.id,
           name: option.name || "",
           price: option.price || 0,
           isActive: option.isActive || false,
         }));
+
         setOptions(formattedOptions);
-        calculateStats(formattedOptions);
+        setPagination({
+          currentPage: response.data.pageNumber || 1,
+          pageSize: response.data.pageSize || 5,
+          totalCount: response.data.totalCount || 0,
+          totalPages: response.data.totalPages || 1,
+          hasNextPage: response.data.pageNumber < response.data.totalPages,
+          hasPreviousPage: response.data.pageNumber > 1,
+        });
+
+        calculateStats(formattedOptions, response.data.totalCount || 0);
       } else {
         setOptions([]);
+        calculateStats([], 0);
       }
     } catch (error) {
       console.error("خطأ في جلب الإضافات:", error);
       setOptions([]);
+      calculateStats([], 0);
     } finally {
-      setLoading(false);
+      isFetchingOptions.current = false;
+      if (showLoading) setLoading(false);
     }
   };
 
-  const calculateStats = (optionsData) => {
-    const totalOptions = optionsData.length;
+  const calculateStats = (optionsData, totalCount = null) => {
+    const totalOptions = totalCount !== null ? totalCount : optionsData.length;
     const activeOptions = optionsData.filter((opt) => opt.isActive).length;
     const inactiveOptions = totalOptions - activeOptions;
     const totalValue = optionsData.reduce(
@@ -69,7 +108,7 @@ export default function OptionsManagement() {
 
   useEffect(() => {
     if (!hasFetched.current) {
-      fetchOptions();
+      fetchOptions(1, true);
       hasFetched.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -129,9 +168,14 @@ export default function OptionsManagement() {
         );
 
         if (response.status === 200 || response.status === 204) {
-          const updatedOptions = options.filter((opt) => opt.id !== optionId);
-          setOptions(updatedOptions);
-          calculateStats(updatedOptions);
+          const newTotalCount = pagination.totalCount - 1;
+          const newTotalPages = Math.ceil(newTotalCount / pagination.pageSize);
+          const newPage =
+            pagination.currentPage > newTotalPages
+              ? newTotalPages
+              : pagination.currentPage;
+
+          await fetchOptions(newPage || 1, false);
           toast.success("تم حذف الإضافة بنجاح");
         } else {
           toast.error("فشل في حذف الإضافة");
@@ -165,11 +209,7 @@ export default function OptionsManagement() {
         );
 
         if (response.status === 200) {
-          const updatedOptions = options.map((opt) =>
-            opt.id === optionId ? { ...opt, isActive: !opt.isActive } : opt,
-          );
-          setOptions(updatedOptions);
-          calculateStats(updatedOptions);
+          await fetchOptions(pagination.currentPage, false);
           toast.success(`تم ${action} الإضافة بنجاح`);
         } else {
           toast.error(`فشل في ${action} الإضافة`);
@@ -224,17 +264,7 @@ export default function OptionsManagement() {
         );
 
         if (response.status === 200) {
-          const updatedOptions = options.map((opt) =>
-            opt.id === editingOption.id
-              ? {
-                  ...opt,
-                  name: formData.name,
-                  price: parseFloat(formData.price),
-                }
-              : opt,
-          );
-          setOptions(updatedOptions);
-          calculateStats(updatedOptions);
+          await fetchOptions(pagination.currentPage, false);
           toast.success("تم تحديث بيانات الإضافة بنجاح");
         } else {
           toast.error("فشل في تحديث بيانات الإضافة");
@@ -246,15 +276,7 @@ export default function OptionsManagement() {
         );
 
         if (response.status === 201 || response.status === 200) {
-          const newOption = {
-            id: response.data.id || Date.now(),
-            name: formData.name,
-            price: parseFloat(formData.price),
-            isActive: true,
-          };
-          const updatedOptions = [...options, newOption];
-          setOptions(updatedOptions);
-          calculateStats(updatedOptions);
+          await fetchOptions(1, false);
           toast.success("تم إضافة الإضافة الجديدة بنجاح");
         } else {
           toast.error("فشل في إضافة الإضافة");
@@ -267,6 +289,49 @@ export default function OptionsManagement() {
       console.error("خطأ في حفظ الإضافة:", error);
       toast.error("حدث خطأ في حفظ الإضافة");
     }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination((prev) => ({ ...prev, currentPage: newPage }));
+      fetchOptions(newPage, true);
+      const tableElement = document.getElementById("options-table-container");
+      if (tableElement) {
+        tableElement.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
+
+  const getPageNumbers = () => {
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+    let l;
+
+    for (let i = 1; i <= pagination.totalPages; i++) {
+      if (
+        i === 1 ||
+        i === pagination.totalPages ||
+        (i >= pagination.currentPage - delta &&
+          i <= pagination.currentPage + delta)
+      ) {
+        range.push(i);
+      }
+    }
+
+    range.forEach((i) => {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push("...");
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    });
+
+    return rangeWithDots;
   };
 
   const getOptionColor = (optionId) => {
@@ -286,11 +351,11 @@ export default function OptionsManagement() {
       className="min-h-screen bg-gradient-to-l from-gray-50 to-gray-100"
     >
       {/* Navbar */}
-      <div className="bg-white shadow-md">
+      <div className="bg-white shadow-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center mr-3">
+              <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center ml-3">
                 <span className="text-white font-bold">➕</span>
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
@@ -473,7 +538,10 @@ export default function OptionsManagement() {
         </div>
 
         {/* Options Table */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div
+          id="options-table-container"
+          className="bg-white rounded-2xl shadow-lg overflow-hidden"
+        >
           {loading ? (
             <div className="p-8 flex flex-col items-center justify-center">
               <div className="w-16 h-16 border-t-4 border-orange-600 border-solid rounded-full animate-spin mb-4"></div>
@@ -664,6 +732,174 @@ export default function OptionsManagement() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Enhanced Pagination with Professional Design */}
+              {pagination.totalPages > 0 && (
+                <div className="px-4 py-4 border-t border-gray-200 bg-gray-50">
+                  <div className="flex justify-end">
+                    <div className="flex items-center gap-2">
+                      {/* First Page Button */}
+                      <button
+                        onClick={() => handlePageChange(1)}
+                        disabled={!pagination.hasPreviousPage}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          pagination.hasPreviousPage
+                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                            : "text-gray-300 cursor-not-allowed"
+                        }`}
+                        title="الصفحة الأولى"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
+
+                      {/* Previous Page Button */}
+                      <button
+                        onClick={() =>
+                          handlePageChange(pagination.currentPage - 1)
+                        }
+                        disabled={!pagination.hasPreviousPage}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          pagination.hasPreviousPage
+                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                            : "text-gray-300 cursor-not-allowed"
+                        }`}
+                        title="الصفحة السابقة"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
+
+                      {/* Page Numbers */}
+                      <div className="flex items-center gap-1">
+                        {getPageNumbers().map((page, index) =>
+                          page === "..." ? (
+                            <span
+                              key={`dots-${index}`}
+                              className="px-3 py-2 text-gray-500"
+                            >
+                              ...
+                            </span>
+                          ) : (
+                            <button
+                              key={page}
+                              onClick={() => handlePageChange(page)}
+                              className={`min-w-[40px] h-10 rounded-lg text-sm font-medium transition-all ${
+                                pagination.currentPage === page
+                                  ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md hover:from-orange-600 hover:to-orange-700"
+                                  : "text-gray-700 hover:bg-gray-200 hover:text-gray-900 border border-gray-200"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          ),
+                        )}
+                      </div>
+
+                      {/* Next Page Button */}
+                      <button
+                        onClick={() =>
+                          handlePageChange(pagination.currentPage + 1)
+                        }
+                        disabled={!pagination.hasNextPage}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          pagination.hasNextPage
+                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                            : "text-gray-300 cursor-not-allowed"
+                        }`}
+                        title="الصفحة التالية"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
+                        </svg>
+                      </button>
+
+                      {/* Last Page Button */}
+                      <button
+                        onClick={() => handlePageChange(pagination.totalPages)}
+                        disabled={!pagination.hasNextPage}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          pagination.hasNextPage
+                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                            : "text-gray-300 cursor-not-allowed"
+                        }`}
+                        title="الصفحة الأخيرة"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick Jump to Page (for large page counts) */}
+                  {pagination.totalPages > 10 && (
+                    <div className="mt-3 flex items-center justify-end gap-2">
+                      <span className="text-sm text-gray-600">
+                        انتقل إلى صفحة:
+                      </span>
+                      <input
+                        type="number"
+                        min="1"
+                        max={pagination.totalPages}
+                        value={pagination.currentPage}
+                        onChange={(e) => {
+                          const page = parseInt(e.target.value);
+                          if (page >= 1 && page <= pagination.totalPages) {
+                            handlePageChange(page);
+                          }
+                        }}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                      <span className="text-sm text-gray-600">
+                        من {pagination.totalPages}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
