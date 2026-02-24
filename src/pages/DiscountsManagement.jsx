@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
@@ -30,9 +30,19 @@ export default function DiscountsManagement() {
     currentDiscount: 0,
   });
 
-  const fetchAllData = async () => {
+  const isFirstRender = useRef(true);
+  const isFetching = useRef(false);
+
+  const fetchAllData = async (showLoading = true) => {
+    if (isFetching.current) {
+      console.log("هناك طلب قيد التنفيذ بالفعل، تجاهل الطلب الجديد");
+      return;
+    }
+
     try {
-      setLoading(true);
+      isFetching.current = true;
+      if (showLoading) setLoading(true);
+
       const [mainCatsRes, subCatsRes, productsRes] = await Promise.all([
         axiosInstance.get("/api/MainCategories/GetAllMainCategories"),
         axiosInstance.get("/api/SubCategories/GetAllSubCategories"),
@@ -54,12 +64,20 @@ export default function DiscountsManagement() {
       console.error("خطأ في جلب البيانات:", error);
       toast.error("حدث خطأ في جلب البيانات");
     } finally {
-      setLoading(false);
+      isFetching.current = false;
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAllData();
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      fetchAllData(true);
+    }
+
+    return () => {
+      isFetching.current = false;
+    };
   }, []);
 
   const getMainCategoriesWithDiscount = () => {
@@ -179,7 +197,7 @@ export default function DiscountsManagement() {
           `تم ${discountValue === 0 ? "إلغاء" : "تحديث"} الخصم بنجاح`,
         );
 
-        await fetchAllData();
+        await fetchAllData(false);
         setEditingDiscount(null);
       } else {
         toast.error("فشل في تحديث الخصم");
@@ -188,7 +206,7 @@ export default function DiscountsManagement() {
       console.error("خطأ في تحديث الخصم:", error);
       if (error.response?.status === 200) {
         toast.success("تم تحديث الخصم بنجاح");
-        await fetchAllData();
+        await fetchAllData(false);
         setEditingDiscount(null);
       } else {
         toast.error("حدث خطأ في تحديث الخصم");
@@ -238,7 +256,7 @@ export default function DiscountsManagement() {
 
         if (response?.status === 200) {
           toast.success("تم إلغاء الخصم بنجاح");
-          await fetchAllData();
+          await fetchAllData(false);
         } else {
           toast.error("فشل في إلغاء الخصم");
         }
@@ -246,7 +264,7 @@ export default function DiscountsManagement() {
         console.error("خطأ في إلغاء الخصم:", error);
         if (error.response?.status === 200) {
           toast.success("تم إلغاء الخصم بنجاح");
-          await fetchAllData();
+          await fetchAllData(false);
         } else {
           toast.error("حدث خطأ في إلغاء الخصم");
         }

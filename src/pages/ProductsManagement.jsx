@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
@@ -17,6 +17,10 @@ export default function ProductsManagement() {
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [selectedMainCategoryId, setSelectedMainCategoryId] = useState("");
   const [focusedField, setFocusedField] = useState(null);
+  const isFetchingProducts = useRef(false);
+  const isFetchingMainCategories = useRef(false);
+  const isFetchingSubCategories = useRef(false);
+  const isFirstRender = useRef(true);
 
   const [productForm, setProductForm] = useState({
     name: "",
@@ -28,9 +32,16 @@ export default function ProductsManagement() {
     isVatIncluded: true,
   });
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (showLoading = true) => {
+    if (isFetchingProducts.current) {
+      console.log("هناك طلب منتجات قيد التنفيذ بالفعل، تجاهل الطلب الجديد");
+      return;
+    }
+
     try {
-      setLoading(true);
+      isFetchingProducts.current = true;
+      if (showLoading) setLoading(true);
+
       const response = await axiosInstance.get("/api/Items/GetAllItems");
 
       if (response.status === 200 && Array.isArray(response.data)) {
@@ -48,12 +59,22 @@ export default function ProductsManagement() {
         toast.error("حدث خطأ في جلب المنتجات");
       }
     } finally {
-      setLoading(false);
+      isFetchingProducts.current = false;
+      if (showLoading) setLoading(false);
     }
   };
 
   const fetchMainCategories = async () => {
+    if (isFetchingMainCategories.current) {
+      console.log(
+        "هناك طلب فئات رئيسية قيد التنفيذ بالفعل، تجاهل الطلب الجديد",
+      );
+      return;
+    }
+
     try {
+      isFetchingMainCategories.current = true;
+
       const response = await axiosInstance.get(
         "/api/MainCategories/GetAllMainCategories",
       );
@@ -68,11 +89,20 @@ export default function ProductsManagement() {
       }
     } catch (error) {
       console.error("خطأ في جلب الفئات الرئيسية:", error);
+    } finally {
+      isFetchingMainCategories.current = false;
     }
   };
 
   const fetchSubCategories = async () => {
+    if (isFetchingSubCategories.current) {
+      console.log("هناك طلب فئات فرعية قيد التنفيذ بالفعل، تجاهل الطلب الجديد");
+      return;
+    }
+
     try {
+      isFetchingSubCategories.current = true;
+
       const response = await axiosInstance.get(
         "/api/SubCategories/GetAllSubCategories",
       );
@@ -81,13 +111,15 @@ export default function ProductsManagement() {
       }
     } catch (error) {
       console.error("خطأ في جلب الفئات الفرعية:", error);
+    } finally {
+      isFetchingSubCategories.current = false;
     }
   };
 
   const fetchAllData = async () => {
     setCategoriesLoading(true);
     await Promise.all([
-      fetchProducts(),
+      fetchProducts(false),
       fetchMainCategories(),
       fetchSubCategories(),
     ]);
@@ -95,7 +127,16 @@ export default function ProductsManagement() {
   };
 
   useEffect(() => {
-    fetchAllData();
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      fetchAllData();
+    }
+
+    return () => {
+      isFetchingProducts.current = false;
+      isFetchingMainCategories.current = false;
+      isFetchingSubCategories.current = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -257,7 +298,7 @@ export default function ProductsManagement() {
 
         if (response.status === 200) {
           toast.success("تم تحديث المنتج بنجاح");
-          await fetchProducts();
+          await fetchProducts(false); // نمرر false لإخفاء مؤشر التحميل
           setShowProductModal(false);
           setEditingProduct(null);
         } else {
@@ -271,7 +312,7 @@ export default function ProductsManagement() {
 
         if (response.status === 201 || response.status === 200) {
           toast.success("تم إضافة المنتج بنجاح");
-          await fetchProducts();
+          await fetchProducts(false); // نمرر false لإخفاء مؤشر التحميل
           setShowProductModal(false);
           setEditingProduct(null);
         } else {
@@ -307,7 +348,7 @@ export default function ProductsManagement() {
       console.error("خطأ في حفظ المنتج:", error);
       if (error.response?.status === 201 || error.response?.status === 200) {
         toast.success("تم حفظ المنتج بنجاح");
-        await fetchProducts();
+        await fetchProducts(false); // نمرر false لإخفاء مؤشر التحميل
         setShowProductModal(false);
         setEditingProduct(null);
       } else {
@@ -337,7 +378,7 @@ export default function ProductsManagement() {
 
         if (response.status === 204 || response.status === 200) {
           toast.success("تم حذف المنتج بنجاح");
-          await fetchProducts();
+          await fetchProducts(false); // نمرر false لإخفاء مؤشر التحميل
         } else {
           toast.error("فشل في حذف المنتج");
         }
@@ -377,7 +418,7 @@ export default function ProductsManagement() {
           toast.success(
             `تم ${product.isAvailable ? "تعطيل" : "تفعيل"} المنتج بنجاح`,
           );
-          await fetchProducts();
+          await fetchProducts(false);
         } else {
           toast.error("فشل في تغيير حالة المنتج");
         }
@@ -462,7 +503,7 @@ export default function ProductsManagement() {
 
       <div className="container mx-auto px-4 py-6">
         {/* Professional Stats Cards with Modern Icons */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {/* Total Products Card */}
           <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
@@ -479,7 +520,7 @@ export default function ProductsManagement() {
                   </span>
                   <span className="mx-1">•</span>
                   <span className="text-red-500 font-medium">
-                    {stats.inactiveProducts} معطل
+                    {stats.inactiveProducts} غير نشط
                   </span>
                 </p>
               </div>
@@ -538,6 +579,48 @@ export default function ProductsManagement() {
                     strokeLinejoin="round"
                     strokeWidth={1.5}
                     d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  المنتجات الغير نشطة
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
+                  {stats.totalProducts - stats.activeProducts}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  <span className="text-red-600 font-medium">
+                    {stats.totalProducts > 0
+                      ? (
+                          ((stats.totalProducts - stats.activeProducts) /
+                            stats.totalProducts) *
+                          100
+                        ).toFixed(1)
+                      : 0}
+                    %
+                  </span>{" "}
+                  من إجمالي المنتجات
+                </p>
+              </div>
+              <div className="w-14 h-14 bg-gradient-to-br from-red-400 to-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
                   />
                 </svg>
               </div>
