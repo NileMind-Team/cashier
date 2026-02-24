@@ -28,13 +28,13 @@ import {
   FaPizzaSlice,
   FaPercentage,
 } from "react-icons/fa";
-import axiosInstance from "../../api/axiosInstance"; // <--- IMPORT AXIOS INSTANCE
+import axiosInstance from "../../api/axiosInstance";
 
 export default function Navbar({ isShiftOpen, onShiftClose }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showReportsDropdown, setShowReportsDropdown] = useState(false);
-  const [isClosingShift, setIsClosingShift] = useState(false); // <--- STATE FOR CLOSING SHIFT LOADING
+  const [isClosingShift, setIsClosingShift] = useState(false);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
