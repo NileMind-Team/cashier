@@ -254,7 +254,7 @@ export default function CategoriesManagement() {
           `/api/SubCategories/UpdateSubCategory/${editingSubCategory.id}`,
           {
             name: subCategoryForm.name,
-            isActive: subCategoryForm.isActive,
+            mainCategoryId: parseInt(subCategoryForm.mainCategoryId),
           },
         );
 
@@ -263,6 +263,13 @@ export default function CategoriesManagement() {
           toast.success("تم تحديث الفئة الفرعية بنجاح");
           setShowSubCategoryModal(false);
           setEditingSubCategory(null);
+
+          const updatedMainCategory = mainCategories.find(
+            (cat) => cat.id === parseInt(subCategoryForm.mainCategoryId),
+          );
+          if (updatedMainCategory) {
+            setSelectedMainCategory(updatedMainCategory);
+          }
         } else {
           toast.error("فشل في تحديث الفئة الفرعية");
         }
@@ -419,11 +426,7 @@ export default function CategoriesManagement() {
     if (result.isConfirmed) {
       try {
         const response = await axiosInstance.put(
-          `/api/MainCategories/UpdateMainCategory/${categoryId}`,
-          {
-            name: category.name,
-            isActive: !category.isActive,
-          },
+          `/api/MainCategories/SetActivation/${categoryId}/Active?isActive=${!category.isActive}`,
         );
 
         if (response.status === 200) {
@@ -457,11 +460,7 @@ export default function CategoriesManagement() {
     if (result.isConfirmed) {
       try {
         const response = await axiosInstance.put(
-          `/api/SubCategories/UpdateSubCategory/${subCategoryId}`,
-          {
-            name: subCategory.name,
-            isActive: !subCategory.isActive,
-          },
+          `/api/SubCategories/SetActivation/${subCategoryId}/Active?isActive=${!subCategory.isActive}`,
         );
 
         if (response.status === 200) {
