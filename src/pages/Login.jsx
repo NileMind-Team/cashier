@@ -73,12 +73,8 @@ export default function Login() {
   const handleStartShift = async () => {
     setIsOpeningShift(true);
 
-    const openingCashAmount = 1;
-
     try {
-      const response = await axiosInstance.post("/api/Shifts/Open", {
-        openingCash: openingCashAmount,
-      });
+      const response = await axiosInstance.post("/api/Shifts/Open");
 
       if (response.status === 200 || response.status === 201) {
         toast.success("تم بدء الوردية بنجاح!");

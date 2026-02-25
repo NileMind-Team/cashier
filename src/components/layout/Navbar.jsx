@@ -53,17 +53,8 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
   const handleCloseShift = () => {
     Swal.fire({
       title: "هل أنت متأكد من إغلاق الوردية؟",
-      text: "يرجى إدخال المبلغ النقدي الموجود في الدرج",
+      text: "سيتم إغلاق الوردية الحالية",
       icon: "warning",
-      input: "number",
-      inputLabel: "المبلغ النقدي الحالي",
-      inputPlaceholder: "أدخل المبلغ النقدي",
-      inputValue: 0,
-      inputAttributes: {
-        min: 0,
-        step: "0.01",
-        dir: "rtl",
-      },
       showCancelButton: true,
       confirmButtonColor: "#193F94",
       cancelButtonColor: "#d33",
@@ -74,22 +65,12 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
         confirmButton: "px-4 py-2",
         cancelButton: "px-4 py-2",
       },
-      preConfirm: (closingCash) => {
-        if (!closingCash || closingCash < 0) {
-          Swal.showValidationMessage("يرجى إدخال مبلغ صحيح");
-          return false;
-        }
-        return closingCash;
-      },
     }).then(async (result) => {
       if (result.isConfirmed) {
-        const closingCash = parseFloat(result.value);
         setIsClosingShift(true);
 
         try {
-          const response = await axiosInstance.post("/api/Shifts/Close", {
-            closingCash: closingCash,
-          });
+          const response = await axiosInstance.post("/api/Shifts/Close");
 
           if (response.status === 200 || response.status === 201) {
             if (onShiftClose) {
