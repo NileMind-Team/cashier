@@ -336,15 +336,6 @@ export default function CategoriesManagement() {
   };
 
   const handleDeleteMainCategory = async (categoryId) => {
-    const hasSubCategories = subCategories.some(
-      (sub) => sub.mainCategoryId === categoryId,
-    );
-
-    if (hasSubCategories) {
-      toast.error("لا يمكن حذف فئة تحتوي على فئات فرعية");
-      return;
-    }
-
     const result = await Swal.fire({
       title: "هل أنت متأكد؟",
       text: "سيتم حذف هذه الفئة الرئيسية بشكل نهائي",
@@ -371,7 +362,23 @@ export default function CategoriesManagement() {
         }
       } catch (error) {
         console.error("خطأ في حذف الفئة الرئيسية:", error);
-        toast.error("حدث خطأ في حذف الفئة الرئيسية");
+
+        if (error.response?.status === 400 && error.response?.data?.errors) {
+          const errors = error.response.data.errors;
+          const hasMainCategoryHasSubCategories = errors.some(
+            (err) => err.code === "MainCategory.HasSubCategories",
+          );
+
+          if (hasMainCategoryHasSubCategories) {
+            toast.error(
+              "لا يمكن حذف الفئة الرئيسية لأنها تحتوي على فئات فرعية",
+            );
+          } else {
+            toast.error("حدث خطأ في حذف الفئة الرئيسية");
+          }
+        } else {
+          toast.error("حدث خطأ في حذف الفئة الرئيسية");
+        }
       }
     }
   };
@@ -403,7 +410,21 @@ export default function CategoriesManagement() {
         }
       } catch (error) {
         console.error("خطأ في حذف الفئة الفرعية:", error);
-        toast.error("حدث خطأ في حذف الفئة الفرعية");
+
+        if (error.response?.status === 400 && error.response?.data?.errors) {
+          const errors = error.response.data.errors;
+          const hasSubCategoryHasItems = errors.some(
+            (err) => err.code === "SubCategory.HasItems",
+          );
+
+          if (hasSubCategoryHasItems) {
+            toast.error("لا يمكن حذف الفئة الفرعية لأنها تحتوي على منتجات");
+          } else {
+            toast.error("حدث خطأ في حذف الفئة الفرعية");
+          }
+        } else {
+          toast.error("حدث خطأ في حذف الفئة الفرعية");
+        }
       }
     }
   };
