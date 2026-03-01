@@ -8,6 +8,14 @@ export default function Home() {
   const [isShiftOpen, setIsShiftOpen] = useState(true);
   const [shiftStartTime] = useState(new Date().toLocaleTimeString("ar-EG"));
   const [loading, setLoading] = useState(false);
+  const [hallsLoading, setHallsLoading] = useState(false);
+  const [tablesLoading, setTablesLoading] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productQuantity, setProductQuantity] = useState(1);
+  const [selectedOptions, setSelectedOptions] = useState([]);
+  const [optionsCurrentPage, setOptionsCurrentPage] = useState(1);
+  const [optionsPerPage] = useState(10);
 
   const [bills, setBills] = useState([
     {
@@ -52,45 +60,48 @@ export default function Home() {
   const [mainCategories, setMainCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
+  const [options, setOptions] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
+  const [halls, setHalls] = useState([]);
+  const [tables, setTables] = useState([]);
 
-  const halls = [
-    { id: 1, name: "الصالة الرئيسية", color: "#3B82F6" },
-    { id: 2, name: "الصالة الخارجية", color: "#10B981" },
-    { id: 3, name: "الصالة VIP", color: "#8B5CF6" },
-  ];
+  const TableStatus = {
+    Available: 0,
+    Occupied: 1,
+    Reserved: 2,
+    OutOfService: 3,
+  };
 
-  const [tablesData, setTablesData] = useState({
-    1: [
-      { id: 1, number: "ط1", status: "available", currentBillId: null },
-      { id: 2, number: "ط2", status: "available", currentBillId: null },
-      { id: 3, number: "ط3", status: "available", currentBillId: null },
-      { id: 4, number: "ط4", status: "available", currentBillId: null },
-      { id: 5, number: "ط5", status: "available", currentBillId: null },
-      { id: 6, number: "ط6", status: "available", currentBillId: null },
-      { id: 7, number: "ط7", status: "available", currentBillId: null },
-      { id: 8, number: "ط8", status: "available", currentBillId: null },
-    ],
-    2: [
-      { id: 9, number: "ط9", status: "available", currentBillId: null },
-      { id: 10, number: "ط10", status: "available", currentBillId: null },
-      { id: 11, number: "ط11", status: "available", currentBillId: null },
-      { id: 12, number: "ط12", status: "available", currentBillId: null },
-      { id: 13, number: "ط13", status: "available", currentBillId: null },
-    ],
-    3: [
-      { id: 14, number: "ط14", status: "available", currentBillId: null },
-      { id: 15, number: "ط15", status: "available", currentBillId: null },
-      { id: 16, number: "ط16", status: "available", currentBillId: null },
-      { id: 17, number: "ط17", status: "available", currentBillId: null },
-      { id: 18, number: "ط18", status: "available", currentBillId: null },
-    ],
-  });
+  const getTableStatusText = (status) => {
+    switch (status) {
+      case TableStatus.Available:
+        return "available";
+      case TableStatus.Occupied:
+        return "occupied";
+      case TableStatus.Reserved:
+        return "reserved";
+      case TableStatus.OutOfService:
+        return "outOfService";
+      default:
+        return "available";
+    }
+  };
 
-  const paymentMethods = [
-    { id: "cash", name: "كاش", icon: "💰", color: "#10B981" },
-    { id: "visa", name: "فيزا", icon: "💳", color: "#3B82F6" },
-    { id: "wallet", name: "محفظة", icon: "📱", color: "#8B5CF6" },
-  ];
+  const getTableStatusFromText = (statusText) => {
+    switch (statusText) {
+      case "available":
+        return TableStatus.Available;
+      case "occupied":
+        return TableStatus.Occupied;
+      case "reserved":
+        return TableStatus.Reserved;
+      case "outOfService":
+        return TableStatus.OutOfService;
+      default:
+        return TableStatus.Available;
+    }
+  };
 
   const shiftSummary = useMemo(() => {
     const totalBills = bills.length;
@@ -137,17 +148,176 @@ export default function Home() {
     };
   }, [bills, shiftStartTime]);
 
+  const fetchPaymentMethods = async () => {
+    try {
+      setPaymentMethodsLoading(true);
+      const response = await axiosInstance.get("/api/Payment/GetAll");
+
+      if (response.status === 200 && Array.isArray(response.data)) {
+        const formattedMethods = response.data.map((method) => ({
+          id: method.id,
+          name: method.name || "",
+          isActive: method.isActive || false,
+          icon: getPaymentMethodIcon(method.name),
+          color: getPaymentMethodColor(method.id),
+        }));
+        setPaymentMethods(formattedMethods);
+      } else {
+        setPaymentMethods([]);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب طرق الدفع:", error);
+      toast.error("حدث خطأ في جلب طرق الدفع");
+      setPaymentMethods([]);
+    } finally {
+      setPaymentMethodsLoading(false);
+    }
+  };
+
+  const getPaymentMethodIcon = (name) => {
+    const nameLower = name?.toLowerCase() || "";
+    if (
+      nameLower.includes("كاش") ||
+      nameLower.includes("cash") ||
+      nameLower.includes("نقد")
+    ) {
+      return "💰";
+    } else if (
+      nameLower.includes("فيزا") ||
+      nameLower.includes("visa") ||
+      nameLower.includes("كارد") ||
+      nameLower.includes("card")
+    ) {
+      return "💳";
+    } else if (
+      nameLower.includes("محفظة") ||
+      nameLower.includes("wallet") ||
+      nameLower.includes("فودافون") ||
+      nameLower.includes("vodafone")
+    ) {
+      return "📱";
+    } else if (
+      nameLower.includes("تحويل") ||
+      nameLower.includes("transfer") ||
+      nameLower.includes("بنك")
+    ) {
+      return "🏦";
+    } else {
+      return "💵";
+    }
+  };
+
+  const getPaymentMethodColor = (id) => {
+    const colors = [
+      "#10B981",
+      "#3B82F6",
+      "#8B5CF6",
+      "#F59E0B",
+      "#EF4444",
+      "#EC4899",
+      "#6366F1",
+    ];
+    return colors[id % colors.length];
+  };
+
+  const fetchHalls = async () => {
+    try {
+      setHallsLoading(true);
+      const response = await axiosInstance.get("/api/Hall/GetAll");
+
+      if (response.status === 200 && response.data) {
+        setHalls(response.data);
+
+        if (response.data.length > 0 && !selectedHall) {
+          setSelectedHall(response.data[0]);
+        }
+      } else {
+        toast.error("فشل في جلب بيانات الصالات");
+      }
+    } catch (error) {
+      console.error("خطأ في جلب الصالات:", error);
+      toast.error("حدث خطأ في جلب بيانات الصالات");
+    } finally {
+      setHallsLoading(false);
+    }
+  };
+
+  const fetchTables = async () => {
+    try {
+      setTablesLoading(true);
+      const response = await axiosInstance.get("/api/Table/GetAll");
+
+      if (response.status === 200 && response.data) {
+        setTables(response.data);
+      } else {
+        toast.error("فشل في جلب بيانات الطاولات");
+      }
+    } catch (error) {
+      console.error("خطأ في جلب الطاولات:", error);
+      toast.error("حدث خطأ في جلب بيانات الطاولات");
+    } finally {
+      setTablesLoading(false);
+    }
+  };
+
   const fetchMainCategories = async () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get(
         "/api/MainCategories/GetAllMainCategories",
       );
+
       if (response.status === 200 && response.data) {
         const activeMainCategories = response.data.filter(
           (cat) => cat.isActive,
         );
         setMainCategories(activeMainCategories);
+
+        const allSubCategories = [];
+        const allProductsList = [];
+
+        response.data.forEach((mainCategory) => {
+          if (
+            mainCategory.subCategories &&
+            mainCategory.subCategories.length > 0
+          ) {
+            mainCategory.subCategories.forEach((subCategory) => {
+              if (subCategory.isActive) {
+                allSubCategories.push({
+                  id: subCategory.id,
+                  name: subCategory.name,
+                  mainCategoryId: subCategory.mainCategoryId,
+                  mainCategoryName: subCategory.mainCategoryName,
+                  isActive: subCategory.isActive,
+                  percentageDiscount: subCategory.percentageDiscount,
+                  printIP: subCategory.printIP,
+                });
+
+                if (subCategory.items && subCategory.items.length > 0) {
+                  subCategory.items.forEach((item) => {
+                    if (item.isAvailable) {
+                      allProductsList.push({
+                        id: item.id,
+                        name: item.name,
+                        price: item.price,
+                        image: item.imgUrl,
+                        mainCategoryId: item.mainCategoryId,
+                        subCategoryId: item.subCategoryId,
+                        finalPrice: item.finalPrice,
+                        isAvailable: item.isAvailable,
+                        valueAddedTax: item.valueAddedTax,
+                        isTaxInclusive: item.isTaxInclusive,
+                      });
+                    }
+                  });
+                }
+              }
+            });
+          }
+        });
+
+        setSubCategories(allSubCategories);
+        setAllProducts(allProductsList);
 
         if (activeMainCategories.length > 0) {
           setSelectedMainCategory(activeMainCategories[0]);
@@ -163,49 +333,31 @@ export default function Home() {
     }
   };
 
-  const fetchSubCategories = async () => {
+  const fetchOptions = async () => {
     try {
-      const response = await axiosInstance.get(
-        "/api/SubCategories/GetAllSubCategories",
-      );
-      if (response.status === 200 && response.data) {
-        const activeSubCategories = response.data.filter((sub) => sub.isActive);
-        setSubCategories(activeSubCategories);
+      const response = await axiosInstance.post("/api/Options/GetAll", {
+        pageNumber: 1,
+        pageSize: 100,
+        skip: 0,
+      });
 
-        const products = [];
-        response.data.forEach((subCategory) => {
-          if (subCategory.items && subCategory.items.length > 0) {
-            subCategory.items.forEach((item) => {
-              if (item.isAvailable) {
-                products.push({
-                  id: item.id,
-                  name: item.name,
-                  price: item.price,
-                  image: item.imgUrl,
-                  mainCategoryId: item.mainCategoryId,
-                  subCategoryId: item.subCategoryId,
-                  finalPrice: item.finalPrice,
-                  isAvailable: item.isAvailable,
-                  valueAddedTax: item.valueAddedTax,
-                  isTaxInclusive: item.isTaxInclusive,
-                });
-              }
-            });
-          }
-        });
-        setAllProducts(products);
-      } else {
-        toast.error("فشل في جلب الفئات الفرعية");
+      if (response.status === 200 && response.data) {
+        const items = response.data.items || [];
+        const activeOptions = items.filter((option) => option.isActive);
+        setOptions(activeOptions);
       }
     } catch (error) {
-      console.error("خطأ في جلب الفئات الفرعية:", error);
-      toast.error("حدث خطأ في جلب الفئات الفرعية");
+      console.error("خطأ في جلب الإضافات:", error);
     }
   };
 
   useEffect(() => {
+    fetchHalls();
+    fetchTables();
     fetchMainCategories();
-    fetchSubCategories();
+    fetchPaymentMethods();
+    fetchOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -229,6 +381,26 @@ export default function Home() {
     );
   }, [selectedSubCategory, allProducts]);
 
+  const paginatedOptions = useMemo(() => {
+    const startIndex = (optionsCurrentPage - 1) * optionsPerPage;
+    const endIndex = startIndex + optionsPerPage;
+    return options.slice(startIndex, endIndex);
+  }, [options, optionsCurrentPage, optionsPerPage]);
+
+  const totalOptionsPages = Math.ceil(options.length / optionsPerPage);
+
+  const handleNextOptionsPage = () => {
+    if (optionsCurrentPage < totalOptionsPages) {
+      setOptionsCurrentPage(optionsCurrentPage + 1);
+    }
+  };
+
+  const handlePrevOptionsPage = () => {
+    if (optionsCurrentPage > 1) {
+      setOptionsCurrentPage(optionsCurrentPage - 1);
+    }
+  };
+
   const billTypes = [
     { value: "takeaway", label: "سفري", icon: "" },
     { value: "dinein", label: "طاولة", icon: "" },
@@ -242,25 +414,42 @@ export default function Home() {
 
   const getTablesForCurrentHall = () => {
     if (!selectedHall) return [];
-    return tablesData[selectedHall.id] || [];
+    const hallTables = tables.filter(
+      (table) => table.hallId === selectedHall.id,
+    );
+
+    return hallTables.map((table) => ({
+      id: table.id,
+      number: table.name,
+      status: getTableStatusText(table.status),
+      currentBillId: table.currentBillId || null,
+    }));
   };
 
-  const updateTableStatus = (hallId, tableId, newStatus, billId = null) => {
-    setTablesData((prev) => {
-      const updatedTables = { ...prev };
-      const tableIndex = updatedTables[hallId]?.findIndex(
-        (t) => t.id === tableId,
-      );
-      if (tableIndex !== -1 && updatedTables[hallId]) {
-        updatedTables[hallId] = [...updatedTables[hallId]];
-        updatedTables[hallId][tableIndex] = {
-          ...updatedTables[hallId][tableIndex],
-          status: newStatus,
-          currentBillId: billId,
-        };
+  const updateTableStatus = async (hallId, tableId, newStatus) => {
+    const table = tables.find((t) => t.id === tableId);
+    if (!table) return;
+
+    try {
+      const response = await axiosInstance.put(`/api/Table/Update/${tableId}`, {
+        name: table.name,
+        hallId: hallId,
+        status: getTableStatusFromText(newStatus),
+      });
+
+      if (response.status === 200) {
+        setTables((prev) =>
+          prev.map((t) =>
+            t.id === tableId
+              ? { ...t, status: getTableStatusFromText(newStatus) }
+              : t,
+          ),
+        );
       }
-      return updatedTables;
-    });
+    } catch (error) {
+      console.error("خطأ في تحديث حالة الطاولة:", error);
+      toast.error("حدث خطأ في تحديث حالة الطاولة");
+    }
   };
 
   const handleOpenTableSelection = () => {
@@ -562,8 +751,8 @@ export default function Home() {
         const hall = halls.find((h) => h.id === currentBill.tableInfo.hallId);
         if (hall) {
           setSelectedHall(hall);
-          const tables = tablesData[hall.id] || [];
-          const table = tables.find(
+          const tablesList = getTablesForCurrentHall();
+          const table = tablesList.find(
             (t) => t.id === currentBill.tableInfo.tableId,
           );
           if (table) {
@@ -580,67 +769,144 @@ export default function Home() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentBillIndex, bills]);
+  }, [currentBillIndex, bills, halls]);
 
-  const addToCart = (product) => {
+  const handleProductClick = (product) => {
     if (bills[currentBillIndex]?.completed) {
       toast.error("لا يمكن إضافة منتجات إلى فاتورة مكتملة");
       return;
     }
 
-    const existingItem = cart.find((item) => item.id === product.id);
-
-    if (existingItem) {
-      setCart(
-        cart.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
-        ),
-      );
-    } else {
-      setCart([...cart, { ...product, quantity: 1, note: "" }]);
-    }
-
-    toast.success(`تم إضافة ${product.name} إلى الفاتورة`);
+    setSelectedProduct(product);
+    setProductQuantity(1);
+    setSelectedOptions([]);
+    setOptionsCurrentPage(1);
+    setShowProductModal(true);
   };
 
-  const removeFromCart = (id) => {
+  const handleAddToCart = () => {
+    if (!selectedProduct) return;
+
+    const optionsTotal = selectedOptions.reduce(
+      (sum, option) => sum + option.price,
+      0,
+    );
+
+    const existingItem = cart.find((item) => item.id === selectedProduct.id);
+
+    if (existingItem) {
+      const sameOptions =
+        existingItem.selectedOptions &&
+        JSON.stringify(existingItem.selectedOptions.map((o) => o.id).sort()) ===
+          JSON.stringify(selectedOptions.map((o) => o.id).sort());
+
+      if (sameOptions) {
+        setCart(
+          cart.map((item) =>
+            item.id === selectedProduct.id
+              ? {
+                  ...item,
+                  quantity: item.quantity + productQuantity,
+                  optionsTotal:
+                    (item.optionsTotal || 0) + optionsTotal * productQuantity,
+                }
+              : item,
+          ),
+        );
+      } else {
+        const newItem = {
+          ...selectedProduct,
+          uniqueId: `${selectedProduct.id}_${Date.now()}`,
+          quantity: productQuantity,
+          selectedOptions: selectedOptions,
+          optionsTotal: optionsTotal * productQuantity,
+          note: "",
+        };
+        setCart([...cart, newItem]);
+      }
+    } else {
+      const newItem = {
+        ...selectedProduct,
+        uniqueId: `${selectedProduct.id}_${Date.now()}`,
+        quantity: productQuantity,
+        selectedOptions: selectedOptions,
+        optionsTotal: optionsTotal * productQuantity,
+        note: "",
+      };
+      setCart([...cart, newItem]);
+    }
+
+    const productName = selectedProduct.name;
+
+    toast.success(
+      <div>
+        <p className="font-bold">
+          تم إضافة {productQuantity} × {productName}
+        </p>
+        {selectedOptions.length > 0 && (
+          <p className="text-xs mt-1 text-gray-600">
+            الإضافات: {selectedOptions.map((o) => o.name).join(", ")}
+          </p>
+        )}
+      </div>,
+    );
+
+    setShowProductModal(false);
+    setSelectedProduct(null);
+    setProductQuantity(1);
+    setSelectedOptions([]);
+  };
+
+  const toggleOption = (option) => {
+    const isSelected = selectedOptions.some((o) => o.id === option.id);
+
+    if (isSelected) {
+      setSelectedOptions(selectedOptions.filter((o) => o.id !== option.id));
+    } else {
+      setSelectedOptions([...selectedOptions, option]);
+    }
+  };
+
+  const removeFromCart = (uniqueId) => {
     if (bills[currentBillIndex]?.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
       return;
     }
 
-    const existingItem = cart.find((item) => item.id === id);
+    const existingItem = cart.find((item) => item.uniqueId === uniqueId);
 
     if (existingItem.quantity > 1) {
       setCart(
         cart.map((item) =>
-          item.id === id ? { ...item, quantity: item.quantity - 1 } : item,
+          item.uniqueId === uniqueId
+            ? { ...item, quantity: item.quantity - 1 }
+            : item,
         ),
       );
     } else {
-      setCart(cart.filter((item) => item.id !== id));
+      setCart(cart.filter((item) => item.uniqueId !== uniqueId));
     }
   };
 
-  const deleteFromCart = (id) => {
+  const deleteFromCart = (uniqueId) => {
     if (bills[currentBillIndex]?.completed) {
       toast.error("لا يمكن حذف منتجات من فاتورة مكتملة");
       return;
     }
 
-    setCart(cart.filter((item) => item.id !== id));
+    setCart(cart.filter((item) => item.uniqueId !== uniqueId));
   };
 
-  const handleAddNote = (id, note) => {
+  const handleAddNote = (uniqueId, note) => {
     if (bills[currentBillIndex]?.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
       return;
     }
 
     setCart(
-      cart.map((item) => (item.id === id ? { ...item, note: note } : item)),
+      cart.map((item) =>
+        item.uniqueId === uniqueId ? { ...item, note: note } : item,
+      ),
     );
     setEditingNoteProductId(null);
     setTempNote("");
@@ -650,13 +916,13 @@ export default function Home() {
     }
   };
 
-  const startEditingNote = (id, currentNote) => {
+  const startEditingNote = (uniqueId, currentNote) => {
     if (bills[currentBillIndex]?.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
       return;
     }
 
-    setEditingNoteProductId(id);
+    setEditingNoteProductId(uniqueId);
     setTempNote(currentNote || "");
   };
 
@@ -733,52 +999,9 @@ export default function Home() {
     const currentBillType = bills[currentBillIndex]?.billType || "takeaway";
     const currentDeliveryFee = currentBillType === "delivery" ? deliveryFee : 0;
 
-    const tableInfoText = selectedTable
-      ? `\n      الطاولة: ${selectedTable.number} (${selectedHall.name})`
-      : "";
-
-    const generalNoteText = generalNote
-      ? `\n      ملاحظة عامة: ${generalNote}`
-      : "";
-
-    const paymentMethodText = selectedPaymentMethod
-      ? `\n      طريقة الدفع: ${paymentMethods.find((p) => p.id === selectedPaymentMethod)?.name}`
-      : "";
-
-    const cartItemsText = cart
-      .map((item) => {
-        let itemText = `• ${item.name} × ${item.quantity} = ${item.price * item.quantity} ج.م`;
-        if (item.note && item.note.trim()) {
-          itemText += `\n  (ملاحظة: ${item.note})`;
-        }
-        return itemText;
-      })
-      .join("\n");
-
-    const receiptText = `
-      فاتورة رقم #${currentBillIndex + 1}
-      ${new Date().toLocaleString()}
-      نوع الفاتورة: ${getBillTypeLabel(currentBillType)}${tableInfoText}
-      العميل: ${customerName || "غير محدد"}
-      الهاتف: ${customerPhone || "غير محدد"}${generalNoteText}${paymentMethodText}
-      ==============================
-      ${cartItemsText}
-      ==============================
-      المجموع الفرعي: ${subtotal.toFixed(2)} ج.م
-      الضريبة (${tax}%): ${totalTax.toFixed(2)} ج.م
-      الخصم (${discount}%): ${totalDiscount.toFixed(2)} ج.م
-      ${currentDeliveryFee > 0 ? `رسوم التوصيل: ${currentDeliveryFee.toFixed(2)} ج.م` : ""}
-      الإجمالي النهائي: ${total.toFixed(2)} ج.م
-      ==============================
-      ✅ فاتورة مكتملة
-      شكراً لزيارتكم!
-    `;
-
-    console.log("نص الفاتورة للرسالة:", receiptText);
-
-    const paymentMethodName = paymentMethods.find(
+    const paymentMethod = paymentMethods.find(
       (p) => p.id === selectedPaymentMethod,
-    )?.name;
+    );
 
     toast.success(
       <div>
@@ -793,7 +1016,10 @@ export default function Home() {
         <p className="text-sm mt-1">
           نوع الفاتورة: {getBillTypeLabel(currentBillType)}
         </p>
-        <p className="text-sm mt-1">طريقة الدفع: {paymentMethodName}</p>
+        <p className="text-sm mt-1">
+          طريقة الدفع: {paymentMethod?.name || "غير معروفة"}{" "}
+          {paymentMethod?.icon}
+        </p>
         {customerName && <p className="text-sm mt-1">العميل: {customerName}</p>}
         {generalNote && (
           <p className="text-sm mt-1 text-blue-600">ملاحظة: {generalNote}</p>
@@ -887,8 +1113,10 @@ export default function Home() {
         const hall = halls.find((h) => h.id === nextBill.tableInfo.hallId);
         if (hall) {
           setSelectedHall(hall);
-          const tables = tablesData[hall.id] || [];
-          const table = tables.find((t) => t.id === nextBill.tableInfo.tableId);
+          const tablesList = getTablesForCurrentHall();
+          const table = tablesList.find(
+            (t) => t.id === nextBill.tableInfo.tableId,
+          );
           if (table) {
             setSelectedTable(table);
             setShowTableInfo(true);
@@ -987,8 +1215,10 @@ export default function Home() {
         const hall = halls.find((h) => h.id === prevBill.tableInfo.hallId);
         if (hall) {
           setSelectedHall(hall);
-          const tables = tablesData[hall.id] || [];
-          const table = tables.find((t) => t.id === prevBill.tableInfo.tableId);
+          const tablesList = getTablesForCurrentHall();
+          const table = tablesList.find(
+            (t) => t.id === prevBill.tableInfo.tableId,
+          );
           if (table) {
             setSelectedTable(table);
             setShowTableInfo(true);
@@ -1011,7 +1241,7 @@ export default function Home() {
   };
 
   const subtotal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + item.price * item.quantity + (item.optionsTotal || 0),
     0,
   );
   const totalTax = (subtotal * tax) / 100;
@@ -1219,55 +1449,11 @@ export default function Home() {
     const currentBillType = currentBill?.billType || "takeaway";
     const currentDeliveryFee = currentBillType === "delivery" ? deliveryFee : 0;
     const currentPaymentMethod = currentBill?.paymentMethod;
-    const paymentMethodName = currentPaymentMethod
-      ? paymentMethods.find((p) => p.id === currentPaymentMethod)?.name
-      : "غير محدد";
-
-    const tableInfoText = selectedTable
-      ? `\n      الطاولة: ${selectedTable.number} (${selectedHall.name})`
-      : "";
-
-    const generalNoteText = generalNote
-      ? `\n      ملاحظة عامة: ${generalNote}`
-      : "";
-
-    const paymentMethodText = currentPaymentMethod
-      ? `\n      طريقة الدفع: ${paymentMethodName}`
-      : "";
-
-    const returnStatusText = isReturned
-      ? `\n      حالة الفاتورة: مرتجعة\n      سبب الارتجاع: ${currentBill.returnReason || "غير محدد"}`
-      : "";
-
-    const cartItemsText = cart
-      .map((item) => {
-        let itemText = `• ${item.name} × ${item.quantity} = ${item.price * item.quantity} ج.م`;
-        if (item.note && item.note.trim()) {
-          itemText += `\n  (ملاحظة: ${item.note})`;
-        }
-        return itemText;
-      })
-      .join("\n");
-
-    const receiptText = `
-      فاتورة رقم #${billNumber} ${isCompleted ? (isReturned ? "(مرتجعة)" : "(مكتملة)") : "(معلقة)"}
-      ${currentBill?.completedDate || new Date().toLocaleString()}
-      نوع الفاتورة: ${getBillTypeLabel(currentBillType)}${tableInfoText}
-      العميل: ${customerName || "غير محدد"}
-      الهاتف: ${customerPhone || "غير محدد"}${generalNoteText}${paymentMethodText}${returnStatusText}
-      ==============================
-      ${cartItemsText}
-      ==============================
-      المجموع الفرعي: ${subtotal.toFixed(2)} ج.م
-      الضريبة (${tax}%): ${totalTax.toFixed(2)} ج.م
-      الخصم (${discount}%): ${totalDiscount.toFixed(2)} ج.م
-      ${currentDeliveryFee > 0 ? `رسوم التوصيل: ${currentDeliveryFee.toFixed(2)} ج.م` : ""}
-      الإجمالي النهائي: ${total.toFixed(2)} ج.م
-      ==============================
-      ${isReturned ? "🔄 فاتورة مرتجعة" : isCompleted ? "✅ فاتورة مكتملة" : "⏸️ فاتورة معلقة"}
-    `;
-
-    console.log("نص الفاتورة لإعادة العرض:", receiptText);
+    const paymentMethod = paymentMethods.find(
+      (p) => p.id === currentPaymentMethod,
+    );
+    const paymentMethodName = paymentMethod?.name || "غير محدد";
+    const paymentMethodIcon = paymentMethod?.icon || "";
 
     toast.info(
       <div>
@@ -1300,7 +1486,7 @@ export default function Home() {
         )}
         {currentPaymentMethod && (
           <p className="text-xs text-green-600 mb-1">
-            طريقة الدفع: {paymentMethodName}
+            طريقة الدفع: {paymentMethodName} {paymentMethodIcon}
           </p>
         )}
         <div className="text-xs mt-2 max-h-32 overflow-y-auto">
@@ -1313,6 +1499,11 @@ export default function Home() {
                 <span className="truncate max-w-[120px] block">
                   {item.name} × {item.quantity}
                 </span>
+                {item.selectedOptions && item.selectedOptions.length > 0 && (
+                  <span className="text-[10px] text-amber-600 block truncate max-w-[120px]">
+                    إضافات: {item.selectedOptions.map((o) => o.name).join(", ")}
+                  </span>
+                )}
                 {item.note && item.note.trim() && (
                   <span className="text-[10px] text-gray-500 block truncate max-w-[120px]">
                     ملاحظة: {item.note}
@@ -1320,7 +1511,7 @@ export default function Home() {
                 )}
               </div>
               <span className="whitespace-nowrap">
-                {item.price * item.quantity} ج.م
+                {item.price * item.quantity + (item.optionsTotal || 0)} ج.م
               </span>
             </div>
           ))}
@@ -1418,6 +1609,236 @@ export default function Home() {
         shiftSummary={shiftSummary}
       />
 
+      {showProductModal && selectedProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold" style={{ color: "#193F94" }}>
+                  تخصيص المنتج
+                </h3>
+                <button
+                  onClick={() => setShowProductModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                  <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-200">
+                    <img
+                      src={selectedProduct.image}
+                      alt={selectedProduct.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src =
+                          "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop&crop=center";
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-lg">
+                      {selectedProduct.name}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      السعر الأساسي: {selectedProduct.price} ج.م
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  الكمية
+                </label>
+                <div className="flex items-center">
+                  <button
+                    onClick={() =>
+                      setProductQuantity(Math.max(1, productQuantity - 1))
+                    }
+                    className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold"
+                  >
+                    -
+                  </button>
+                  <span className="mx-4 font-bold text-lg min-w-[40px] text-center">
+                    {productQuantity}
+                  </span>
+                  <button
+                    onClick={() => setProductQuantity(productQuantity + 1)}
+                    className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {options.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      الإضافات المتاحة
+                    </label>
+                  </div>
+
+                  {/* Options Grid with Side Arrows */}
+                  <div className="relative flex items-center">
+                    {/* Left Arrow */}
+                    <button
+                      onClick={handlePrevOptionsPage}
+                      disabled={optionsCurrentPage === 1}
+                      className={`absolute right-0 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                        optionsCurrentPage === 1
+                          ? "text-gray-300 cursor-not-allowed bg-gray-100"
+                          : "text-gray-600 hover:bg-gray-200 hover:text-gray-800 bg-white shadow-md border border-gray-200"
+                      }`}
+                      style={{ transform: "translateX(50%)" }}
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+
+                    {/* Options Grid */}
+                    <div className="border border-gray-200 rounded-lg p-2 bg-gray-50 w-full mx-6">
+                      <div className="grid grid-cols-5 gap-1">
+                        {paginatedOptions.map((option) => {
+                          const isSelected = selectedOptions.some(
+                            (o) => o.id === option.id,
+                          );
+                          return (
+                            <button
+                              key={option.id}
+                              onClick={() => toggleOption(option)}
+                              className={`h-12 px-2 rounded-lg border-2 flex items-center justify-between transition-all w-full ${
+                                isSelected
+                                  ? "border-blue-500 bg-blue-50 shadow-sm"
+                                  : "border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center space-x-1 rtl:space-x-reverse overflow-hidden">
+                                  <div
+                                    className={`w-3 h-3 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                                      isSelected
+                                        ? "border-blue-500 bg-blue-500"
+                                        : "border-gray-300"
+                                    }`}
+                                  >
+                                    {isSelected && (
+                                      <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
+                                    )}
+                                  </div>
+                                  <span className="font-medium text-xs truncate max-w-[60px]">
+                                    {option.name}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-gray-600 whitespace-nowrap mr-1 flex-shrink-0">
+                                  +{option.price} ج.م
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Right Arrow */}
+                    <button
+                      onClick={handleNextOptionsPage}
+                      disabled={optionsCurrentPage === totalOptionsPages}
+                      className={`absolute left-0 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                        optionsCurrentPage === totalOptionsPages
+                          ? "text-gray-300 cursor-not-allowed bg-gray-100"
+                          : "text-gray-600 hover:bg-gray-200 hover:text-gray-800 bg-white shadow-md border border-gray-200"
+                      }`}
+                      style={{ transform: "translateX(-50%)" }}
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 19l-7-7 7-7"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold">إجمالي المنتج:</span>
+                  <span
+                    className="font-bold text-lg"
+                    style={{ color: "#193F94" }}
+                  >
+                    {(
+                      selectedProduct.price * productQuantity +
+                      selectedOptions.reduce((sum, o) => sum + o.price, 0) *
+                        productQuantity
+                    ).toFixed(2)}{" "}
+                    ج.م
+                  </span>
+                </div>
+                <div className="text-xs text-gray-600 mt-1">
+                  <div>
+                    السعر الأساسي: {selectedProduct.price} ج.م ×{" "}
+                    {productQuantity}
+                  </div>
+                  {selectedOptions.length > 0 && (
+                    <div>
+                      الإضافات: +
+                      {selectedOptions.reduce((sum, o) => sum + o.price, 0)} ج.م
+                      × {productQuantity}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex space-x-3 rtl:space-x-reverse">
+                <button
+                  onClick={() => setShowProductModal(false)}
+                  className="flex-1 py-3 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleAddToCart}
+                  className="flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors"
+                  style={{ backgroundColor: "#193F94" }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "#0f2a6b";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "#193F94";
+                  }}
+                >
+                  تأكيد الإضافة
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showTableSelection && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
@@ -1444,36 +1865,46 @@ export default function Home() {
                   <h4 className="font-bold text-gray-700">الصالات</h4>
                 </div>
                 <div className="overflow-y-auto h-full">
-                  {halls.map((hall) => (
-                    <button
-                      key={hall.id}
-                      onClick={() => handleSelectHall(hall)}
-                      className={`w-full p-3 text-right border-b transition-all ${
-                        selectedHall?.id === hall.id
-                          ? "bg-blue-50 border-r-4"
-                          : "hover:bg-gray-100"
-                      }`}
-                      style={{
-                        borderRightColor:
+                  {hallsLoading ? (
+                    <div className="p-4 text-center text-gray-500">
+                      جاري تحميل الصالات...
+                    </div>
+                  ) : halls.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500">
+                      لا توجد صالات متاحة
+                    </div>
+                  ) : (
+                    halls.map((hall) => (
+                      <button
+                        key={hall.id}
+                        onClick={() => handleSelectHall(hall)}
+                        className={`w-full p-3 text-right border-b transition-all ${
                           selectedHall?.id === hall.id
-                            ? hall.color
-                            : "transparent",
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: hall.color }}
-                        />
-                        <div className="flex-1 mr-2">
-                          <p className="font-medium">{hall.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {tablesData[hall.id]?.length || 0} طاولة
-                          </p>
+                            ? "bg-blue-50 border-r-4"
+                            : "hover:bg-gray-100"
+                        }`}
+                        style={{
+                          borderRightColor:
+                            selectedHall?.id === hall.id
+                              ? "#3B82F6"
+                              : "transparent",
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: "#3B82F6" }}
+                          />
+                          <div className="flex-1 mr-2">
+                            <p className="font-medium">{hall.name}</p>
+                            <p className="text-xs text-gray-500">
+                              {hall.isCompleted ? "محجوزة بالكامل" : "متاحة"}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -1483,7 +1914,7 @@ export default function Home() {
                     <div className="mb-4">
                       <h4
                         className="font-bold text-lg"
-                        style={{ color: selectedHall.color }}
+                        style={{ color: "#3B82F6" }}
                       >
                         {selectedHall.name}
                       </h4>
@@ -1491,32 +1922,51 @@ export default function Home() {
                         اختر طاولة من القائمة التالية:
                       </p>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {getTablesForCurrentHall().map((table) => (
-                        <button
-                          key={table.id}
-                          onClick={() => handleSelectTable(table)}
-                          className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center transition-all transform hover:scale-[1.02] active:scale-[0.98] ${
-                            table.status === "occupied"
-                              ? "bg-red-50 border-red-300"
-                              : selectedTable?.id === table.id
-                                ? "bg-blue-50 border-blue-500"
-                                : "bg-white border-gray-200 hover:border-blue-300"
-                          }`}
-                        >
-                          <p className="font-bold text-lg">{table.number}</p>
-                          <div
-                            className={`mt-2 px-2 py-1 rounded-full text-xs ${
-                              table.status === "available"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
+                    {tablesLoading ? (
+                      <div className="text-center py-8 text-gray-500">
+                        جاري تحميل الطاولات...
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {getTablesForCurrentHall().map((table) => (
+                          <button
+                            key={table.id}
+                            onClick={() => handleSelectTable(table)}
+                            disabled={selectedHall?.isCompleted}
+                            className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center transition-all transform hover:scale-[1.02] active:scale-[0.98] ${
+                              selectedHall?.isCompleted
+                                ? "opacity-50 cursor-not-allowed"
+                                : table.status === "occupied"
+                                  ? "bg-red-50 border-red-300"
+                                  : selectedTable?.id === table.id
+                                    ? "bg-blue-50 border-blue-500"
+                                    : "bg-white border-gray-200 hover:border-blue-300"
                             }`}
                           >
-                            {table.status === "available" ? "متاحة" : "مشغولة"}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                            <p className="font-bold text-lg">{table.number}</p>
+                            <div
+                              className={`mt-2 px-2 py-1 rounded-full text-xs ${
+                                table.status === "available"
+                                  ? "bg-green-100 text-green-800"
+                                  : table.status === "occupied"
+                                    ? "bg-red-100 text-red-800"
+                                    : table.status === "reserved"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {table.status === "available"
+                                ? "متاحة"
+                                : table.status === "occupied"
+                                  ? "مشغولة"
+                                  : table.status === "reserved"
+                                    ? "محجوزة"
+                                    : "معطلة"}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-gray-400">
@@ -1598,44 +2048,52 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  {paymentMethods.map((method) => (
-                    <button
-                      key={method.id}
-                      onClick={() => setSelectedPaymentMethod(method.id)}
-                      className={`w-full p-4 rounded-lg border-2 flex items-center justify-between transition-all ${
-                        selectedPaymentMethod === method.id
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      <div className="flex items-center">
-                        <span className="text-2xl mr-3">{method.icon}</span>
-                        <div className="text-right">
-                          <p className="font-medium">{method.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {method.id === "cash"
-                              ? "دفع نقدي عند الاستلام"
-                              : method.id === "visa"
-                                ? "دفع إلكتروني ببطاقة الائتمان"
-                                : "دفع عبر المحفظة الإلكترونية"}
-                          </p>
-                        </div>
-                      </div>
-                      <div
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                          selectedPaymentMethod === method.id
-                            ? "border-blue-500 bg-blue-500"
-                            : "border-gray-300"
-                        }`}
-                      >
-                        {selectedPaymentMethod === method.id && (
-                          <div className="w-3 h-3 rounded-full bg-white"></div>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                {paymentMethodsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                    <p className="text-xs text-gray-500">
+                      جاري تحميل طرق الدفع...
+                    </p>
+                  </div>
+                ) : paymentMethods.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>لا توجد طرق دفع متاحة</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {paymentMethods
+                      .filter((method) => method.isActive)
+                      .map((method) => (
+                        <button
+                          key={method.id}
+                          onClick={() => setSelectedPaymentMethod(method.id)}
+                          className={`w-full p-4 rounded-lg border-2 flex items-center justify-between transition-all ${
+                            selectedPaymentMethod === method.id
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <span className="text-2xl mr-3">{method.icon}</span>
+                            <div className="text-right">
+                              <p className="font-medium">{method.name}</p>
+                            </div>
+                          </div>
+                          <div
+                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                              selectedPaymentMethod === method.id
+                                ? "border-blue-500 bg-blue-500"
+                                : "border-gray-300"
+                            }`}
+                          >
+                            {selectedPaymentMethod === method.id && (
+                              <div className="w-3 h-3 rounded-full bg-white"></div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-3 rtl:space-x-reverse">
@@ -1647,14 +2105,17 @@ export default function Home() {
                 </button>
                 <button
                   onClick={handleCompletePayment}
-                  disabled={!selectedPaymentMethod}
+                  disabled={!selectedPaymentMethod || paymentMethodsLoading}
                   className={`flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors ${
-                    !selectedPaymentMethod
+                    !selectedPaymentMethod || paymentMethodsLoading
                       ? "opacity-50 cursor-not-allowed bg-gray-400"
                       : "bg-blue-600 hover:bg-blue-700"
                   }`}
                   style={{
-                    backgroundColor: !selectedPaymentMethod ? "" : "#193F94",
+                    backgroundColor:
+                      !selectedPaymentMethod || paymentMethodsLoading
+                        ? ""
+                        : "#193F94",
                   }}
                 >
                   تأكيد الدفع
@@ -1759,7 +2220,7 @@ export default function Home() {
                         {filteredProducts.map((product) => (
                           <button
                             key={product.id}
-                            onClick={() => addToCart(product)}
+                            onClick={() => handleProductClick(product)}
                             disabled={bills[currentBillIndex]?.completed}
                             className={`bg-gray-50 hover:bg-blue-50 rounded-lg p-2 flex items-center transition-all duration-300 transform active:scale-[0.98] border border-gray-200 h-20 ${
                               bills[currentBillIndex]?.completed
@@ -1775,7 +2236,7 @@ export default function Home() {
                                 loading="lazy"
                                 onError={(e) => {
                                   e.target.src =
-                                    "https://via.placeholder.com/150";
+                                    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop&crop=center";
                                 }}
                               />
                             </div>
@@ -2113,7 +2574,7 @@ export default function Home() {
                   <div className="space-y-2">
                     {cart.map((item) => (
                       <div
-                        key={item.id}
+                        key={item.uniqueId || item.id}
                         className="bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-xs"
                       >
                         <div className="p-2.5">
@@ -2123,6 +2584,10 @@ export default function Home() {
                                 src={item.image}
                                 alt={item.name}
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.src =
+                                    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop&crop=center";
+                                }}
                               />
                             </div>
 
@@ -2141,18 +2606,37 @@ export default function Home() {
                                     className="font-bold text-sm"
                                     style={{ color: "#193F94" }}
                                   >
-                                    {item.price * item.quantity} ج.م
+                                    {item.price * item.quantity +
+                                      (item.optionsTotal || 0)}{" "}
+                                    ج.م
                                   </p>
                                   <p className="text-[10px] text-gray-500">
                                     {item.quantity} × {item.price}
+                                    {item.optionsTotal > 0 && ` + إضافات`}
                                   </p>
                                 </div>
                               </div>
 
+                              {item.selectedOptions &&
+                                item.selectedOptions.length > 0 && (
+                                  <div className="mt-1">
+                                    <p className="text-[10px] text-amber-600">
+                                      إضافات:{" "}
+                                      {item.selectedOptions
+                                        .map(
+                                          (o) => `${o.name} (+${o.price} ج.م)`,
+                                        )
+                                        .join(", ")}
+                                    </p>
+                                  </div>
+                                )}
+
                               <div className="flex justify-between items-center mt-2">
                                 <div className="flex items-center">
                                   <button
-                                    onClick={() => removeFromCart(item.id)}
+                                    onClick={() =>
+                                      removeFromCart(item.uniqueId || item.id)
+                                    }
                                     disabled={
                                       bills[currentBillIndex]?.completed
                                     }
@@ -2168,7 +2652,35 @@ export default function Home() {
                                     {item.quantity}
                                   </span>
                                   <button
-                                    onClick={() => addToCart(item)}
+                                    onClick={() => {
+                                      const existingItem = cart.find(
+                                        (i) =>
+                                          (i.uniqueId || i.id) ===
+                                          (item.uniqueId || item.id),
+                                      );
+                                      if (existingItem) {
+                                        setCart(
+                                          cart.map((i) =>
+                                            (i.uniqueId || i.id) ===
+                                            (item.uniqueId || item.id)
+                                              ? {
+                                                  ...i,
+                                                  quantity: i.quantity + 1,
+                                                  optionsTotal:
+                                                    (i.optionsTotal || 0) +
+                                                    (item.selectedOptions
+                                                      ? item.selectedOptions.reduce(
+                                                          (sum, o) =>
+                                                            sum + o.price,
+                                                          0,
+                                                        )
+                                                      : 0),
+                                                }
+                                              : i,
+                                          ),
+                                        );
+                                      }
+                                    }}
                                     disabled={
                                       bills[currentBillIndex]?.completed
                                     }
@@ -2188,7 +2700,10 @@ export default function Home() {
                                       {item.note && item.note.trim() ? (
                                         <button
                                           onClick={() =>
-                                            startEditingNote(item.id, item.note)
+                                            startEditingNote(
+                                              item.uniqueId || item.id,
+                                              item.note,
+                                            )
                                           }
                                           className="text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded-md transition-colors flex items-center border border-blue-200"
                                         >
@@ -2210,7 +2725,10 @@ export default function Home() {
                                       ) : (
                                         <button
                                           onClick={() =>
-                                            startEditingNote(item.id, item.note)
+                                            startEditingNote(
+                                              item.uniqueId || item.id,
+                                              item.note,
+                                            )
                                           }
                                           className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md transition-colors flex items-center border border-gray-300"
                                         >
@@ -2234,7 +2752,9 @@ export default function Home() {
                                   )}
                                   {!bills[currentBillIndex]?.completed && (
                                     <button
-                                      onClick={() => deleteFromCart(item.id)}
+                                      onClick={() =>
+                                        deleteFromCart(item.uniqueId || item.id)
+                                      }
                                       className="text-[10px] bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-md transition-colors flex items-center border border-red-200"
                                     >
                                       <svg
@@ -2255,7 +2775,8 @@ export default function Home() {
                                 </div>
                               </div>
 
-                              {editingNoteProductId === item.id ? (
+                              {editingNoteProductId ===
+                              (item.uniqueId || item.id) ? (
                                 <div className="mt-2 pt-2 border-t border-gray-200">
                                   <textarea
                                     value={tempNote}
@@ -2279,7 +2800,10 @@ export default function Home() {
                                     </button>
                                     <button
                                       onClick={() =>
-                                        handleAddNote(item.id, tempNote)
+                                        handleAddNote(
+                                          item.uniqueId || item.id,
+                                          tempNote,
+                                        )
                                       }
                                       className="px-2 py-1 text-[10px] bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                                     >

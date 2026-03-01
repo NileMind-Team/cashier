@@ -1,259 +1,66 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import axiosInstance from "../api/axiosInstance";
 
 export default function PendingBillsReport() {
   const navigate = useNavigate();
   const [pendingBills, setPendingBills] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [sortBy, setSortBy] = useState("date");
-  const [sortOrder, setSortOrder] = useState("desc");
-
-  // بيانات تجريبية للفواتير المعلقة
-  const pendingBillsData = [
-    {
-      id: 1,
-      billNumber: "F-2026-101",
-      createdAt: "2026-01-15 14:30",
-      createdBy: "أحمد محمد",
-      employeeId: "EMP-001",
-      status: "pending",
-      customerName: "سارة علي",
-      customerPhone: "01123456789",
-      billType: "dinein",
-      tableInfo: {
-        hallName: "الصالة الرئيسية",
-        tableNumber: "ط5",
-      },
-      subtotal: 265.75,
-      tax: 37.21,
-      discount: 13.29,
-      deliveryFee: 0,
-      total: 289.67,
-      items: [
-        { name: "قهوة تركية", quantity: 2, price: 15, note: "سكر متوسط" },
-        { name: "كرواسون", quantity: 1, price: 8 },
-        { name: "تشيز كيك", quantity: 2, price: 20 },
-      ],
-      generalNote: "الطاولة قريبة من النافذة",
-      createdByImage:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-    },
-    {
-      id: 2,
-      billNumber: "F-2026-102",
-      createdAt: "2026-01-15 15:45",
-      createdBy: "محمد خالد",
-      employeeId: "EMP-002",
-      status: "pending",
-      customerName: "علي حسن",
-      customerPhone: "01098765432",
-      billType: "delivery",
-      tableInfo: null,
-      subtotal: 180.5,
-      tax: 25.27,
-      discount: 9.03,
-      deliveryFee: 25,
-      total: 221.74,
-      items: [
-        { name: "برجر لحم", quantity: 2, price: 40 },
-        { name: "بطاطس مقلية", quantity: 1, price: 15 },
-        { name: "مشروب غازي", quantity: 2, price: 7 },
-      ],
-      generalNote: "توصيل للمنزل - الطابق الثالث",
-      createdByImage:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face",
-    },
-    {
-      id: 3,
-      billNumber: "F-2026-103",
-      createdAt: "2026-01-14 12:15",
-      createdBy: "فاطمة أحمد",
-      employeeId: "EMP-003",
-      status: "pending",
-      customerName: "ريم سعد",
-      customerPhone: "01234567890",
-      billType: "takeaway",
-      tableInfo: null,
-      subtotal: 95.25,
-      tax: 13.34,
-      discount: 4.76,
-      deliveryFee: 0,
-      total: 103.83,
-      items: [
-        { name: "شاي أخضر", quantity: 1, price: 10, note: "بدون سكر" },
-        { name: "دونات", quantity: 3, price: 10 },
-        { name: "عصير برتقال", quantity: 1, price: 12 },
-      ],
-      generalNote: "العميل يفضل التغليف الحراري",
-      createdByImage:
-        "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
-    },
-    {
-      id: 4,
-      billNumber: "F-2026-104",
-      createdAt: "2026-01-14 19:30",
-      createdBy: "خالد عمر",
-      employeeId: "EMP-004",
-      status: "pending",
-      customerName: "نورا سليم",
-      customerPhone: "01187654321",
-      billType: "dinein",
-      tableInfo: {
-        hallName: "الصالة الخارجية",
-        tableNumber: "ط12",
-      },
-      subtotal: 320.0,
-      tax: 44.8,
-      discount: 16.0,
-      deliveryFee: 0,
-      total: 348.8,
-      items: [
-        { name: "ستيك لحم", quantity: 1, price: 65 },
-        { name: "سلطة خضار", quantity: 2, price: 22 },
-        { name: "معكرونة", quantity: 1, price: 28 },
-        { name: "آيس كريم", quantity: 2, price: 12 },
-      ],
-      generalNote: "العميل يحتفل بعيد ميلاده",
-      createdByImage:
-        "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face",
-    },
-    {
-      id: 5,
-      billNumber: "F-2026-105",
-      createdAt: "2026-01-13 11:20",
-      createdBy: "سامي رامي",
-      employeeId: "EMP-005",
-      status: "pending",
-      customerName: "ليلى محمود",
-      customerPhone: "01011223344",
-      billType: "takeaway",
-      tableInfo: null,
-      subtotal: 152.75,
-      tax: 21.39,
-      discount: 7.64,
-      deliveryFee: 0,
-      total: 166.5,
-      items: [
-        { name: "قهوة مثلجة", quantity: 2, price: 20 },
-        { name: "ساندويتش جبنة", quantity: 1, price: 25 },
-        { name: "كيك شوكولاتة", quantity: 1, price: 22 },
-        { name: "عصير مانجو", quantity: 1, price: 15 },
-      ],
-      generalNote: "العميل يطلب فاتورة ضريبية",
-      createdByImage:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-    },
-    {
-      id: 6,
-      billNumber: "F-2026-106",
-      createdAt: "2026-01-13 16:45",
-      createdBy: "أحمد محمد",
-      employeeId: "EMP-001",
-      status: "pending",
-      customerName: "محمد خالد",
-      customerPhone: "01199887766",
-      billType: "dinein",
-      tableInfo: {
-        hallName: "الصالة VIP",
-        tableNumber: "ط16",
-      },
-      subtotal: 210.5,
-      tax: 29.47,
-      discount: 10.53,
-      deliveryFee: 0,
-      total: 229.44,
-      items: [
-        { name: "سوشي", quantity: 2, price: 45 },
-        { name: "شاي أخضر", quantity: 1, price: 10 },
-        { name: "كابتشينو", quantity: 2, price: 18 },
-        { name: "كرواسون", quantity: 2, price: 8 },
-      ],
-      generalNote: "اجتماع عمل - يحتاج انترنت سريع",
-      createdByImage:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face",
-    },
-    {
-      id: 7,
-      billNumber: "F-2026-107",
-      createdAt: "2026-01-12 14:10",
-      createdBy: "فاطمة أحمد",
-      employeeId: "EMP-003",
-      status: "pending",
-      customerName: "علي حسن",
-      customerPhone: "01233445566",
-      billType: "delivery",
-      tableInfo: null,
-      subtotal: 185.25,
-      tax: 25.94,
-      discount: 9.26,
-      deliveryFee: 25,
-      total: 226.93,
-      items: [
-        { name: "بيتزا صغيرة", quantity: 3, price: 35 },
-        { name: "سلطة خضار", quantity: 1, price: 22 },
-        { name: "مشروب غازي", quantity: 4, price: 7 },
-      ],
-      generalNote: "التوصيل قبل الساعة 8 مساءً",
-      createdByImage:
-        "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
-    },
-  ];
+  const [selectedBill, setSelectedBill] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      const sortedData = sortBills([...pendingBillsData]);
-      setPendingBills(sortedData);
-      setLoading(false);
-      toast.success(`تم تحميل ${sortedData.length} فاتورة معلقة`);
-    }, 800);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!hasFetched.current) {
+      fetchPendingBills();
+      hasFetched.current = true;
+    }
   }, []);
 
-  const sortBills = (bills) => {
-    return [...bills].sort((a, b) => {
-      let aValue, bValue;
+  const fetchPendingBills = async () => {
+    setLoading(true);
+    try {
+      const response = await axiosInstance.get(
+        "/api/Reports/PendingBillsReport",
+      );
 
-      if (sortBy === "billNumber") {
-        aValue = a.billNumber;
-        bValue = b.billNumber;
-      } else if (sortBy === "total") {
-        aValue = a.total;
-        bValue = b.total;
-      } else if (sortBy === "createdBy") {
-        aValue = a.createdBy;
-        bValue = b.createdBy;
-      } else {
-        // تاريخ الإنشاء
-        aValue = new Date(a.createdAt);
-        bValue = new Date(b.createdAt);
+      if (response.status === 200 && response.data) {
+        const data = response.data;
+
+        const billsWithDetails = (data.invoices || []).map((bill) => ({
+          id: bill.invoiceId,
+          billNumber: bill.invoiceNumber,
+          createdAt: bill.invoiceDate,
+          createdBy: bill.employeeName,
+          employeeId: bill.employeeId,
+          employeeName: bill.employeeName,
+          customerName: bill.customerName || "عميل",
+          total: bill.totalAmount,
+          status: "pending",
+          invoiceType: bill.invoiceType,
+        }));
+
+        setPendingBills(billsWithDetails);
+        toast.success(`تم تحميل ${billsWithDetails.length} فاتورة معلقة`);
       }
-
-      if (sortOrder === "asc") {
-        return aValue > bValue ? 1 : -1;
+    } catch (error) {
+      console.error("خطأ في جلب الفواتير المعلقة:", error);
+      if (error.response?.status === 404) {
+        toast.error("لا توجد فواتير معلقة");
+        setPendingBills([]);
       } else {
-        return aValue < bValue ? 1 : -1;
+        toast.error("حدث خطأ في جلب الفواتير المعلقة");
       }
-    });
-  };
-
-  const handleSort = (column) => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortOrder("desc");
+    } finally {
+      setLoading(false);
     }
-
-    const sortedData = sortBills([...pendingBills]);
-    setPendingBills(sortedData);
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return "";
     const date = new Date(dateString);
     return date.toLocaleDateString("ar-EG", {
-      weekday: "short",
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -263,6 +70,7 @@ export default function PendingBillsReport() {
   };
 
   const formatCurrency = (amount) => {
+    if (amount === undefined || amount === null) return "0.00";
     return new Intl.NumberFormat("ar-EG", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -270,13 +78,18 @@ export default function PendingBillsReport() {
   };
 
   const getBillTypeLabel = (type) => {
-    const types = {
-      dinein: { label: "طاولة", color: "#10B981", bgColor: "#10B9811A" },
-      takeaway: { label: "سفري", color: "#3B82F6", bgColor: "#3B82F61A" },
-      delivery: { label: "دليفري", color: "#8B5CF6", bgColor: "#8B5CF61A" },
+    const numericTypes = {
+      0: { label: "طاولة", color: "#10B981", bgColor: "#10B9811A" },
+      1: { label: "سفري", color: "#3B82F6", bgColor: "#3B82F61A" },
+      2: { label: "دليفري", color: "#8B5CF6", bgColor: "#8B5CF61A" },
     };
+
     return (
-      types[type] || { label: "غير محدد", color: "#6B7280", bgColor: "#F3F4F6" }
+      numericTypes[type] || {
+        label: "غير محدد",
+        color: "#6B7280",
+        bgColor: "#F3F4F6",
+      }
     );
   };
 
@@ -289,12 +102,13 @@ export default function PendingBillsReport() {
       pendingBills.length > 0 ? totalPendingAmount / pendingBills.length : 0;
 
     const billTypeCount = pendingBills.reduce((acc, bill) => {
-      acc[bill.billType] = (acc[bill.billType] || 0) + 1;
+      const type = bill.invoiceType;
+      acc[type] = (acc[type] || 0) + 1;
       return acc;
     }, {});
 
     const employeeCount = pendingBills.reduce((acc, bill) => {
-      acc[bill.createdBy] = (acc[bill.createdBy] || 0) + 1;
+      acc[bill.employeeName] = (acc[bill.employeeName] || 0) + 1;
       return acc;
     }, {});
 
@@ -313,165 +127,16 @@ export default function PendingBillsReport() {
     };
   };
 
-  const handleResumeBill = (billId) => {
-    const bill = pendingBills.find((b) => b.id === billId);
-
-    toast.info(
-      <div className="text-right p-3">
-        <p className="font-bold mb-2">استئناف الفاتورة {bill?.billNumber}</p>
-        <p className="text-sm text-gray-600 mb-3">
-          هل تريد استئناف هذه الفاتورة والانتقال لصفحة البيع؟
-        </p>
-        <div className="flex justify-end space-x-2 rtl:space-x-reverse mt-3">
-          <button
-            onClick={() => {
-              toast.dismiss();
-              toast.success(`جارٍ استئناف الفاتورة ${bill?.billNumber}...`);
-              // في التطبيق الحقيقي، هنا سيتم توجيه المستخدم لصفحة البيع مع تحميل الفاتورة
-            }}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
-          >
-            نعم، استئناف
-          </button>
-          <button
-            onClick={() => toast.dismiss()}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm"
-          >
-            إلغاء
-          </button>
-        </div>
-      </div>,
-      {
-        autoClose: false,
-        closeOnClick: false,
-        draggable: false,
-      },
-    );
+  const handleViewBillDetails = (bill) => {
+    setSelectedBill(bill);
+    setShowDetailsModal(true);
   };
 
-  const handleViewBillDetails = (billId) => {
-    const bill = pendingBills.find((b) => b.id === billId);
-
-    if (!bill) return;
-
-    const billType = getBillTypeLabel(bill.billType);
-
-    toast.info(
-      <div className="text-right p-3 max-w-md">
-        <h4 className="font-bold mb-3 text-lg" style={{ color: "#193F94" }}>
-          تفاصيل الفاتورة {bill.billNumber}
-        </h4>
-
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-600">الموظف:</span>
-            <span className="font-medium">{bill.createdBy}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span className="text-gray-600">تاريخ الإنشاء:</span>
-            <span className="font-medium">{formatDate(bill.createdAt)}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span className="text-gray-600">نوع الفاتورة:</span>
-            <span className="font-medium">{billType.label}</span>
-          </div>
-
-          {bill.tableInfo && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">الطاولة:</span>
-              <span className="font-medium">
-                {bill.tableInfo.tableNumber} ({bill.tableInfo.hallName})
-              </span>
-            </div>
-          )}
-
-          <div className="flex justify-between">
-            <span className="text-gray-600">العميل:</span>
-            <span className="font-medium">
-              {bill.customerName || "غير محدد"}
-            </span>
-          </div>
-
-          <div className="flex justify-between">
-            <span className="text-gray-600">الهاتف:</span>
-            <span className="font-medium">
-              {bill.customerPhone || "غير محدد"}
-            </span>
-          </div>
-
-          {bill.generalNote && (
-            <div className="mt-2 pt-2 border-t">
-              <p className="text-gray-600 mb-1">ملاحظة عامة:</p>
-              <p className="text-blue-600 text-sm">{bill.generalNote}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-3 pt-3 border-t">
-          <h5 className="font-bold mb-2">المنتجات:</h5>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
-            {bill.items.map((item, index) => (
-              <div
-                key={index}
-                className="flex justify-between items-start text-sm"
-              >
-                <div className="flex-1">
-                  <p className="font-medium">
-                    {item.name} × {item.quantity}
-                  </p>
-                  {item.note && (
-                    <p className="text-xs text-gray-500">ملاحظة: {item.note}</p>
-                  )}
-                </div>
-                <span className="font-bold">
-                  {item.price * item.quantity} ج.م
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-3 space-y-1">
-            <div className="flex justify-between">
-              <span>المجموع الفرعي:</span>
-              <span>{formatCurrency(bill.subtotal)} ج.م</span>
-            </div>
-            <div className="flex justify-between">
-              <span>الضريبة:</span>
-              <span>{formatCurrency(bill.tax)} ج.م</span>
-            </div>
-            <div className="flex justify-between">
-              <span>الخصم:</span>
-              <span>{formatCurrency(bill.discount)} ج.م</span>
-            </div>
-            {bill.deliveryFee > 0 && (
-              <div className="flex justify-between">
-                <span>رسوم التوصيل:</span>
-                <span>{formatCurrency(bill.deliveryFee)} ج.م</span>
-              </div>
-            )}
-            <div className="flex justify-between font-bold mt-2 pt-2 border-t">
-              <span>الإجمالي:</span>
-              <span>{formatCurrency(bill.total)} ج.م</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end space-x-2 rtl:space-x-reverse mt-4">
-          <button
-            onClick={() => {
-              toast.dismiss();
-              handleResumeBill(bill.id);
-            }}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
-          >
-            استئناف الفاتورة
-          </button>
-        </div>
-      </div>,
-      { autoClose: false, closeOnClick: false },
-    );
+  const closeModal = () => {
+    setShowDetailsModal(false);
+    setTimeout(() => {
+      setSelectedBill(null);
+    }, 200);
   };
 
   const stats = calculateStats();
@@ -486,7 +151,7 @@ export default function PendingBillsReport() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center mr-3">
+              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
                 <span className="text-white font-bold">$</span>
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
@@ -528,7 +193,6 @@ export default function PendingBillsReport() {
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* اللوحة الجانبية للإحصائيات */}
           <div className="lg:col-span-1 print:hidden">
             <div className="bg-white rounded-2xl shadow-lg p-5 sticky top-6">
               <h3
@@ -549,7 +213,20 @@ export default function PendingBillsReport() {
                       <p className="text-xs text-blue-600 mt-1">فاتورة معلقة</p>
                     </div>
                     <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                      <span className="text-blue-700 font-bold">📋</span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-blue-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -567,7 +244,20 @@ export default function PendingBillsReport() {
                       </p>
                     </div>
                     <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                      <span className="text-green-700 font-bold">💰</span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-green-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -582,25 +272,20 @@ export default function PendingBillsReport() {
                       <p className="text-xs text-purple-600 mt-1">موظف</p>
                     </div>
                     <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                      <span className="text-purple-700 font-bold">👥</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-amber-800">أكثر الموظفين</p>
-                      <p className="text-2xl font-bold text-amber-900 mt-1">
-                        {stats.topEmployee?.name.substring(0, 8) || "غير محدد"}
-                        ...
-                      </p>
-                      <p className="text-xs text-amber-600 mt-1">
-                        {stats.topEmployee?.count || 0} فاتورة
-                      </p>
-                    </div>
-                    <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
-                      <span className="text-amber-700 font-bold">👑</span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-purple-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                        />
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -612,7 +297,7 @@ export default function PendingBillsReport() {
                     </h4>
                     {Object.entries(stats.billTypeCount).map(
                       ([type, count]) => {
-                        const billType = getBillTypeLabel(type);
+                        const billType = getBillTypeLabel(parseInt(type));
                         const percentage = (count / stats.totalCount) * 100;
                         return (
                           <div key={type} className="space-y-1">
@@ -643,7 +328,6 @@ export default function PendingBillsReport() {
             </div>
           </div>
 
-          {/* منطقة عرض الفواتير */}
           <div className="lg:col-span-3">
             {loading ? (
               <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center min-h-[400px]">
@@ -699,8 +383,7 @@ export default function PendingBillsReport() {
                   </div>
                 </div>
 
-                {/* بطاقات الإحصائيات الرئيسية */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 print:grid-cols-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 print:grid-cols-2">
                   <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
                     <div className="flex items-center justify-between">
                       <div>
@@ -715,7 +398,7 @@ export default function PendingBillsReport() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
-                        <span className="text-amber-700 font-bold">⏸️</span>
+                        <span className="text-2xl text-amber-700">⏸️</span>
                       </div>
                     </div>
                   </div>
@@ -734,7 +417,20 @@ export default function PendingBillsReport() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                        <span className="text-blue-700 font-bold">💵</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-blue-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -753,121 +449,51 @@ export default function PendingBillsReport() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                        <span className="text-purple-700 font-bold">📊</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-green-800">الموظف الأكثر</p>
-                        <p className="text-2xl font-bold text-green-900 mt-1">
-                          {stats.topEmployee?.name.substring(0, 8) ||
-                            "غير محدد"}
-                          ...
-                        </p>
-                        <p className="text-xs text-green-600 mt-1">
-                          {stats.topEmployee?.count || 0} فاتورة
-                        </p>
-                      </div>
-                      <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                        <span className="text-green-700 font-bold">🏆</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-purple-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                          />
+                        </svg>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* جدول الفواتير المعلقة */}
                 <div className="mb-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3
-                      className="text-lg font-bold"
-                      style={{ color: "#193F94" }}
-                    >
-                      قائمة الفواتير المعلقة ({pendingBills.length} فاتورة)
-                    </h3>
-                    <div className="flex items-center space-x-2 rtl:space-x-reverse print:hidden">
-                      <span className="text-sm text-gray-600">ترتيب حسب:</span>
-                      <select
-                        value={sortBy}
-                        onChange={(e) => handleSort(e.target.value)}
-                        className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white"
-                      >
-                        <option value="date">تاريخ الإنشاء</option>
-                        <option value="billNumber">رقم الفاتورة</option>
-                        <option value="total">المبلغ الإجمالي</option>
-                        <option value="createdBy">الموظف</option>
-                      </select>
-                      <button
-                        onClick={() =>
-                          setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                        }
-                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
-                      >
-                        {sortOrder === "asc" ? "تصاعدي ↑" : "تنازلي ↓"}
-                      </button>
-                    </div>
-                  </div>
+                  <h3
+                    className="text-lg font-bold mb-4"
+                    style={{ color: "#193F94" }}
+                  >
+                    قائمة الفواتير المعلقة ({pendingBills.length} فاتورة)
+                  </h3>
 
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-gray-50">
                           <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                            <button
-                              onClick={() => handleSort("billNumber")}
-                              className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                            >
-                              رقم الفاتورة
-                              {sortBy === "billNumber" && (
-                                <span className="mr-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
-                              )}
-                            </button>
+                            رقم الفاتورة
                           </th>
                           <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                            <button
-                              onClick={() => handleSort("date")}
-                              className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                            >
-                              تاريخ الإنشاء
-                              {sortBy === "date" && (
-                                <span className="mr-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
-                              )}
-                            </button>
+                            تاريخ الإنشاء
                           </th>
                           <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                            <button
-                              onClick={() => handleSort("createdBy")}
-                              className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                            >
-                              الموظف
-                              {sortBy === "createdBy" && (
-                                <span className="mr-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
-                              )}
-                            </button>
+                            الموظف
                           </th>
                           <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
                             نوع الفاتورة
                           </th>
                           <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                            <button
-                              onClick={() => handleSort("total")}
-                              className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                            >
-                              المبلغ الإجمالي
-                              {sortBy === "total" && (
-                                <span className="mr-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
-                              )}
-                            </button>
+                            المبلغ الإجمالي
                           </th>
                           <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700 print:hidden">
                             الإجراءات
@@ -876,7 +502,7 @@ export default function PendingBillsReport() {
                       </thead>
                       <tbody>
                         {pendingBills.map((bill) => {
-                          const billType = getBillTypeLabel(bill.billType);
+                          const billType = getBillTypeLabel(bill.invoiceType);
 
                           return (
                             <tr
@@ -897,41 +523,20 @@ export default function PendingBillsReport() {
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-right">
-                                <div className="flex items-center justify-end">
-                                  <div className="ml-3 text-right">
-                                    <div className="font-medium">
-                                      {bill.createdBy}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      {bill.employeeId}
-                                    </div>
-                                  </div>
-                                  <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200">
-                                    <img
-                                      src={bill.createdByImage}
-                                      alt={bill.createdBy}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
+                                <div className="font-medium">
+                                  {bill.employeeName}
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-right">
-                                <div className="flex flex-col items-end">
-                                  <span
-                                    className="px-3 py-1 rounded-full text-xs font-medium mb-1"
-                                    style={{
-                                      backgroundColor: billType.bgColor,
-                                      color: billType.color,
-                                    }}
-                                  >
-                                    {billType.label}
-                                  </span>
-                                  {bill.tableInfo && (
-                                    <div className="text-xs text-gray-500">
-                                      {bill.tableInfo.tableNumber}
-                                    </div>
-                                  )}
-                                </div>
+                                <span
+                                  className="px-3 py-1 rounded-full text-xs font-medium"
+                                  style={{
+                                    backgroundColor: billType.bgColor,
+                                    color: billType.color,
+                                  }}
+                                >
+                                  {billType.label}
+                                </span>
                               </td>
                               <td className="py-3 px-4 text-right">
                                 <div
@@ -940,27 +545,14 @@ export default function PendingBillsReport() {
                                 >
                                   {formatCurrency(bill.total)} ج.م
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  {bill.items.length} منتج
-                                </div>
                               </td>
                               <td className="py-3 px-4 text-right print:hidden">
-                                <div className="flex space-x-2 rtl:space-x-reverse">
-                                  <button
-                                    onClick={() =>
-                                      handleViewBillDetails(bill.id)
-                                    }
-                                    className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
-                                  >
-                                    التفاصيل
-                                  </button>
-                                  <button
-                                    onClick={() => handleResumeBill(bill.id)}
-                                    className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition-colors"
-                                  >
-                                    استئناف
-                                  </button>
-                                </div>
+                                <button
+                                  onClick={() => handleViewBillDetails(bill)}
+                                  className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg transition-colors"
+                                >
+                                  عرض التفاصيل
+                                </button>
                               </td>
                             </tr>
                           );
@@ -984,7 +576,6 @@ export default function PendingBillsReport() {
                   </div>
                 </div>
 
-                {/* ملخص النتائج */}
                 <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-200">
                   <h4
                     className="font-bold mb-4 text-gray-800"
@@ -1085,6 +676,115 @@ export default function PendingBillsReport() {
           </div>
         </div>
       </div>
+
+      {showDetailsModal && selectedBill && (
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+          onClick={closeModal}
+        >
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* الهيدر */}
+              <div className="bg-gradient-to-l from-blue-600 to-blue-700 px-6 py-4 rounded-t-2xl">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-white">
+                    تفاصيل الفاتورة
+                  </h3>
+                  <button
+                    onClick={closeModal}
+                    className="text-white hover:text-gray-200 transition-colors"
+                  >
+                    <svg
+                      className="h-6 w-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="px-6 py-4">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <p className="text-sm text-gray-500">رقم الفاتورة</p>
+                    <p className="text-xl font-bold text-blue-900">
+                      {selectedBill.billNumber}
+                    </p>
+                  </div>
+                  <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
+                    معلقة
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-4 space-y-3 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">الموظف:</span>
+                    <span className="font-medium">
+                      {selectedBill.employeeName}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">تاريخ الإنشاء:</span>
+                    <span className="font-medium">
+                      {formatDate(selectedBill.createdAt)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">العميل:</span>
+                    <span className="font-medium">
+                      {selectedBill.customerName || "غير محدد"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">نوع الفاتورة:</span>
+                    <span
+                      className="px-3 py-1 rounded-full text-xs font-medium"
+                      style={{
+                        backgroundColor: getBillTypeLabel(
+                          selectedBill.invoiceType,
+                        ).bgColor,
+                        color: getBillTypeLabel(selectedBill.invoiceType).color,
+                      }}
+                    >
+                      {getBillTypeLabel(selectedBill.invoiceType).label}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-4 border border-blue-200">
+                  <div className="flex justify-between items-center text-lg font-bold">
+                    <span style={{ color: "#193F94" }}>الإجمالي:</span>
+                    <span style={{ color: "#193F94" }}>
+                      {formatCurrency(selectedBill.total)} ج.م
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 px-6 py-3 rounded-b-2xl flex justify-left">
+                <button
+                  onClick={closeModal}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+                >
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

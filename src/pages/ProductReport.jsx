@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import axiosInstance from "../api/axiosInstance";
 
 export default function ProductsReports() {
   const navigate = useNavigate();
@@ -8,234 +9,6 @@ export default function ProductsReports() {
   const [endDate, setEndDate] = useState("");
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [sortBy, setSortBy] = useState("quantitySold");
-  const [sortOrder, setSortOrder] = useState("desc");
-
-  const productsData = useMemo(
-    () => [
-      {
-        id: "prod_001",
-        name: "قهوة تركية",
-        category: "مشروبات ساخنة",
-        price: 15,
-        cost: 5,
-        quantitySold: 156,
-        totalRevenue: 2340,
-        date: "2026-01-15",
-        profit: 1560,
-      },
-      {
-        id: "prod_002",
-        name: "كابتشينو",
-        category: "مشروبات ساخنة",
-        price: 18,
-        cost: 6,
-        quantitySold: 128,
-        totalRevenue: 2304,
-        date: "2026-01-15",
-        profit: 1536,
-      },
-      {
-        id: "prod_003",
-        name: "إسبريسو",
-        category: "مشروبات ساخنة",
-        price: 12,
-        cost: 4,
-        quantitySold: 95,
-        totalRevenue: 1140,
-        date: "2026-01-15",
-        profit: 760,
-      },
-      {
-        id: "prod_004",
-        name: "شاي أخضر",
-        category: "مشروبات ساخنة",
-        price: 10,
-        cost: 3,
-        quantitySold: 142,
-        totalRevenue: 1420,
-        date: "2026-01-14",
-        profit: 994,
-      },
-      {
-        id: "prod_005",
-        name: "كرواسون",
-        category: "مخبوزات",
-        price: 8,
-        cost: 3,
-        quantitySold: 89,
-        totalRevenue: 712,
-        date: "2026-01-14",
-        profit: 445,
-      },
-      {
-        id: "prod_006",
-        name: "تشيز كيك",
-        category: "حلويات",
-        price: 20,
-        cost: 8,
-        quantitySold: 67,
-        totalRevenue: 1340,
-        date: "2026-01-14",
-        profit: 804,
-      },
-      {
-        id: "prod_007",
-        name: "دونات",
-        category: "حلويات",
-        price: 10,
-        cost: 4,
-        quantitySold: 112,
-        totalRevenue: 1120,
-        date: "2026-01-13",
-        profit: 672,
-      },
-      {
-        id: "prod_008",
-        name: "بيتزا صغيرة",
-        category: "أطباق رئيسية",
-        price: 35,
-        cost: 15,
-        quantitySold: 54,
-        totalRevenue: 1890,
-        date: "2026-01-13",
-        profit: 1080,
-      },
-      {
-        id: "prod_009",
-        name: "برجر لحم",
-        category: "أطباق رئيسية",
-        price: 40,
-        cost: 18,
-        quantitySold: 48,
-        totalRevenue: 1920,
-        date: "2026-01-13",
-        profit: 1056,
-      },
-      {
-        id: "prod_010",
-        name: "عصير برتقال",
-        category: "مشروبات باردة",
-        price: 12,
-        cost: 4,
-        quantitySold: 135,
-        totalRevenue: 1620,
-        date: "2026-01-16",
-        profit: 1080,
-      },
-      {
-        id: "prod_011",
-        name: "عصير مانجو",
-        category: "مشروبات باردة",
-        price: 15,
-        cost: 5,
-        quantitySold: 98,
-        totalRevenue: 1470,
-        date: "2026-01-16",
-        profit: 980,
-      },
-      {
-        id: "prod_012",
-        name: "مشروب غازي",
-        category: "مشروبات باردة",
-        price: 7,
-        cost: 2,
-        quantitySold: 176,
-        totalRevenue: 1232,
-        date: "2026-01-16",
-        profit: 880,
-      },
-      {
-        id: "prod_013",
-        name: "آيس كريم",
-        category: "حلويات",
-        price: 12,
-        cost: 5,
-        quantitySold: 103,
-        totalRevenue: 1236,
-        date: "2026-01-12",
-        profit: 721,
-      },
-      {
-        id: "prod_014",
-        name: "سوشي",
-        category: "أطباق رئيسية",
-        price: 45,
-        cost: 20,
-        quantitySold: 32,
-        totalRevenue: 1440,
-        date: "2026-01-12",
-        profit: 800,
-      },
-      {
-        id: "prod_015",
-        name: "سلطة خضار",
-        category: "سلطات",
-        price: 22,
-        cost: 9,
-        quantitySold: 76,
-        totalRevenue: 1672,
-        date: "2026-01-12",
-        profit: 988,
-      },
-      {
-        id: "prod_016",
-        name: "قهوة مثلجة",
-        category: "مشروبات باردة",
-        price: 20,
-        cost: 7,
-        quantitySold: 84,
-        totalRevenue: 1680,
-        date: "2026-01-11",
-        profit: 1092,
-      },
-      {
-        id: "prod_017",
-        name: "كيك شوكولاتة",
-        category: "حلويات",
-        price: 22,
-        cost: 9,
-        quantitySold: 58,
-        totalRevenue: 1276,
-        date: "2026-01-11",
-        profit: 754,
-      },
-      {
-        id: "prod_018",
-        name: "ساندويتش جبنة",
-        category: "ساندويتشات",
-        price: 25,
-        cost: 10,
-        quantitySold: 72,
-        totalRevenue: 1800,
-        date: "2026-01-11",
-        profit: 1080,
-      },
-      {
-        id: "prod_019",
-        name: "معكرونة",
-        category: "أطباق رئيسية",
-        price: 28,
-        cost: 12,
-        quantitySold: 46,
-        totalRevenue: 1288,
-        date: "2026-01-10",
-        profit: 736,
-      },
-      {
-        id: "prod_020",
-        name: "ستيك لحم",
-        category: "أطباق رئيسية",
-        price: 65,
-        cost: 30,
-        quantitySold: 29,
-        totalRevenue: 1885,
-        date: "2026-01-10",
-        profit: 1015,
-      },
-    ],
-    [],
-  );
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -247,7 +20,7 @@ export default function ProductsReports() {
     setEndDate(today);
   }, []);
 
-  const generateReport = () => {
+  const generateReport = async () => {
     if (!startDate || !endDate) {
       toast.error("يرجى اختيار تاريخ البداية والنهاية");
       return;
@@ -260,119 +33,71 @@ export default function ProductsReports() {
 
     setLoading(true);
 
-    setTimeout(() => {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-
-      const filteredData = productsData.filter((product) => {
-        const productDate = new Date(product.date);
-        return productDate >= start && productDate <= end;
-      });
-
-      const aggregatedData = filteredData.reduce((acc, product) => {
-        const existing = acc.find((p) => p.id === product.id);
-        if (existing) {
-          existing.quantitySold += product.quantitySold;
-          existing.totalRevenue += product.totalRevenue;
-          existing.profit += product.profit;
-        } else {
-          acc.push({ ...product });
-        }
-        return acc;
-      }, []);
-
-      const sortedData = [...aggregatedData].sort((a, b) => {
-        let aValue, bValue;
-
-        if (sortBy === "name") {
-          aValue = a.name;
-          bValue = b.name;
-        } else if (sortBy === "category") {
-          aValue = a.category;
-          bValue = b.category;
-        } else if (sortBy === "price") {
-          aValue = a.price;
-          bValue = b.price;
-        } else if (sortBy === "totalRevenue") {
-          aValue = a.totalRevenue;
-          bValue = b.totalRevenue;
-        } else if (sortBy === "profit") {
-          aValue = a.profit;
-          bValue = b.profit;
-        } else {
-          aValue = a.quantitySold;
-          bValue = b.quantitySold;
-        }
-
-        if (sortOrder === "asc") {
-          return aValue > bValue ? 1 : -1;
-        } else {
-          return aValue < bValue ? 1 : -1;
-        }
-      });
-
-      const stats = {
-        totalProducts: sortedData.length,
-        totalQuantitySold: sortedData.reduce(
-          (sum, product) => sum + product.quantitySold,
-          0,
-        ),
-        totalRevenue: sortedData.reduce(
-          (sum, product) => sum + product.totalRevenue,
-          0,
-        ),
-        totalProfit: sortedData.reduce(
-          (sum, product) => sum + product.profit,
-          0,
-        ),
-        averageRevenuePerProduct:
-          sortedData.length > 0
-            ? sortedData.reduce(
-                (sum, product) => sum + product.totalRevenue,
-                0,
-              ) / sortedData.length
-            : 0,
-        averageProfitMargin:
-          sortedData.length > 0
-            ? (sortedData.reduce((sum, product) => sum + product.profit, 0) /
-                sortedData.reduce(
-                  (sum, product) => sum + product.totalRevenue,
-                  0,
-                )) *
-              100
-            : 0,
-        topSellingProduct: sortedData.length > 0 ? sortedData[0] : null,
-        categoryBreakdown: sortedData.reduce((acc, product) => {
-          const category = product.category;
-          acc[category] = acc[category] || {
-            count: 0,
-            quantity: 0,
-            revenue: 0,
-          };
-          acc[category].count++;
-          acc[category].quantity += product.quantitySold;
-          acc[category].revenue += product.totalRevenue;
-          return acc;
-        }, {}),
-      };
-
-      setReportData({
-        products: sortedData,
-        stats: stats,
-        dateRange: {
-          start: formatArabicDate(startDate),
-          end: formatArabicDate(endDate),
-          startDate: startDate,
-          endDate: endDate,
+    try {
+      const response = await axiosInstance.get("/api/Reports/ProductsReport", {
+        params: {
+          from: startDate,
+          to: endDate,
         },
       });
 
+      if (response.status === 200 && response.data) {
+        const data = response.data;
+
+        const categoryBreakdown = (data.products || []).reduce(
+          (acc, product) => {
+            const category = product.subCategoryName || "غير مصنف";
+            acc[category] = acc[category] || {
+              count: 0,
+              quantity: 0,
+              revenue: 0,
+            };
+            acc[category].count++;
+            acc[category].quantity += product.quantitySold;
+            acc[category].revenue += product.revenue;
+            return acc;
+          },
+          {},
+        );
+
+        const stats = {
+          totalProducts: data.products?.length || 0,
+          totalQuantitySold: data.totalQuantitySold || 0,
+          totalRevenue: data.totalRevenue || 0,
+          averageRevenuePerProduct:
+            data.products?.length > 0
+              ? (data.totalRevenue || 0) / data.products.length
+              : 0,
+          categoryBreakdown: categoryBreakdown,
+        };
+
+        setReportData({
+          products: data.products || [],
+          stats: stats,
+          dateRange: {
+            start: formatArabicDate(startDate),
+            end: formatArabicDate(endDate),
+            startDate: startDate,
+            endDate: endDate,
+          },
+        });
+
+        toast.success(
+          `تم إنشاء التقرير للفترة من ${formatArabicDate(startDate)} إلى ${formatArabicDate(endDate)} (${data.products?.length || 0} منتج)`,
+        );
+      }
+    } catch (error) {
+      console.error("خطأ في جلب تقرير المنتجات:", error);
+      if (error.response?.status === 404) {
+        toast.error("لا توجد بيانات للفترة المحددة");
+      } else if (error.response?.status === 400) {
+        toast.error("بيانات غير صالحة: تأكد من تواريخ صحيحة");
+      } else {
+        toast.error("حدث خطأ في جلب تقرير المنتجات");
+      }
+    } finally {
       setLoading(false);
-      toast.success(
-        `تم إنشاء التقرير للفترة من ${formatArabicDate(startDate)} إلى ${formatArabicDate(endDate)} (${sortedData.length} منتج)`,
-      );
-    }, 800);
+    }
   };
 
   const formatArabicDate = (dateString) => {
@@ -386,32 +111,29 @@ export default function ProductsReports() {
   };
 
   const formatCurrency = (amount) => {
+    if (amount === undefined || amount === null) return "0.00";
     return new Intl.NumberFormat("ar-EG", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
   };
 
-  const handleSort = (column) => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortOrder("desc");
-    }
-  };
-
   const getCategoryColor = (category) => {
-    const colors = {
-      "مشروبات ساخنة": { bg: "#FEE2E2", text: "#DC2626" },
-      "مشروبات باردة": { bg: "#DBEAFE", text: "#1D4ED8" },
-      حلويات: { bg: "#F3E8FF", text: "#7C3AED" },
-      مخبوزات: { bg: "#FEF3C7", text: "#D97706" },
-      "أطباق رئيسية": { bg: "#DCFCE7", text: "#16A34A" },
-      سلطات: { bg: "#FCE7F3", text: "#DB2777" },
-      ساندويتشات: { bg: "#E0E7FF", text: "#4F46E5" },
-    };
-    return colors[category] || { bg: "#F3F4F6", text: "#6B7280" };
+    const colors = [
+      { bg: "#FEE2E2", text: "#DC2626" },
+      { bg: "#DBEAFE", text: "#1D4ED8" },
+      { bg: "#F3E8FF", text: "#7C3AED" },
+      { bg: "#FEF3C7", text: "#D97706" },
+      { bg: "#DCFCE7", text: "#16A34A" },
+      { bg: "#FCE7F3", text: "#DB2777" },
+      { bg: "#E0E7FF", text: "#4F46E5" },
+      { bg: "#FFEDD5", text: "#EA580C" },
+    ];
+
+    const hash = category
+      .split("")
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
   };
 
   return (
@@ -424,7 +146,7 @@ export default function ProductsReports() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center mr-3">
+              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
                 <span className="text-white font-bold">$</span>
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
@@ -476,58 +198,72 @@ export default function ProductsReports() {
               </h3>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    التاريخ من
-                  </label>
+                <div className="relative">
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                     max={endDate || undefined}
+                    dir="rtl"
                   />
+                  <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
+                    <span className="flex items-center">
+                      <svg
+                        className="w-4 h-4 ml-1"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      التاريخ من
+                    </span>
+                  </label>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    التاريخ إلى
-                  </label>
+                <div className="relative">
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                     min={startDate || undefined}
+                    dir="rtl"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    الفرز حسب
+                  <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
+                    <span className="flex items-center">
+                      <svg
+                        className="w-4 h-4 ml-1"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      التاريخ إلى
+                    </span>
                   </label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => handleSort(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
-                  >
-                    <option value="quantitySold">الأكثر مبيعاً</option>
-                    <option value="totalRevenue">الأعلى إيراداً</option>
-                    <option value="profit">الأعلى ربحاً</option>
-                    <option value="name">اسم المنتج</option>
-                    <option value="category">الفئة</option>
-                    <option value="price">السعر</option>
-                  </select>
                 </div>
 
                 <div className="pt-4">
                   <button
                     onClick={generateReport}
                     disabled={loading || !startDate || !endDate}
-                    className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 mb-3 ${
+                    className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
                       loading || !startDate || !endDate
                         ? "opacity-50 cursor-not-allowed bg-gray-400"
-                        : "bg-blue-600 hover:bg-blue-700"
+                        : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                     }`}
                     style={{
                       backgroundColor:
@@ -535,12 +271,28 @@ export default function ProductsReports() {
                     }}
                   >
                     {loading ? (
-                      <div className="flex items-center justify-center">
+                      <>
                         <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin ml-2"></div>
                         جاري التحميل...
-                      </div>
+                      </>
                     ) : (
-                      "عرض التقرير"
+                      <>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5 ml-2"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                          />
+                        </svg>
+                        عرض التقرير
+                      </>
                     )}
                   </button>
                 </div>
@@ -584,7 +336,7 @@ export default function ProductsReports() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 print:grid-cols-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 print:grid-cols-2">
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
                     <div className="flex items-center justify-between">
                       <div>
@@ -603,7 +355,20 @@ export default function ProductsReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                        <span className="text-blue-700 font-bold">💰</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-blue-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -622,7 +387,20 @@ export default function ProductsReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                        <span className="text-green-700 font-bold">📦</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-green-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                          />
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -630,41 +408,30 @@ export default function ProductsReports() {
                   <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-purple-800">إجمالي الربح</p>
+                        <p className="text-sm text-purple-800">عدد المنتجات</p>
                         <p className="text-2xl font-bold text-purple-900 mt-1">
-                          {formatCurrency(reportData.stats.totalProfit)} ج.م
+                          {reportData.stats.totalProducts}
                         </p>
                         <p className="text-xs text-purple-600 mt-1">
-                          هامش ربح:{" "}
-                          {reportData.stats.averageProfitMargin.toFixed(1)}%
+                          إجمالي الإيرادات:{" "}
+                          {formatCurrency(reportData.stats.totalRevenue)} ج.م
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                        <span className="text-purple-700 font-bold">📈</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-amber-800">
-                          المنتج الأكثر مبيعاً
-                        </p>
-                        <p className="text-2xl font-bold text-amber-900 mt-1">
-                          {reportData.stats.topSellingProduct?.name.substring(
-                            0,
-                            10,
-                          )}
-                          ...
-                        </p>
-                        <p className="text-xs text-amber-600 mt-1">
-                          {reportData.stats.topSellingProduct?.quantitySold}{" "}
-                          وحدة
-                        </p>
-                      </div>
-                      <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
-                        <span className="text-amber-700 font-bold">🏆</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-purple-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                          />
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -752,126 +519,48 @@ export default function ProductsReports() {
                 )}
 
                 <div className="mb-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3
-                      className="text-lg font-bold"
-                      style={{ color: "#193F94" }}
-                    >
-                      تفاصيل أداء المنتجات ({reportData.products.length} منتج)
-                    </h3>
-                    <div className="flex items-center space-x-2 rtl:space-x-reverse print:hidden">
-                      <span className="text-sm text-gray-600">ترتيب:</span>
-                      <button
-                        onClick={() =>
-                          setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                        }
-                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
-                      >
-                        {sortOrder === "asc" ? "تصاعدي ↑" : "تنازلي ↓"}
-                      </button>
-                    </div>
-                  </div>
+                  <h3
+                    className="text-lg font-bold mb-4"
+                    style={{ color: "#193F94" }}
+                  >
+                    تفاصيل أداء المنتجات ({reportData.products.length} منتج)
+                  </h3>
 
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-gray-50">
                           <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                            <button
-                              onClick={() => handleSort("name")}
-                              className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                            >
-                              اسم المنتج
-                              {sortBy === "name" && (
-                                <span className="mr-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
-                              )}
-                            </button>
+                            اسم المنتج
                           </th>
                           <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                            <button
-                              onClick={() => handleSort("category")}
-                              className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                            >
-                              الفئة
-                              {sortBy === "category" && (
-                                <span className="mr-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
-                              )}
-                            </button>
+                            الفئة
                           </th>
                           <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                            <button
-                              onClick={() => handleSort("price")}
-                              className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                            >
-                              السعر
-                              {sortBy === "price" && (
-                                <span className="mr-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
-                              )}
-                            </button>
+                            السعر
                           </th>
                           <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                            <button
-                              onClick={() => handleSort("quantitySold")}
-                              className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                            >
-                              الكمية المباعة
-                              {sortBy === "quantitySold" && (
-                                <span className="mr-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
-                              )}
-                            </button>
+                            الكمية المباعة
                           </th>
                           <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                            <button
-                              onClick={() => handleSort("totalRevenue")}
-                              className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                            >
-                              إجمالي الإيرادات
-                              {sortBy === "totalRevenue" && (
-                                <span className="mr-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
-                              )}
-                            </button>
-                          </th>
-                          <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                            <button
-                              onClick={() => handleSort("profit")}
-                              className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                            >
-                              الربح
-                              {sortBy === "profit" && (
-                                <span className="mr-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
-                              )}
-                            </button>
+                            إجمالي الإيرادات
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         {reportData.products.map((product) => {
                           const categoryColor = getCategoryColor(
-                            product.category,
+                            product.subCategoryName || "غير مصنف",
                           );
-                          const profitMargin =
-                            (product.profit / product.totalRevenue) * 100;
 
                           return (
                             <tr
-                              key={product.id}
+                              key={product.productId}
                               className="hover:bg-gray-50 transition-colors border-b border-gray-100"
                             >
                               <td className="py-3 px-4 text-right">
                                 <div className="font-medium text-gray-900">
-                                  {product.name}
+                                  {product.productName}
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-right">
@@ -882,7 +571,7 @@ export default function ProductsReports() {
                                     color: categoryColor.text,
                                   }}
                                 >
-                                  {product.category}
+                                  {product.subCategoryName || "غير مصنف"}
                                 </span>
                               </td>
                               <td className="py-3 px-4 text-right">
@@ -891,27 +580,11 @@ export default function ProductsReports() {
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-right">
-                                <div className="flex items-center justify-end">
-                                  <div className="text-center">
-                                    <div className="font-bold text-blue-900 text-lg">
-                                      {product.quantitySold}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      وحدة
-                                    </div>
-                                  </div>
-                                  <div className="w-1 h-10 bg-gray-200 mx-3"></div>
-                                  <div className="text-right">
-                                    <div className="text-sm font-medium">
-                                      {formatCurrency(
-                                        product.price * product.quantitySold,
-                                      )}{" "}
-                                      ج.م
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      إجمالي
-                                    </div>
-                                  </div>
+                                <div className="font-bold text-blue-900 text-lg">
+                                  {product.quantitySold}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  وحدة
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-right">
@@ -919,22 +592,12 @@ export default function ProductsReports() {
                                   className="font-bold text-lg"
                                   style={{ color: "#193F94" }}
                                 >
-                                  {formatCurrency(product.totalRevenue)} ج.م
+                                  {formatCurrency(product.revenue)} ج.م
                                 </div>
                                 <div className="text-xs text-gray-500">
                                   {product.quantitySold > 0
-                                    ? `${formatCurrency(product.totalRevenue / product.quantitySold)} ج.م/وحدة`
+                                    ? `${formatCurrency(product.revenue / product.quantitySold)} ج.م/وحدة`
                                     : "لا توجد مبيعات"}
-                                </div>
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                <div className="font-bold text-green-700">
-                                  {formatCurrency(product.profit)} ج.م
-                                </div>
-                                <div
-                                  className={`text-xs ${profitMargin >= 50 ? "text-green-600" : profitMargin >= 30 ? "text-amber-600" : "text-red-600"}`}
-                                >
-                                  {profitMargin.toFixed(1)}% هامش ربح
                                 </div>
                               </td>
                             </tr>
@@ -955,9 +618,6 @@ export default function ProductsReports() {
                           >
                             {formatCurrency(reportData.stats.totalRevenue)} ج.م
                           </td>
-                          <td className="py-4 px-4 text-right text-green-700">
-                            {formatCurrency(reportData.stats.totalProfit)} ج.م
-                          </td>
                         </tr>
                       </tfoot>
                     </table>
@@ -971,7 +631,7 @@ export default function ProductsReports() {
                   >
                     ملخص أداء المنتجات
                   </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="text-center">
                       <div
                         className="text-2xl font-bold"
@@ -995,21 +655,10 @@ export default function ProductsReports() {
                         className="text-2xl font-bold"
                         style={{ color: "#8B5CF6" }}
                       >
-                        {reportData.stats.topSellingProduct?.quantitySold || 0}
+                        {formatCurrency(reportData.stats.totalRevenue)}
                       </div>
                       <div className="text-sm text-gray-600">
-                        أعلى كمية مبيعاً
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div
-                        className="text-2xl font-bold"
-                        style={{ color: "#F59E0B" }}
-                      >
-                        {reportData.stats.averageProfitMargin.toFixed(1)}%
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        متوسط هامش الربح
+                        إجمالي الإيرادات
                       </div>
                     </div>
                   </div>
@@ -1057,9 +706,6 @@ export default function ProductsReports() {
                     </svg>
                     اختر التاريخ من وإلى
                   </div>
-                  <div className="text-sm text-gray-500">
-                    يمكنك فرز المنتجات حسب الأكثر مبيعاً أو الأعلى ربحاً
-                  </div>
                 </div>
               </div>
             )}
@@ -1069,3 +715,4 @@ export default function ProductsReports() {
     </div>
   );
 }
+ 

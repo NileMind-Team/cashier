@@ -1,296 +1,17 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import axiosInstance from "../api/axiosInstance";
 
 export default function CustomersReports() {
   const navigate = useNavigate();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState("");
-  // eslint-disable-next-line no-unused-vars
-  const [customers, setCustomers] = useState([]);
-  const [filteredCustomers, setFilteredCustomers] = useState([]);
+  const [phoneSearch, setPhoneSearch] = useState("");
+  const [customerData, setCustomerData] = useState(null);
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [sortBy, setSortBy] = useState("totalSpent");
-  const [sortOrder, setSortOrder] = useState("desc");
-  const [phoneSearch, setPhoneSearch] = useState("");
-  const [searchMode, setSearchMode] = useState("select");
-
-  const customersData = useMemo(
-    () => [
-      {
-        id: "cust_001",
-        name: "أحمد محمد",
-        phone: "01012345678",
-        email: "ahmed@example.com",
-        joinDate: "2026-11-15",
-        totalSpent: 25640.75,
-        totalBills: 42,
-        pendingAmount: 1250.5,
-        bills: [
-          { id: "bill_001", date: "2026-01-15", amount: 163.5, status: "paid" },
-          {
-            id: "bill_002",
-            date: "2026-01-14",
-            amount: 285.75,
-            status: "paid",
-          },
-          {
-            id: "bill_003",
-            date: "2026-01-10",
-            amount: 452.0,
-            status: "pending",
-          },
-          {
-            id: "bill_004",
-            date: "2026-01-05",
-            amount: 320.25,
-            status: "paid",
-          },
-          {
-            id: "bill_005",
-            date: "2026-12-28",
-            amount: 1250.5,
-            status: "pending",
-          },
-        ],
-      },
-      {
-        id: "cust_002",
-        name: "سارة علي",
-        phone: "01123456789",
-        email: "sara@example.com",
-        joinDate: "2026-10-20",
-        totalSpent: 18950.25,
-        totalBills: 36,
-        pendingAmount: 0,
-        bills: [
-          { id: "bill_006", date: "2026-01-16", amount: 92.65, status: "paid" },
-          { id: "bill_007", date: "2026-01-12", amount: 185.3, status: "paid" },
-          {
-            id: "bill_008",
-            date: "2026-01-08",
-            amount: 320.75,
-            status: "paid",
-          },
-          { id: "bill_009", date: "2026-12-15", amount: 452.8, status: "paid" },
-        ],
-      },
-      {
-        id: "cust_003",
-        name: "محمد خالد",
-        phone: "01234567890",
-        email: "mohamed@example.com",
-        joinDate: "2026-12-05",
-        totalSpent: 15478.54,
-        totalBills: 29,
-        pendingAmount: 850.25,
-        bills: [
-          { id: "bill_010", date: "2026-01-15", amount: 155.8, status: "paid" },
-          {
-            id: "bill_011",
-            date: "2026-01-13",
-            amount: 850.25,
-            status: "pending",
-          },
-          { id: "bill_012", date: "2026-01-07", amount: 285.6, status: "paid" },
-          {
-            id: "bill_013",
-            date: "2026-12-25",
-            amount: 325.75,
-            status: "paid",
-          },
-        ],
-      },
-      {
-        id: "cust_004",
-        name: "فاطمة أحمد",
-        phone: "01098765432",
-        email: "fatma@example.com",
-        joinDate: "2026-09-12",
-        totalSpent: 32015.8,
-        totalBills: 58,
-        pendingAmount: 2100.75,
-        bills: [
-          { id: "bill_014", date: "2026-01-14", amount: 70.85, status: "paid" },
-          {
-            id: "bill_015",
-            date: "2026-01-11",
-            amount: 2100.75,
-            status: "pending",
-          },
-          {
-            id: "bill_016",
-            date: "2026-01-05",
-            amount: 185.25,
-            status: "paid",
-          },
-          { id: "bill_017", date: "2026-12-20", amount: 452.9, status: "paid" },
-          { id: "bill_018", date: "2026-12-10", amount: 325.6, status: "paid" },
-        ],
-      },
-      {
-        id: "cust_005",
-        name: "علي حسن",
-        phone: "01187654321",
-        email: "ali@example.com",
-        joinDate: "2026-08-30",
-        totalSpent: 15420.35,
-        totalBills: 31,
-        pendingAmount: 625.0,
-        bills: [
-          { id: "bill_019", date: "2026-01-14", amount: 228.9, status: "paid" },
-          {
-            id: "bill_020",
-            date: "2026-01-10",
-            amount: 625.0,
-            status: "pending",
-          },
-          {
-            id: "bill_021",
-            date: "2026-01-03",
-            amount: 185.45,
-            status: "paid",
-          },
-          {
-            id: "bill_022",
-            date: "2026-12-22",
-            amount: 320.15,
-            status: "paid",
-          },
-        ],
-      },
-      {
-        id: "cust_006",
-        name: "ريم سعد",
-        phone: "01276543210",
-        email: "reem@example.com",
-        joinDate: "2026-11-25",
-        totalSpent: 10235.4,
-        totalBills: 24,
-        pendingAmount: 0,
-        bills: [
-          { id: "bill_023", date: "2026-01-13", amount: 221.2, status: "paid" },
-          {
-            id: "bill_024",
-            date: "2026-01-09",
-            amount: 185.75,
-            status: "paid",
-          },
-          { id: "bill_025", date: "2026-01-02", amount: 125.3, status: "paid" },
-        ],
-      },
-      {
-        id: "cust_007",
-        name: "خالد عمر",
-        phone: "01065432109",
-        email: "khaled@example.com",
-        joinDate: "2026-10-15",
-        totalSpent: 18765.85,
-        totalBills: 38,
-        pendingAmount: 1550.0,
-        bills: [
-          {
-            id: "bill_026",
-            date: "2026-01-13",
-            amount: 103.55,
-            status: "paid",
-          },
-          {
-            id: "bill_027",
-            date: "2026-01-08",
-            amount: 1550.0,
-            status: "pending",
-          },
-          { id: "bill_028", date: "2026-01-04", amount: 285.3, status: "paid" },
-          { id: "bill_029", date: "2026-12-18", amount: 452.5, status: "paid" },
-        ],
-      },
-      {
-        id: "cust_008",
-        name: "نورا سليم",
-        phone: "01154321098",
-        email: "nora@example.com",
-        joinDate: "2026-12-18",
-        totalSpent: 8750.6,
-        totalBills: 19,
-        pendingAmount: 325.75,
-        bills: [
-          { id: "bill_030", date: "2026-01-12", amount: 152.6, status: "paid" },
-          {
-            id: "bill_031",
-            date: "2026-01-07",
-            amount: 325.75,
-            status: "pending",
-          },
-          {
-            id: "bill_032",
-            date: "2026-01-01",
-            amount: 185.25,
-            status: "paid",
-          },
-        ],
-      },
-      {
-        id: "cust_009",
-        name: "سامي رامي",
-        phone: "01243210987",
-        email: "sami@example.com",
-        joinDate: "2026-01-05",
-        totalSpent: 5175.8,
-        totalBills: 12,
-        pendingAmount: 850.0,
-        bills: [
-          { id: "bill_033", date: "2026-01-16", amount: 81.75, status: "paid" },
-          {
-            id: "bill_034",
-            date: "2026-01-14",
-            amount: 850.0,
-            status: "pending",
-          },
-          {
-            id: "bill_035",
-            date: "2026-01-09",
-            amount: 125.05,
-            status: "paid",
-          },
-        ],
-      },
-      {
-        id: "cust_010",
-        name: "ليلى محمود",
-        phone: "01032109876",
-        email: "layla@example.com",
-        joinDate: "2026-09-28",
-        totalSpent: 24150.35,
-        totalBills: 46,
-        pendingAmount: 0,
-        bills: [
-          {
-            id: "bill_036",
-            date: "2026-01-16",
-            amount: 237.55,
-            status: "paid",
-          },
-          { id: "bill_037", date: "2026-01-13", amount: 185.8, status: "paid" },
-          {
-            id: "bill_038",
-            date: "2026-01-08",
-            amount: 325.25,
-            status: "paid",
-          },
-          {
-            id: "bill_039",
-            date: "2026-12-28",
-            amount: 452.75,
-            status: "paid",
-          },
-        ],
-      },
-    ],
-    [],
-  );
+  const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -300,18 +21,11 @@ export default function CustomersReports() {
 
     setStartDate(thirtyDaysAgoFormatted);
     setEndDate(today);
-    setCustomers(customersData);
-    setFilteredCustomers(customersData);
-    if (customersData.length > 0) {
-      setSelectedCustomer(customersData[0].id);
-    }
-  }, [customersData]);
+  }, []);
 
-  const handlePhoneSearch = () => {
+  const handlePhoneSearch = async () => {
     if (!phoneSearch.trim()) {
-      setFilteredCustomers(customersData);
-      setSearchMode("select");
-      toast.info("تم عرض جميع العملاء");
+      toast.error("يرجى إدخال رقم التليفون");
       return;
     }
 
@@ -322,24 +36,31 @@ export default function CustomersReports() {
       return;
     }
 
-    const results = customersData.filter((customer) =>
-      customer.phone.includes(searchTerm),
-    );
+    setSearchLoading(true);
 
-    if (results.length === 0) {
-      toast.error(`لم يتم العثور على عميل برقم التليفون ${phoneSearch}`);
-      setFilteredCustomers([]);
-    } else if (results.length === 1) {
-      const customer = results[0];
-      setSelectedCustomer(customer.id);
-      setPhoneSearch(customer.phone);
-      toast.success(`تم العثور على ${customer.name}`);
-      setFilteredCustomers(results);
-      setSearchMode("search");
-    } else {
-      setFilteredCustomers(results);
-      setSearchMode("search");
-      toast.success(`تم العثور على ${results.length} عميل`);
+    try {
+      const response = await axiosInstance.get("/api/Reports/GetCustomer", {
+        params: {
+          phone: searchTerm,
+        },
+      });
+
+      if (response.status === 200 && response.data) {
+        setCustomerData(response.data);
+        toast.success(`تم العثور على ${response.data.name}`);
+      }
+    } catch (error) {
+      console.error("خطأ في البحث عن العميل:", error);
+      if (error.response?.status === 404) {
+        toast.error(`لم يتم العثور على عميل برقم التليفون ${phoneSearch}`);
+        setCustomerData(null);
+      } else if (error.response?.status === 400) {
+        toast.error("بيانات غير صالحة: تأكد من رقم التليفون");
+      } else {
+        toast.error("حدث خطأ في البحث عن العميل");
+      }
+    } finally {
+      setSearchLoading(false);
     }
   };
 
@@ -351,14 +72,11 @@ export default function CustomersReports() {
 
   const clearSearch = () => {
     setPhoneSearch("");
-    setFilteredCustomers(customersData);
-    setSearchMode("select");
-    if (customersData.length > 0) {
-      setSelectedCustomer(customersData[0].id);
-    }
+    setCustomerData(null);
+    setReportData(null);
   };
 
-  const generateReport = () => {
+  const generateReport = async () => {
     if (!startDate || !endDate) {
       toast.error("يرجى اختيار تاريخ البداية والنهاية");
       return;
@@ -369,196 +87,54 @@ export default function CustomersReports() {
       return;
     }
 
-    if (selectedCustomer === "" || selectedCustomer === "all") {
-      setLoading(true);
-    } else {
-      const customerExists = filteredCustomers.find(
-        (c) => c.id === selectedCustomer,
-      );
-      if (!customerExists) {
-        toast.error("العميل المحدد غير موجود في نتائج البحث");
-        return;
-      }
+    if (!customerData) {
+      toast.error("يرجى البحث عن عميل أولاً");
+      return;
     }
 
     setLoading(true);
 
-    setTimeout(() => {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+    try {
+      const response = await axiosInstance.get(
+        `/api/Reports/CustomerAnalytics/${customerData.id}`,
+        {
+          params: {
+            from: startDate,
+            to: endDate,
+          },
+        },
+      );
 
-      let filteredData;
+      if (response.status === 200 && response.data) {
+        const data = response.data;
 
-      if (selectedCustomer === "all") {
-        filteredData = filteredCustomers
-          .map((customer) => {
-            const filteredBills = customer.bills.filter((bill) => {
-              const billDate = new Date(bill.date);
-              return billDate >= start && billDate <= end;
-            });
-
-            const totalSpentInPeriod = filteredBills.reduce(
-              (sum, bill) => sum + bill.amount,
-              0,
-            );
-            const pendingAmountInPeriod = filteredBills
-              .filter((bill) => bill.status === "pending")
-              .reduce((sum, bill) => sum + bill.amount, 0);
-
-            return {
-              ...customer,
-              filteredBills,
-              totalSpentInPeriod,
-              pendingAmountInPeriod,
-              billsCountInPeriod: filteredBills.length,
-            };
-          })
-          .filter((customer) => customer.billsCountInPeriod > 0);
-      } else {
-        const customer = filteredCustomers.find(
-          (c) => c.id === selectedCustomer,
-        );
-        if (!customer) {
-          toast.error("لم يتم العثور على بيانات العميل");
-          setLoading(false);
-          return;
-        }
-
-        const filteredBills = customer.bills.filter((bill) => {
-          const billDate = new Date(bill.date);
-          return billDate >= start && billDate <= end;
+        setReportData({
+          customer: {
+            ...customerData,
+            analytics: data,
+          },
+          dateRange: {
+            start: formatArabicDate(startDate),
+            end: formatArabicDate(endDate),
+            startDate: startDate,
+            endDate: endDate,
+          },
         });
 
-        const totalSpentInPeriod = filteredBills.reduce(
-          (sum, bill) => sum + bill.amount,
-          0,
-        );
-        const pendingAmountInPeriod = filteredBills
-          .filter((bill) => bill.status === "pending")
-          .reduce((sum, bill) => sum + bill.amount, 0);
-
-        filteredData = [
-          {
-            ...customer,
-            filteredBills,
-            totalSpentInPeriod,
-            pendingAmountInPeriod,
-            billsCountInPeriod: filteredBills.length,
-          },
-        ];
+        toast.success(`تم إنشاء تقرير ${data.customerName}`);
       }
-
-      const sortedData = [...filteredData].sort((a, b) => {
-        let aValue, bValue;
-
-        if (sortBy === "name") {
-          aValue = a.name;
-          bValue = b.name;
-        } else if (sortBy === "totalBills") {
-          aValue = a.totalBills;
-          bValue = b.totalBills;
-        } else if (sortBy === "totalSpent") {
-          aValue = a.totalSpent;
-          bValue = b.totalSpent;
-        } else if (sortBy === "pendingAmount") {
-          aValue = a.pendingAmount;
-          bValue = b.pendingAmount;
-        } else {
-          aValue =
-            selectedCustomer === "all" ? a.totalSpentInPeriod : a.totalSpent;
-          bValue =
-            selectedCustomer === "all" ? b.totalSpentInPeriod : b.totalSpent;
-        }
-
-        if (sortOrder === "asc") {
-          return aValue > bValue ? 1 : -1;
-        } else {
-          return aValue < bValue ? 1 : -1;
-        }
-      });
-
-      const stats = {
-        totalCustomers: sortedData.length,
-        totalSpentAll: sortedData.reduce(
-          (sum, customer) =>
-            sum +
-            (selectedCustomer === "all"
-              ? customer.totalSpentInPeriod
-              : customer.totalSpent),
-          0,
-        ),
-        totalBillsAll: sortedData.reduce(
-          (sum, customer) =>
-            sum +
-            (selectedCustomer === "all"
-              ? customer.billsCountInPeriod
-              : customer.totalBills),
-          0,
-        ),
-        totalPendingAll: sortedData.reduce(
-          (sum, customer) =>
-            sum +
-            (selectedCustomer === "all"
-              ? customer.pendingAmountInPeriod
-              : customer.pendingAmount),
-          0,
-        ),
-        averageSpentPerCustomer:
-          sortedData.length > 0
-            ? sortedData.reduce(
-                (sum, customer) =>
-                  sum +
-                  (selectedCustomer === "all"
-                    ? customer.totalSpentInPeriod
-                    : customer.totalSpent),
-                0,
-              ) / sortedData.length
-            : 0,
-        topSpender:
-          sortedData.length > 0
-            ? sortedData.reduce((max, customer) =>
-                (selectedCustomer === "all"
-                  ? customer.totalSpentInPeriod
-                  : customer.totalSpent) >
-                (selectedCustomer === "all"
-                  ? max.totalSpentInPeriod
-                  : max.totalSpent)
-                  ? customer
-                  : max,
-              )
-            : null,
-        customersWithPending: sortedData.filter(
-          (customer) =>
-            (selectedCustomer === "all"
-              ? customer.pendingAmountInPeriod
-              : customer.pendingAmount) > 0,
-        ).length,
-      };
-
-      setReportData({
-        customers: sortedData,
-        stats: stats,
-        dateRange: {
-          start: formatArabicDate(startDate),
-          end: formatArabicDate(endDate),
-          startDate: startDate,
-          endDate: endDate,
-        },
-        selectedCustomer:
-          selectedCustomer === "all"
-            ? "جميع العملاء"
-            : filteredCustomers.find((c) => c.id === selectedCustomer)?.name ||
-              "عميل محدد",
-      });
-
+    } catch (error) {
+      console.error("خطأ في جلب تقرير العميل:", error);
+      if (error.response?.status === 404) {
+        toast.error("لا توجد بيانات للعميل في الفترة المحددة");
+      } else if (error.response?.status === 400) {
+        toast.error("بيانات غير صالحة: تأكد من تواريخ صحيحة");
+      } else {
+        toast.error("حدث خطأ في جلب تقرير العميل");
+      }
+    } finally {
       setLoading(false);
-      toast.success(
-        selectedCustomer === "all"
-          ? `تم إنشاء التقرير لـ ${sortedData.length} عميل`
-          : `تم إنشاء تقرير ${filteredCustomers.find((c) => c.id === selectedCustomer)?.name}`,
-      );
-    }, 800);
+    }
   };
 
   const formatArabicDate = (dateString) => {
@@ -571,40 +147,12 @@ export default function CustomersReports() {
     });
   };
 
-  const formatDetailedDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ar-EG", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   const formatCurrency = (amount) => {
+    if (amount === undefined || amount === null) return "0.00";
     return new Intl.NumberFormat("ar-EG", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
-  };
-
-  const handleSort = (column) => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortOrder("desc");
-    }
-  };
-
-  const getStatusColor = (status) => {
-    return status === "paid"
-      ? "bg-green-100 text-green-800"
-      : "bg-red-100 text-red-800";
-  };
-
-  const getStatusLabel = (status) => {
-    return status === "paid" ? "مدفوعة" : "معلقة";
   };
 
   return (
@@ -617,7 +165,7 @@ export default function CustomersReports() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center mr-3">
+              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
                 <span className="text-white font-bold">$</span>
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
@@ -669,26 +217,7 @@ export default function CustomersReports() {
               </h3>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <span className="flex items-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 ml-1"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        />
-                      </svg>
-                      بحث برقم التليفون
-                    </span>
-                  </label>
+                <div className="relative">
                   <div className="flex space-x-2 rtl:space-x-reverse">
                     <input
                       type="text"
@@ -696,132 +225,190 @@ export default function CustomersReports() {
                       onChange={(e) => setPhoneSearch(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="أدخل رقم التليفون..."
-                      className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                      className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      dir="rtl"
                     />
                     <button
                       onClick={handlePhoneSearch}
-                      className="px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                      disabled={searchLoading}
+                      className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
+                      {searchLoading ? (
+                        <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin"></div>
+                      ) : (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
+                    <span className="flex items-center">
                       <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4"
+                        className="w-4 h-4 ml-1"
                         fill="none"
-                        viewBox="0 0 24 24"
                         stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                          d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                         />
                       </svg>
-                    </button>
-                  </div>
-                  {phoneSearch && (
-                    <div className="flex justify-between items-center mt-1">
+                      بحث برقم التليفون
+                    </span>
+                  </label>
+                </div>
+
+                {customerData && (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-green-800">
+                        {customerData.name}
+                      </span>
                       <button
                         onClick={clearSearch}
-                        className="text-xs text-red-600 hover:text-red-800"
+                        className="text-red-600 hover:text-red-800"
                       >
-                        مسح البحث
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
                       </button>
-                      <span className="text-xs text-gray-500">
-                        {searchMode === "search" ? "وضع البحث" : "وضع الاختيار"}
-                      </span>
                     </div>
-                  )}
-                </div>
+                    <div className="text-sm text-green-700">
+                      <div>رقم التليفون: {customerData.phone}</div>
+                      {customerData.address && (
+                        <div className="mt-1 text-xs">
+                          العنوان: {customerData.address}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    اختيار العميل
-                    {searchMode === "search" && (
-                      <span className="text-xs text-green-600 mr-2">
-                        ({filteredCustomers.length} نتيجة)
-                      </span>
-                    )}
-                  </label>
-                  <select
-                    value={selectedCustomer}
-                    onChange={(e) => setSelectedCustomer(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
-                    disabled={filteredCustomers.length === 0}
-                  >
-                    <option value="all">جميع العملاء</option>
-                    {filteredCustomers.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.name} - {customer.phone}
-                      </option>
-                    ))}
-                  </select>
-                  {filteredCustomers.length === 0 && (
-                    <p className="text-xs text-red-500 mt-1">
-                      لا توجد عملاء متطابقين مع البحث
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    التاريخ من
-                  </label>
+                <div className="relative">
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                     max={endDate || undefined}
+                    dir="rtl"
                   />
+                  <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
+                    <span className="flex items-center">
+                      <svg
+                        className="w-4 h-4 ml-1"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      التاريخ من
+                    </span>
+                  </label>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    التاريخ إلى
-                  </label>
+                <div className="relative">
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                     min={startDate || undefined}
+                    dir="rtl"
                   />
+                  <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
+                    <span className="flex items-center">
+                      <svg
+                        className="w-4 h-4 ml-1"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      التاريخ إلى
+                    </span>
+                  </label>
                 </div>
 
                 <div className="pt-4">
                   <button
                     onClick={generateReport}
                     disabled={
-                      loading ||
-                      !startDate ||
-                      !endDate ||
-                      filteredCustomers.length === 0
+                      loading || !startDate || !endDate || !customerData
                     }
-                    className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 mb-3 ${
-                      loading ||
-                      !startDate ||
-                      !endDate ||
-                      filteredCustomers.length === 0
+                    className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
+                      loading || !startDate || !endDate || !customerData
                         ? "opacity-50 cursor-not-allowed bg-gray-400"
-                        : "bg-blue-600 hover:bg-blue-700"
+                        : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                     }`}
                     style={{
                       backgroundColor:
-                        loading ||
-                        !startDate ||
-                        !endDate ||
-                        filteredCustomers.length === 0
+                        loading || !startDate || !endDate || !customerData
                           ? ""
                           : "#193F94",
                     }}
                   >
                     {loading ? (
-                      <div className="flex items-center justify-center">
+                      <>
                         <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin ml-2"></div>
                         جاري التحميل...
-                      </div>
+                      </>
                     ) : (
-                      "عرض التقرير"
+                      <>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5 ml-2"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                          />
+                        </svg>
+                        عرض التقرير
+                      </>
                     )}
                   </button>
                 </div>
@@ -838,7 +425,8 @@ export default function CustomersReports() {
                       className="text-2xl font-bold"
                       style={{ color: "#193F94" }}
                     >
-                      تقرير العملاء - {reportData.selectedCustomer}
+                      تقرير العميل -{" "}
+                      {reportData.customer.analytics.customerName}
                     </h2>
                     <p className="text-gray-600 mt-1">
                       الفترة من{" "}
@@ -851,28 +439,16 @@ export default function CustomersReports() {
                       </span>
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      {reportData.stats.totalCustomers} عميل |{" "}
-                      {reportData.stats.totalBillsAll} فاتورة
-                      {searchMode === "search" && (
-                        <span className="mr-2 text-blue-600">
-                          • بحث برقم التليفون
-                        </span>
-                      )}
+                      {reportData.customer.analytics.totalInvoices} فاتورة
                     </p>
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse print:hidden">
                     <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
-                      {reportData.stats.totalCustomers} عميل
+                      {reportData.customer.analytics.totalInvoices} فاتورة
                     </div>
-                    {reportData.stats.customersWithPending > 0 && (
+                    {reportData.customer.analytics.hasDebt && (
                       <div className="px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">
-                        {reportData.stats.customersWithPending} عميل عليه
-                        مدفوعات
-                      </div>
-                    )}
-                    {searchMode === "search" && (
-                      <div className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
-                        بحث
+                        عليه مدفوعات
                       </div>
                     )}
                   </div>
@@ -886,18 +462,27 @@ export default function CustomersReports() {
                           إجمالي المشتريات
                         </p>
                         <p className="text-2xl font-bold text-blue-900 mt-1">
-                          {formatCurrency(reportData.stats.totalSpentAll)} ج.م
-                        </p>
-                        <p className="text-xs text-blue-600 mt-1">
-                          متوسط/عميل:{" "}
                           {formatCurrency(
-                            reportData.stats.averageSpentPerCustomer,
+                            reportData.customer.analytics.totalPurchases,
                           )}{" "}
                           ج.م
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                        <span className="text-blue-700 font-bold">💰</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-blue-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -909,20 +494,29 @@ export default function CustomersReports() {
                           إجمالي الفواتير
                         </p>
                         <p className="text-2xl font-bold text-green-900 mt-1">
-                          {reportData.stats.totalBillsAll}
+                          {reportData.customer.analytics.totalInvoices}
                         </p>
                         <p className="text-xs text-green-600 mt-1">
-                          {reportData.stats.totalCustomers > 0
-                            ? (
-                                reportData.stats.totalBillsAll /
-                                reportData.stats.totalCustomers
-                              ).toFixed(1)
-                            : 0}{" "}
-                          فاتورة/عميل
+                          {reportData.customer.analytics.totalInvoices > 0
+                            ? `متوسط ${formatCurrency(reportData.customer.analytics.averageSpending)} ج.م/فاتورة`
+                            : "لا توجد فواتير"}
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                        <span className="text-green-700 font-bold">🧾</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-green-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -931,453 +525,191 @@ export default function CustomersReports() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-purple-800">
-                          إجمالي المديونيات
+                          إجمالي المدفوع
                         </p>
                         <p className="text-2xl font-bold text-purple-900 mt-1">
-                          {formatCurrency(reportData.stats.totalPendingAll)} ج.م
-                        </p>
-                        <p className="text-xs text-purple-600 mt-1">
-                          {reportData.stats.customersWithPending} عميل عليه
-                          مدفوعات
-                        </p>
-                      </div>
-                      <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                        <span className="text-purple-700 font-bold">⚠️</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-amber-800">أعلى إنفاق</p>
-                        <p className="text-2xl font-bold text-amber-900 mt-1">
-                          {reportData.stats.topSpender?.name.substring(0, 10)}
-                          ...
-                        </p>
-                        <p className="text-xs text-amber-600 mt-1">
                           {formatCurrency(
-                            selectedCustomer === "all"
-                              ? reportData.stats.topSpender?.totalSpentInPeriod
-                              : reportData.stats.topSpender?.totalSpent,
+                            reportData.customer.analytics.totalPaid,
                           )}{" "}
                           ج.م
                         </p>
                       </div>
-                      <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
-                        <span className="text-amber-700 font-bold">👑</span>
+                      <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-purple-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`bg-gradient-to-r rounded-xl p-4 border ${
+                      reportData.customer.analytics.hasDebt
+                        ? "from-red-50 to-red-100 border-red-200"
+                        : "from-amber-50 to-amber-100 border-amber-200"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p
+                          className={`text-sm ${
+                            reportData.customer.analytics.hasDebt
+                              ? "text-red-800"
+                              : "text-amber-800"
+                          }`}
+                        >
+                          المتبقي
+                        </p>
+                        <p
+                          className={`text-2xl font-bold mt-1 ${
+                            reportData.customer.analytics.hasDebt
+                              ? "text-red-900"
+                              : "text-amber-900"
+                          }`}
+                        >
+                          {formatCurrency(
+                            reportData.customer.analytics.totalRemaining,
+                          )}{" "}
+                          ج.م
+                        </p>
+                        <p
+                          className={`text-xs mt-1 ${
+                            reportData.customer.analytics.hasDebt
+                              ? "text-red-600"
+                              : "text-amber-600"
+                          }`}
+                        >
+                          {reportData.customer.analytics.hasDebt
+                            ? "مدفوعات ناقصة"
+                            : "جميع المدفوعات مكتملة"}
+                        </p>
+                      </div>
+                      <div
+                        className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                          reportData.customer.analytics.hasDebt
+                            ? "bg-red-200"
+                            : "bg-amber-200"
+                        }`}
+                      >
+                        <span
+                          className={`text-xl ${
+                            reportData.customer.analytics.hasDebt
+                              ? "text-red-700"
+                              : "text-amber-700"
+                          }`}
+                        >
+                          {reportData.customer.analytics.hasDebt ? "⚠️" : "✓"}
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {selectedCustomer !== "all" &&
-                  reportData.customers.length > 0 && (
-                    <div className="mb-6">
-                      <h3
-                        className="text-lg font-bold mb-4"
-                        style={{ color: "#193F94" }}
-                      >
-                        تفاصيل العميل
-                      </h3>
-                      <div className="bg-gradient-to-r from-gray-50 to-white rounded-xl p-5 border border-gray-200">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                          <div className="bg-white rounded-lg p-4 border border-gray-200">
-                            <div className="flex items-center mb-3">
-                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center ml-2">
-                                <span className="text-blue-700 font-bold">
-                                  👤
-                                </span>
-                              </div>
-                              <div>
-                                <p className="font-bold text-lg">
-                                  {reportData.customers[0].name}
-                                </p>
-                                <p className="text-sm text-gray-600">العميل</p>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">الهاتف:</span>
-                                <span className="font-medium">
-                                  {reportData.customers[0].phone}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">
-                                  تاريخ الانضمام:
-                                </span>
-                                <span className="font-medium">
-                                  {formatArabicDate(
-                                    reportData.customers[0].joinDate,
-                                  )}
-                                </span>
-                              </div>
-                            </div>
+                <div className="mb-6">
+                  <h3
+                    className="text-lg font-bold mb-4"
+                    style={{ color: "#193F94" }}
+                  >
+                    تفاصيل العميل
+                  </h3>
+                  <div className="bg-gradient-to-r from-gray-50 to-white rounded-xl p-5 border border-gray-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-center mb-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center ml-2">
+                            <span className="text-blue-700 font-bold">👤</span>
                           </div>
-
-                          <div className="bg-white rounded-lg p-4 border border-gray-200">
-                            <h4 className="font-bold mb-3 text-gray-800">
-                              إحصائيات الفترة
-                            </h4>
-                            <div className="space-y-3">
-                              <div className="flex justify-between items-center">
-                                <span className="text-gray-600">
-                                  المشتريات في الفترة:
-                                </span>
-                                <span className="font-bold text-blue-700">
-                                  {formatCurrency(
-                                    reportData.customers[0].totalSpentInPeriod,
-                                  )}{" "}
-                                  ج.م
-                                </span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-gray-600">
-                                  عدد الفواتير:
-                                </span>
-                                <span className="font-bold">
-                                  {reportData.customers[0].billsCountInPeriod}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div
-                            className={`rounded-lg p-4 border ${
-                              reportData.customers[0].pendingAmountInPeriod > 0
-                                ? "bg-red-50 border-red-200"
-                                : "bg-green-50 border-green-200"
-                            }`}
-                          >
-                            <h4 className="font-bold mb-3 text-gray-800">
-                              حالة المدفوعات
-                            </h4>
-                            <div className="text-center">
-                              <div
-                                className={`text-3xl font-bold mb-2 ${
-                                  reportData.customers[0]
-                                    .pendingAmountInPeriod > 0
-                                    ? "text-red-700"
-                                    : "text-green-700"
-                                }`}
-                              >
-                                {formatCurrency(
-                                  reportData.customers[0].pendingAmountInPeriod,
-                                )}{" "}
-                                ج.م
-                              </div>
-                              <p className="text-sm text-gray-600">
-                                {reportData.customers[0].pendingAmountInPeriod >
-                                0
-                                  ? "مدفوعات ناقصة"
-                                  : "جميع المدفوعات مكتملة"}
-                              </p>
-                              {reportData.customers[0].pendingAmountInPeriod >
-                                0 && (
-                                <div className="mt-3">
-                                  <button className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors">
-                                    إرسال تذكير
-                                  </button>
-                                </div>
-                              )}
-                            </div>
+                          <div>
+                            <p className="font-bold text-lg">
+                              {reportData.customer.analytics.customerName}
+                            </p>
+                            <p className="text-sm text-gray-600">العميل</p>
                           </div>
                         </div>
-
-                        {reportData.customers[0].filteredBills.length > 0 && (
-                          <div className="mt-4">
-                            <h4 className="font-bold mb-3 text-gray-800">
-                              فواتير العميل في الفترة المحددة
-                            </h4>
-                            <div className="overflow-x-auto">
-                              <table className="w-full border-collapse">
-                                <thead>
-                                  <tr className="bg-gray-100">
-                                    <th className="py-2 px-3 text-right text-sm font-medium text-gray-700">
-                                      رقم الفاتورة
-                                    </th>
-                                    <th className="py-2 px-3 text-right text-sm font-medium text-gray-700">
-                                      التاريخ
-                                    </th>
-                                    <th className="py-2 px-3 text-right text-sm font-medium text-gray-700">
-                                      المبلغ
-                                    </th>
-                                    <th className="py-2 px-3 text-right text-sm font-medium text-gray-700">
-                                      الحالة
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {reportData.customers[0].filteredBills.map(
-                                    (bill, index) => (
-                                      <tr
-                                        key={index}
-                                        className="border-b border-gray-200 hover:bg-gray-50"
-                                      >
-                                        <td className="py-2 px-3 text-right font-medium">
-                                          {bill.id}
-                                        </td>
-                                        <td className="py-2 px-3 text-right">
-                                          {formatDetailedDate(bill.date)}
-                                        </td>
-                                        <td className="py-2 px-3 text-right font-bold">
-                                          {formatCurrency(bill.amount)} ج.م
-                                        </td>
-                                        <td className="py-2 px-3 text-right">
-                                          <span
-                                            className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(bill.status)}`}
-                                          >
-                                            {getStatusLabel(bill.status)}
-                                          </span>
-                                        </td>
-                                      </tr>
-                                    ),
-                                  )}
-                                </tbody>
-                                <tfoot>
-                                  <tr className="bg-gray-50 font-bold">
-                                    <td
-                                      colSpan="2"
-                                      className="py-3 px-3 text-right"
-                                    >
-                                      الإجمالي:
-                                    </td>
-                                    <td className="py-3 px-3 text-right text-blue-700">
-                                      {formatCurrency(
-                                        reportData.customers[0].filteredBills.reduce(
-                                          (sum, bill) => sum + bill.amount,
-                                          0,
-                                        ),
-                                      )}{" "}
-                                      ج.م
-                                    </td>
-                                    <td className="py-3 px-3 text-right">
-                                      <div className="flex items-center justify-end space-x-2 rtl:space-x-reverse">
-                                        <span className="text-green-600 text-sm">
-                                          {
-                                            reportData.customers[0].filteredBills.filter(
-                                              (b) => b.status === "paid",
-                                            ).length
-                                          }{" "}
-                                          مدفوعة
-                                        </span>
-                                        <span className="text-red-600 text-sm">
-                                          {
-                                            reportData.customers[0].filteredBills.filter(
-                                              (b) => b.status === "pending",
-                                            ).length
-                                          }{" "}
-                                          معلقة
-                                        </span>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                </tfoot>
-                              </table>
-                            </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">الهاتف:</span>
+                            <span className="font-medium">
+                              {reportData.customer.analytics.phone}
+                            </span>
                           </div>
-                        )}
+                          {reportData.customer.address && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">العنوان:</span>
+                              <span className="font-medium">
+                                {reportData.customer.address}
+                              </span>
+                            </div>
+                          )}
+                          {reportData.customer.nationalId && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">
+                                الرقم القومي:
+                              </span>
+                              <span className="font-medium">
+                                {reportData.customer.nationalId}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
 
-                {selectedCustomer === "all" && (
-                  <div className="mb-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3
-                        className="text-lg font-bold"
-                        style={{ color: "#193F94" }}
-                      >
-                        قائمة العملاء ({reportData.customers.length} عميل)
-                      </h3>
-                      <div className="flex items-center space-x-2 rtl:space-x-reverse print:hidden">
-                        <span className="text-sm text-gray-600">ترتيب:</span>
-                        <button
-                          onClick={() =>
-                            setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                          }
-                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
-                        >
-                          {sortOrder === "asc" ? "تصاعدي ↑" : "تنازلي ↓"}
-                        </button>
+                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                        <h4 className="font-bold mb-3 text-gray-800">
+                          إحصائيات الفترة
+                        </h4>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">
+                              المشتريات في الفترة:
+                            </span>
+                            <span className="font-bold text-blue-700">
+                              {formatCurrency(
+                                reportData.customer.analytics.totalPurchases,
+                              )}{" "}
+                              ج.م
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">عدد الفواتير:</span>
+                            <span className="font-bold">
+                              {reportData.customer.analytics.totalInvoices}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">
+                              متوسط الإنفاق:
+                            </span>
+                            <span className="font-bold">
+                              {formatCurrency(
+                                reportData.customer.analytics.averageSpending,
+                              )}{" "}
+                              ج.م
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="bg-gray-50">
-                            <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                              <button
-                                onClick={() => handleSort("name")}
-                                className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                              >
-                                اسم العميل
-                                {sortBy === "name" && (
-                                  <span className="mr-1">
-                                    {sortOrder === "asc" ? "↑" : "↓"}
-                                  </span>
-                                )}
-                              </button>
-                            </th>
-                            <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                              رقم التليفون
-                            </th>
-                            <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                              <button
-                                onClick={() => handleSort("totalBills")}
-                                className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                              >
-                                الفواتير
-                                {sortBy === "totalBills" && (
-                                  <span className="mr-1">
-                                    {sortOrder === "asc" ? "↑" : "↓"}
-                                  </span>
-                                )}
-                              </button>
-                            </th>
-                            <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                              <button
-                                onClick={() => handleSort("totalSpent")}
-                                className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                              >
-                                إجمالي المشتريات
-                                {sortBy === "totalSpent" && (
-                                  <span className="mr-1">
-                                    {sortOrder === "asc" ? "↑" : "↓"}
-                                  </span>
-                                )}
-                              </button>
-                            </th>
-                            <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
-                              <button
-                                onClick={() => handleSort("pendingAmount")}
-                                className="hover:text-blue-600 transition-colors flex items-center justify-end w-full"
-                              >
-                                المديونيات
-                                {sortBy === "pendingAmount" && (
-                                  <span className="mr-1">
-                                    {sortOrder === "asc" ? "↑" : "↓"}
-                                  </span>
-                                )}
-                              </button>
-                            </th>
-                            <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700 print:hidden">
-                              الإجراءات
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {reportData.customers.map((customer) => (
-                            <tr
-                              key={customer.id}
-                              className="hover:bg-gray-50 transition-colors border-b border-gray-100"
-                            >
-                              <td className="py-3 px-4 text-right">
-                                <div className="font-medium text-gray-900">
-                                  {customer.name}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {formatArabicDate(customer.joinDate)}
-                                </div>
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                <div className="font-medium">
-                                  {customer.phone}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {customer.email}
-                                </div>
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                <div className="text-center">
-                                  <div className="font-bold text-lg text-blue-900">
-                                    {customer.billsCountInPeriod}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    فاتورة في الفترة
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                <div
-                                  className="font-bold text-lg"
-                                  style={{ color: "#193F94" }}
-                                >
-                                  {formatCurrency(customer.totalSpentInPeriod)}{" "}
-                                  ج.م
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {customer.billsCountInPeriod > 0
-                                    ? `${formatCurrency(customer.totalSpentInPeriod / customer.billsCountInPeriod)} ج.م/فاتورة`
-                                    : "لا توجد فواتير"}
-                                </div>
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                <div
-                                  className={`font-bold ${customer.pendingAmountInPeriod > 0 ? "text-red-700" : "text-green-700"}`}
-                                >
-                                  {formatCurrency(
-                                    customer.pendingAmountInPeriod,
-                                  )}{" "}
-                                  ج.م
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {customer.pendingAmountInPeriod > 0
-                                    ? "مدفوعات ناقصة"
-                                    : "مكتمل"}
-                                </div>
-                              </td>
-                              <td className="py-3 px-4 text-right print:hidden">
-                                <button
-                                  onClick={() => {
-                                    setSelectedCustomer(customer.id);
-                                    setPhoneSearch(customer.phone);
-                                    setTimeout(() => generateReport(), 100);
-                                  }}
-                                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
-                                >
-                                  عرض التفاصيل
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                        <tfoot>
-                          <tr className="bg-gray-50 font-bold">
-                            <td className="py-4 px-4 text-right">
-                              الإجمالي ({reportData.customers.length} عميل):
-                            </td>
-                            <td className="py-4 px-4 text-right">-</td>
-                            <td className="py-4 px-4 text-right text-blue-900">
-                              {reportData.stats.totalBillsAll}
-                            </td>
-                            <td
-                              className="py-4 px-4 text-right"
-                              style={{ color: "#193F94" }}
-                            >
-                              {formatCurrency(reportData.stats.totalSpentAll)}{" "}
-                              ج.م
-                            </td>
-                            <td className="py-4 px-4 text-right text-red-700">
-                              {formatCurrency(reportData.stats.totalPendingAll)}{" "}
-                              ج.م
-                            </td>
-                            <td className="print:hidden"></td>
-                          </tr>
-                        </tfoot>
-                      </table>
                     </div>
                   </div>
-                )}
+                </div>
 
                 <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-200">
                   <h4
                     className="font-bold mb-4 text-gray-800"
                     style={{ color: "#193F94" }}
                   >
-                    ملخص تقرير العملاء
+                    ملخص تقرير العميل
                   </h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center">
@@ -1385,19 +717,21 @@ export default function CustomersReports() {
                         className="text-2xl font-bold"
                         style={{ color: "#193F94" }}
                       >
-                        {reportData.stats.totalCustomers}
+                        {reportData.customer.analytics.totalInvoices}
                       </div>
-                      <div className="text-sm text-gray-600">عدد العملاء</div>
+                      <div className="text-sm text-gray-600">عدد الفواتير</div>
                     </div>
                     <div className="text-center">
                       <div
                         className="text-2xl font-bold"
                         style={{ color: "#10B981" }}
                       >
-                        {reportData.stats.totalBillsAll}
+                        {formatCurrency(
+                          reportData.customer.analytics.totalPurchases,
+                        )}
                       </div>
                       <div className="text-sm text-gray-600">
-                        إجمالي الفواتير
+                        إجمالي المشتريات
                       </div>
                     </div>
                     <div className="text-center">
@@ -1406,23 +740,26 @@ export default function CustomersReports() {
                         style={{ color: "#8B5CF6" }}
                       >
                         {formatCurrency(
-                          reportData.stats.averageSpentPerCustomer,
+                          reportData.customer.analytics.totalPaid,
                         )}
                       </div>
                       <div className="text-sm text-gray-600">
-                        متوسط الإنفاق/عميل
+                        إجمالي المدفوع
                       </div>
                     </div>
                     <div className="text-center">
                       <div
-                        className="text-2xl font-bold"
-                        style={{ color: "#F59E0B" }}
+                        className={`text-2xl font-bold ${
+                          reportData.customer.analytics.hasDebt
+                            ? "text-red-600"
+                            : "text-green-600"
+                        }`}
                       >
-                        {reportData.stats.customersWithPending}
+                        {formatCurrency(
+                          reportData.customer.analytics.totalRemaining,
+                        )}
                       </div>
-                      <div className="text-sm text-gray-600">
-                        عملاء عليه مدفوعات
-                      </div>
+                      <div className="text-sm text-gray-600">المتبقي</div>
                     </div>
                   </div>
                 </div>
@@ -1449,8 +786,7 @@ export default function CustomersReports() {
                   تقارير العملاء
                 </h3>
                 <p className="text-gray-500 text-center mb-6 max-w-md">
-                  ابحث برقم التليفون أو اختر عميلاً من القائمة وتاريخ البداية
-                  والنهاية لعرض التقرير
+                  ابحث برقم التليفون واختر تاريخ البداية والنهاية لعرض التقرير
                 </p>
                 <div className="text-center space-y-3">
                   <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg">
@@ -1469,9 +805,6 @@ export default function CustomersReports() {
                       />
                     </svg>
                     بحث برقم التليفون
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    أو اختر "جميع العملاء" لعرض تقرير شامل
                   </div>
                 </div>
               </div>
