@@ -27,6 +27,7 @@ import {
   FaShieldAlt,
   FaPizzaSlice,
   FaPercentage,
+  FaPrint,
 } from "react-icons/fa";
 import axiosInstance from "../../api/axiosInstance";
 
@@ -228,6 +229,10 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
     navigate("/discounts");
   };
 
+  const handlePrintersNavigation = () => {
+    navigate("/printers");
+  };
+
   const isReportsActive = location.pathname.startsWith("/reports");
   const isUsersActive = location.pathname === "/users";
   const isPermissionsActive = location.pathname === "/permissions";
@@ -240,6 +245,7 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
   const isHallsActive = location.pathname === "/halls";
   const isOptionsActive = location.pathname === "/options";
   const isDiscountsActive = location.pathname === "/discounts";
+  const isPrintersActive = location.pathname === "/printers";
 
   return (
     <div className="bg-gradient-to-r from-white to-gray-50/80 shadow-lg backdrop-blur-sm border-b border-gray-200/80 sticky top-0 z-50">
@@ -381,6 +387,21 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                 className={`h-4 w-4 ml-1.5 ${isPaymentMethodsActive ? "text-white" : "text-blue-700"}`}
               />
               <span className="relative">طرق الدفع</span>
+            </button>
+
+            <button
+              onClick={handlePrintersNavigation}
+              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
+                isPrintersActive
+                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
+                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
+              }`}
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
+              <FaPrint
+                className={`h-4 w-4 ml-1.5 ${isPrintersActive ? "text-white" : "text-blue-700"}`}
+              />
+              <span className="relative">إدارة الطابعات</span>
             </button>
 
             <button
