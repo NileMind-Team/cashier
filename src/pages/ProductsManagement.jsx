@@ -453,10 +453,12 @@ export default function ProductsManagement() {
     if (result.isConfirmed) {
       try {
         const response = await axiosInstance.put(
-          `/api/Items/Update/${productId}`,
+          `/api/Items/SetAvailability/${productId}/${product.isAvailable ? "Active" : "Active"}`,
+          null,
           {
-            ...product,
-            isAvailable: !product.isAvailable,
+            params: {
+              isAvailable: !product.isAvailable,
+            },
           },
         );
 
@@ -470,7 +472,15 @@ export default function ProductsManagement() {
         }
       } catch (error) {
         console.error("خطأ في تغيير حالة المنتج:", error);
-        toast.error("حدث خطأ في تغيير حالة المنتج");
+
+        if (error.response?.status === 200 || error.response?.status === 204) {
+          toast.success(
+            `تم ${product.isAvailable ? "تعطيل" : "تفعيل"} المنتج بنجاح`,
+          );
+          await fetchProducts(pagination.currentPage, false);
+        } else {
+          toast.error("حدث خطأ في تغيير حالة المنتج");
+        }
       }
     }
   };
