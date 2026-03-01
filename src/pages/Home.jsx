@@ -15,7 +15,7 @@ export default function Home() {
   const [productQuantity, setProductQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState([]);
   const [optionsCurrentPage, setOptionsCurrentPage] = useState(1);
-  const [optionsPerPage] = useState(10);
+  const [optionsPerPage] = useState(8);
 
   const [bills, setBills] = useState([
     {
@@ -1712,7 +1712,7 @@ export default function Home() {
 
                     {/* Options Grid */}
                     <div className="border border-gray-200 rounded-lg p-2 bg-gray-50 w-full mx-6">
-                      <div className="grid grid-cols-5 gap-1">
+                      <div className="grid grid-cols-4 gap-1">
                         {paginatedOptions.map((option) => {
                           const isSelected = selectedOptions.some(
                             (o) => o.id === option.id,

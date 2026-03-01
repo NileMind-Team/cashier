@@ -28,6 +28,7 @@ import {
   FaPizzaSlice,
   FaPercentage,
   FaPrint,
+  FaBuilding,
 } from "react-icons/fa";
 import axiosInstance from "../../api/axiosInstance";
 
@@ -35,13 +36,21 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showReportsDropdown, setShowReportsDropdown] = useState(false);
+  const [showManagementDropdown, setShowManagementDropdown] = useState(false);
   const [isClosingShift, setIsClosingShift] = useState(false);
   const dropdownRef = useRef(null);
+  const managementDropdownRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowReportsDropdown(false);
+      }
+      if (
+        managementDropdownRef.current &&
+        !managementDropdownRef.current.contains(event.target)
+      ) {
+        setShowManagementDropdown(false);
       }
     };
 
@@ -189,63 +198,61 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
     }
   };
 
-  const handleUsersNavigation = () => {
-    navigate("/users");
-  };
+  const handleManagementNavigation = (managementType) => {
+    setShowManagementDropdown(false);
 
-  const handlePermissionsNavigation = () => {
-    navigate("/permissions");
-  };
-
-  const handleCategoriesNavigation = () => {
-    navigate("/categories");
-  };
-
-  const handleProductsManagementNavigation = () => {
-    navigate("/products-management");
-  };
-
-  const handleCustomersNavigation = () => {
-    navigate("/customers");
-  };
-
-  const handleShippingCompaniesNavigation = () => {
-    navigate("/shipping-companies");
-  };
-
-  const handlePaymentMethodsNavigation = () => {
-    navigate("/payment-methods");
-  };
-
-  const handleHallsNavigation = () => {
-    navigate("/halls");
-  };
-
-  const handleOptionsNavigation = () => {
-    navigate("/options");
-  };
-
-  const handleDiscountsNavigation = () => {
-    navigate("/discounts");
-  };
-
-  const handlePrintersNavigation = () => {
-    navigate("/printers");
+    switch (managementType) {
+      case "halls":
+        navigate("/halls");
+        break;
+      case "options":
+        navigate("/options");
+        break;
+      case "categories":
+        navigate("/categories");
+        break;
+      case "products":
+        navigate("/products-management");
+        break;
+      case "customers":
+        navigate("/customers");
+        break;
+      case "shipping":
+        navigate("/shipping-companies");
+        break;
+      case "payment-methods":
+        navigate("/payment-methods");
+        break;
+      case "printers":
+        navigate("/printers");
+        break;
+      case "discounts":
+        navigate("/discounts");
+        break;
+      case "users":
+        navigate("/users");
+        break;
+      case "permissions":
+        navigate("/permissions");
+        break;
+      default:
+        break;
+    }
   };
 
   const isReportsActive = location.pathname.startsWith("/reports");
-  const isUsersActive = location.pathname === "/users";
-  const isPermissionsActive = location.pathname === "/permissions";
-  const isCategoriesActive = location.pathname === "/categories";
-  const isProductsManagementActive =
-    location.pathname === "/products-management";
-  const isCustomersActive = location.pathname === "/customers";
-  const isShippingCompaniesActive = location.pathname === "/shipping-companies";
-  const isPaymentMethodsActive = location.pathname === "/payment-methods";
-  const isHallsActive = location.pathname === "/halls";
-  const isOptionsActive = location.pathname === "/options";
-  const isDiscountsActive = location.pathname === "/discounts";
-  const isPrintersActive = location.pathname === "/printers";
+  const isManagementActive =
+    location.pathname === "/halls" ||
+    location.pathname === "/options" ||
+    location.pathname === "/categories" ||
+    location.pathname === "/products-management" ||
+    location.pathname === "/customers" ||
+    location.pathname === "/shipping-companies" ||
+    location.pathname === "/payment-methods" ||
+    location.pathname === "/printers" ||
+    location.pathname === "/discounts" ||
+    location.pathname === "/users" ||
+    location.pathname === "/permissions";
 
   return (
     <div className="bg-gradient-to-r from-white to-gray-50/80 shadow-lg backdrop-blur-sm border-b border-gray-200/80 sticky top-0 z-50">
@@ -277,179 +284,366 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
 
           {/* Navigation Buttons */}
           <div className="flex items-center space-x-1.5 rtl:space-x-reverse">
-            {/* Halls Management */}
-            <button
-              onClick={handleHallsNavigation}
-              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm whitespace-nowrap flex-shrink-0 relative overflow-hidden group ${
-                isHallsActive
-                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
-                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
-              }`}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
-              <FaChair
-                className={`h-4 w-4 ml-1.5 ${isHallsActive ? "text-white" : "text-blue-700"}`}
-              />
-              <span className="relative">إدارة الصالات</span>
-            </button>
+            {/* Management Dropdown */}
+            <div className="relative" ref={managementDropdownRef}>
+              <button
+                onClick={() =>
+                  setShowManagementDropdown(!showManagementDropdown)
+                }
+                aria-expanded={showManagementDropdown}
+                aria-haspopup="true"
+                className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
+                  isManagementActive
+                    ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
+                    : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
+                } ${showManagementDropdown ? "bg-gradient-to-r from-blue-900 to-blue-700 text-white" : ""}`}
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
+                <FaBuilding
+                  className={`h-4 w-4 ml-1.5 ${isManagementActive || showManagementDropdown ? "text-white" : "text-blue-700"}`}
+                />
+                <span className="relative">الإدارات</span>
+                <FaChevronDown
+                  className={`h-3 w-3 mr-1 transition-all duration-300 ${
+                    showManagementDropdown ? "rotate-180 transform" : ""
+                  } ${isManagementActive || showManagementDropdown ? "text-white" : "text-gray-500"}`}
+                />
+              </button>
 
-            {/* Options Management */}
-            <button
-              onClick={handleOptionsNavigation}
-              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm whitespace-nowrap flex-shrink-0 relative overflow-hidden group ${
-                isOptionsActive
-                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
-                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
-              }`}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
-              <FaPizzaSlice
-                className={`h-4 w-4 ml-1.5 ${isOptionsActive ? "text-white" : "text-blue-700"}`}
-              />
-              <span className="relative">إدارة الإضافات</span>
-            </button>
+              {showManagementDropdown && (
+                <div className="absolute left-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-slideDown">
+                  <div className="p-2 bg-gradient-to-b from-gray-50 to-white">
+                    <div className="text-xs font-semibold text-gray-500 px-3 py-1.5 border-b border-gray-100 mb-1">
+                      قائمة الإدارات
+                    </div>
+                    <div className="space-y-0.5">
+                      {/* Halls Management */}
+                      <button
+                        onClick={() => handleManagementNavigation("halls")}
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                          location.pathname === "/halls"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
+                            location.pathname === "/halls"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
+                          }`}
+                        >
+                          <FaChair
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
+                              location.pathname === "/halls"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium text-sm">إدارة الصالات</p>
+                        </div>
+                      </button>
 
-            {/* Categories Management */}
-            <button
-              onClick={handleCategoriesNavigation}
-              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
-                isCategoriesActive
-                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
-                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
-              }`}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
-              <FaLayerGroup
-                className={`h-4 w-4 ml-1.5 ${isCategoriesActive ? "text-white" : "text-blue-700"}`}
-              />
-              <span className="relative">إدارة الفئات</span>
-            </button>
+                      {/* Options Management */}
+                      <button
+                        onClick={() => handleManagementNavigation("options")}
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                          location.pathname === "/options"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
+                            location.pathname === "/options"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
+                          }`}
+                        >
+                          <FaPizzaSlice
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
+                              location.pathname === "/options"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium text-sm">إدارة الإضافات</p>
+                        </div>
+                      </button>
 
-            {/* Products Management */}
-            <button
-              onClick={handleProductsManagementNavigation}
-              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
-                isProductsManagementActive
-                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
-                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
-              }`}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
-              <FaBoxOpen
-                className={`h-4 w-4 ml-1.5 ${isProductsManagementActive ? "text-white" : "text-blue-700"}`}
-              />
-              <span className="relative">إدارة المنتجات</span>
-            </button>
+                      {/* Categories Management */}
+                      <button
+                        onClick={() => handleManagementNavigation("categories")}
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                          location.pathname === "/categories"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
+                            location.pathname === "/categories"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
+                          }`}
+                        >
+                          <FaLayerGroup
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
+                              location.pathname === "/categories"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium text-sm">إدارة الفئات</p>
+                        </div>
+                      </button>
 
-            {/* Customers Management */}
-            <button
-              onClick={handleCustomersNavigation}
-              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
-                isCustomersActive
-                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
-                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
-              }`}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
-              <FaUser
-                className={`h-4 w-4 ml-1.5 ${isCustomersActive ? "text-white" : "text-blue-700"}`}
-              />
-              <span className="relative">إدارة العملاء</span>
-            </button>
+                      {/* Products Management */}
+                      <button
+                        onClick={() => handleManagementNavigation("products")}
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                          location.pathname === "/products-management"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
+                            location.pathname === "/products-management"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
+                          }`}
+                        >
+                          <FaBoxOpen
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
+                              location.pathname === "/products-management"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium text-sm">إدارة المنتجات</p>
+                        </div>
+                      </button>
 
-            {/* Shipping Companies */}
-            <button
-              onClick={handleShippingCompaniesNavigation}
-              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
-                isShippingCompaniesActive
-                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
-                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
-              }`}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
-              <FaTruck
-                className={`h-4 w-4 ml-1.5 ${isShippingCompaniesActive ? "text-white" : "text-blue-700"}`}
-              />
-              <span className="relative">شركات التوصيل</span>
-            </button>
+                      {/* Customers Management */}
+                      <button
+                        onClick={() => handleManagementNavigation("customers")}
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                          location.pathname === "/customers"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
+                            location.pathname === "/customers"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
+                          }`}
+                        >
+                          <FaUser
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
+                              location.pathname === "/customers"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium text-sm">إدارة العملاء</p>
+                        </div>
+                      </button>
 
-            {/* Payment Methods */}
-            <button
-              onClick={handlePaymentMethodsNavigation}
-              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
-                isPaymentMethodsActive
-                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
-                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
-              }`}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
-              <FaCreditCard
-                className={`h-4 w-4 ml-1.5 ${isPaymentMethodsActive ? "text-white" : "text-blue-700"}`}
-              />
-              <span className="relative">طرق الدفع</span>
-            </button>
+                      {/* Shipping Companies */}
+                      <button
+                        onClick={() => handleManagementNavigation("shipping")}
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                          location.pathname === "/shipping-companies"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
+                            location.pathname === "/shipping-companies"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
+                          }`}
+                        >
+                          <FaTruck
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
+                              location.pathname === "/shipping-companies"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium text-sm">شركات التوصيل</p>
+                        </div>
+                      </button>
 
-            <button
-              onClick={handlePrintersNavigation}
-              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
-                isPrintersActive
-                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
-                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
-              }`}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
-              <FaPrint
-                className={`h-4 w-4 ml-1.5 ${isPrintersActive ? "text-white" : "text-blue-700"}`}
-              />
-              <span className="relative">إدارة الطابعات</span>
-            </button>
+                      {/* Payment Methods */}
+                      <button
+                        onClick={() =>
+                          handleManagementNavigation("payment-methods")
+                        }
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                          location.pathname === "/payment-methods"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
+                            location.pathname === "/payment-methods"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
+                          }`}
+                        >
+                          <FaCreditCard
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
+                              location.pathname === "/payment-methods"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium text-sm">طرق الدفع</p>
+                        </div>
+                      </button>
 
-            <button
-              onClick={handleDiscountsNavigation}
-              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
-                isDiscountsActive
-                  ? "text-white bg-gradient-to-r from-purple-900 to-purple-700 shadow-md shadow-purple-900/30"
-                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-purple-300 hover:shadow-md hover:shadow-purple-900/10"
-              }`}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-purple-600/0 group-hover:from-purple-600/5 group-hover:to-purple-600/0 transition-all duration-300"></span>
-              <FaPercentage
-                className={`h-4 w-4 ml-1.5 ${isDiscountsActive ? "text-white" : "text-blue-700"}`}
-              />
-              <span className="relative">إدارة الخصومات</span>
-            </button>
+                      {/* Printers Management */}
+                      <button
+                        onClick={() => handleManagementNavigation("printers")}
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                          location.pathname === "/printers"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
+                            location.pathname === "/printers"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
+                          }`}
+                        >
+                          <FaPrint
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
+                              location.pathname === "/printers"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium text-sm">إدارة الطابعات</p>
+                        </div>
+                      </button>
 
-            {/* Users Management */}
-            <button
-              onClick={handleUsersNavigation}
-              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
-                isUsersActive
-                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
-                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
-              }`}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
-              <FaUserCog
-                className={`h-4 w-4 ml-1.5 ${isUsersActive ? "text-white" : "text-blue-700"}`}
-              />
-              <span className="relative">إدارة الموظفين</span>
-            </button>
+                      {/* Discounts Management */}
+                      <button
+                        onClick={() => handleManagementNavigation("discounts")}
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                          location.pathname === "/discounts"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
+                            location.pathname === "/discounts"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
+                          }`}
+                        >
+                          <FaPercentage
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
+                              location.pathname === "/discounts"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium text-sm">إدارة الخصومات</p>
+                        </div>
+                      </button>
 
-            {/* Permissions Management */}
-            <button
-              onClick={handlePermissionsNavigation}
-              className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
-                isPermissionsActive
-                  ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
-                  : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
-              }`}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
-              <FaShieldAlt
-                className={`h-4 w-4 ml-1.5 ${isPermissionsActive ? "text-white" : "text-blue-700"}`}
-              />
-              <span className="relative">إدارة الصلاحيات</span>
-            </button>
+                      {/* Users Management */}
+                      <button
+                        onClick={() => handleManagementNavigation("users")}
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                          location.pathname === "/users"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
+                            location.pathname === "/users"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
+                          }`}
+                        >
+                          <FaUserCog
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
+                              location.pathname === "/users"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium text-sm">إدارة الموظفين</p>
+                        </div>
+                      </button>
+
+                      {/* Permissions Management */}
+                      <button
+                        onClick={() =>
+                          handleManagementNavigation("permissions")
+                        }
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                          location.pathname === "/permissions"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
+                            location.pathname === "/permissions"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
+                          }`}
+                        >
+                          <FaShieldAlt
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
+                              location.pathname === "/permissions"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium text-sm">إدارة الصلاحيات</p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Reports Dropdown */}
             <div className="relative" ref={dropdownRef}>
@@ -478,27 +672,27 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
               {showReportsDropdown && (
                 <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-slideDown">
                   <div className="p-2 bg-gradient-to-b from-gray-50 to-white">
-                    <div className="text-xs font-semibold text-gray-500 px-3 py-2 border-b border-gray-100 mb-2">
+                    <div className="text-xs font-semibold text-gray-500 px-3 py-1.5 border-b border-gray-100 mb-1">
                       قائمة التقارير
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                       <button
                         onClick={() => handleReportNavigation("shifts")}
-                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/shifts"
                             ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
                             : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
                             location.pathname === "/reports/shifts"
                               ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
                               : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
                           <FaClock
-                            className={`h-4 w-4 transition-all duration-200 ${
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
                               location.pathname === "/reports/shifts"
                                 ? "text-white"
                                 : "text-blue-600 group-hover:text-white"
@@ -506,7 +700,7 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                           />
                         </div>
                         <div className="flex-1 text-right">
-                          <p className="font-medium">تقارير الورديات</p>
+                          <p className="font-medium text-sm">تقارير الورديات</p>
                           <p className="text-xs text-gray-500">
                             سجل الورديات والإيرادات
                           </p>
@@ -515,21 +709,21 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
 
                       <button
                         onClick={() => handleReportNavigation("sales")}
-                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/sales"
                             ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
                             : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
                             location.pathname === "/reports/sales"
                               ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
                               : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
                           <FaChartLine
-                            className={`h-4 w-4 transition-all duration-200 ${
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
                               location.pathname === "/reports/sales"
                                 ? "text-white"
                                 : "text-blue-600 group-hover:text-white"
@@ -537,7 +731,7 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                           />
                         </div>
                         <div className="flex-1 text-right">
-                          <p className="font-medium">تقارير المبيعات</p>
+                          <p className="font-medium text-sm">تقارير المبيعات</p>
                           <p className="text-xs text-gray-500">
                             تحليلات المبيعات والأرباح
                           </p>
@@ -546,21 +740,21 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
 
                       <button
                         onClick={() => handleReportNavigation("products")}
-                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/products"
                             ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
                             : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
                             location.pathname === "/reports/products"
                               ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
                               : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
                           <FaBoxes
-                            className={`h-4 w-4 transition-all duration-200 ${
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
                               location.pathname === "/reports/products"
                                 ? "text-white"
                                 : "text-blue-600 group-hover:text-white"
@@ -568,7 +762,7 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                           />
                         </div>
                         <div className="flex-1 text-right">
-                          <p className="font-medium">تقارير المنتجات</p>
+                          <p className="font-medium text-sm">تقارير المنتجات</p>
                           <p className="text-xs text-gray-500">
                             أكثر المنتجات مبيعاً
                           </p>
@@ -577,21 +771,21 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
 
                       <button
                         onClick={() => handleReportNavigation("customers")}
-                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/customers"
                             ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
                             : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
                             location.pathname === "/reports/customers"
                               ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
                               : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
                           <FaUserFriends
-                            className={`h-4 w-4 transition-all duration-200 ${
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
                               location.pathname === "/reports/customers"
                                 ? "text-white"
                                 : "text-blue-600 group-hover:text-white"
@@ -599,7 +793,7 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                           />
                         </div>
                         <div className="flex-1 text-right">
-                          <p className="font-medium">تقارير العملاء</p>
+                          <p className="font-medium text-sm">تقارير العملاء</p>
                           <p className="text-xs text-gray-500">
                             تحليلات العملاء والمشتريات
                           </p>
@@ -610,21 +804,21 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                         onClick={() =>
                           handleReportNavigation("payment-methods")
                         }
-                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/payment-methods"
                             ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
                             : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
                             location.pathname === "/reports/payment-methods"
                               ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
                               : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
                           <FaMoneyCheck
-                            className={`h-4 w-4 transition-all duration-200 ${
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
                               location.pathname === "/reports/payment-methods"
                                 ? "text-white"
                                 : "text-blue-600 group-hover:text-white"
@@ -632,7 +826,9 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                           />
                         </div>
                         <div className="flex-1 text-right">
-                          <p className="font-medium">تقارير طرق الدفع</p>
+                          <p className="font-medium text-sm">
+                            تقارير طرق الدفع
+                          </p>
                           <p className="text-xs text-gray-500">
                             تحليلات طرق الدفع المستخدمة
                           </p>
@@ -641,21 +837,21 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
 
                       <button
                         onClick={() => handleReportNavigation("pending-bills")}
-                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/pending-bills"
                             ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
                             : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
                             location.pathname === "/reports/pending-bills"
                               ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
                               : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
                           <FaExclamationCircle
-                            className={`h-4 w-4 transition-all duration-200 ${
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
                               location.pathname === "/reports/pending-bills"
                                 ? "text-white"
                                 : "text-blue-600 group-hover:text-white"
@@ -663,7 +859,9 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                           />
                         </div>
                         <div className="flex-1 text-right">
-                          <p className="font-medium">تقارير الفواتير المعلقة</p>
+                          <p className="font-medium text-sm">
+                            تقارير الفواتير المعلقة
+                          </p>
                           <p className="text-xs text-gray-500">
                             الفواتير غير المكتملة
                           </p>
@@ -672,21 +870,21 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
 
                       <button
                         onClick={() => handleReportNavigation("returns")}
-                        className={`flex items-center w-full px-3 py-2.5 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
                           location.pathname === "/reports/returns"
                             ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
                             : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
                         }`}
                       >
                         <div
-                          className={`flex items-center justify-center w-8 h-8 rounded-lg ml-3 transition-all duration-200 ${
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
                             location.pathname === "/reports/returns"
                               ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
                               : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
                           <FaUndo
-                            className={`h-4 w-4 transition-all duration-200 ${
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
                               location.pathname === "/reports/returns"
                                 ? "text-white"
                                 : "text-blue-600 group-hover:text-white"
@@ -694,7 +892,9 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                           />
                         </div>
                         <div className="flex-1 text-right">
-                          <p className="font-medium">تقارير المرتجعات</p>
+                          <p className="font-medium text-sm">
+                            تقارير المرتجعات
+                          </p>
                           <p className="text-xs text-gray-500">
                             سجل المنتجات المرتجعة
                           </p>
