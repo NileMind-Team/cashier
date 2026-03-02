@@ -1,12 +1,21 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import Navbar from "../components/layout/Navbar.jsx";
 import axiosInstance from "../api/axiosInstance";
 
 export default function Home() {
+  const initializedRef = useRef(false);
+  const shiftFetchedRef = useRef(false);
+  const hallsFetchedRef = useRef(false);
+  const tablesFetchedRef = useRef(false);
+  const mainCategoriesFetchedRef = useRef(false);
+  const paymentMethodsFetchedRef = useRef(false);
+  const optionsFetchedRef = useRef(false);
   const [isShiftOpen, setIsShiftOpen] = useState(true);
-  const [shiftStartTime] = useState(new Date().toLocaleTimeString("ar-EG"));
+  const [shiftStartTime, setShiftStartTime] = useState(
+    new Date().toLocaleTimeString("ar-EG"),
+  );
   const [loading, setLoading] = useState(false);
   const [hallsLoading, setHallsLoading] = useState(false);
   const [tablesLoading, setTablesLoading] = useState(false);
@@ -16,7 +25,8 @@ export default function Home() {
   const [selectedOptions, setSelectedOptions] = useState([]);
   const [optionsCurrentPage, setOptionsCurrentPage] = useState(1);
   const [optionsPerPage] = useState(8);
-
+  const [currentShift, setCurrentShift] = useState(null);
+  const [shiftLoading, setShiftLoading] = useState(false);
   const [bills, setBills] = useState([
     {
       id: 1,
@@ -30,10 +40,14 @@ export default function Home() {
       billType: "takeaway",
       customerName: "",
       customerPhone: "",
+      customerAddress: "",
+      customerNationalId: "",
+      customerId: null,
       tableStatus: null,
-      preparedItems: [],
       generalNote: "",
       paymentMethod: null,
+      invoiceId: null,
+      isPending: true,
     },
   ]);
   const [currentBillIndex, setCurrentBillIndex] = useState(0);
@@ -41,8 +55,13 @@ export default function Home() {
   const [tax, setTax] = useState(14);
   const [discount, setDiscount] = useState(0);
   const [deliveryFee, setDeliveryFee] = useState(25);
-  const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [customerNationalId, setCustomerNationalId] = useState("");
+  const [customerId, setCustomerId] = useState(null);
+  const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState(null);
   const [showTableSelection, setShowTableSelection] = useState(false);
   const [selectedHall, setSelectedHall] = useState(null);
   const [selectedTable, setSelectedTable] = useState(null);
@@ -65,12 +84,32 @@ export default function Home() {
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
   const [halls, setHalls] = useState([]);
   const [tables, setTables] = useState([]);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [isEditingCustomer, setIsEditingCustomer] = useState(false);
+  const [customerFormData, setCustomerFormData] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    nationalId: "",
+  });
+  const [focusedField, setFocusedField] = useState(null);
 
   const TableStatus = {
     Available: 0,
     Occupied: 1,
     Reserved: 2,
     OutOfService: 3,
+  };
+
+  const InvoiceType = {
+    DineIn: 0,
+    Takeaway: 1,
+    Delivery: 2,
+  };
+
+  const DiscountType = {
+    Percentage: 0,
+    Fixed: 1,
   };
 
   const getTableStatusText = (status) => {
@@ -103,7 +142,69 @@ export default function Home() {
     }
   };
 
+  const getInvoiceTypeFromBillType = (billType) => {
+    switch (billType) {
+      case "dinein":
+        return InvoiceType.DineIn;
+      case "takeaway":
+        return InvoiceType.Takeaway;
+      case "delivery":
+        return InvoiceType.Delivery;
+      default:
+        return InvoiceType.Takeaway;
+    }
+  };
+
+  const fetchShiftDetails = async () => {
+    if (shiftFetchedRef.current) {
+      return currentShift;
+    }
+
+    try {
+      setShiftLoading(true);
+      const response = await axiosInstance.post("/api/Shifts/GetDetails");
+
+      if (response.status === 200 && response.data) {
+        setCurrentShift(response.data);
+        setIsShiftOpen(true);
+        setShiftStartTime(
+          new Date(response.data.startTime).toLocaleTimeString("ar-EG"),
+        );
+        shiftFetchedRef.current = true;
+        return response.data;
+      } else {
+        toast.error("فشل في جلب بيانات الوردية");
+        return null;
+      }
+    } catch (error) {
+      console.error("خطأ في جلب بيانات الوردية:", error);
+      toast.error("حدث خطأ في جلب بيانات الوردية");
+      return null;
+    } finally {
+      setShiftLoading(false);
+    }
+  };
+
   const shiftSummary = useMemo(() => {
+    if (currentShift) {
+      return {
+        totalBills: currentShift.invoiceCount || 0,
+        completedBills: currentShift.invoiceCount || 0,
+        pendingBills: 0,
+        returnedBills: 0,
+        totalSales: currentShift.totalSales || 0,
+        totalTax: 0,
+        totalDiscount: 0,
+        netRevenue: currentShift.totalSales || 0,
+        startTime: new Date(currentShift.startTime).toLocaleTimeString("ar-EG"),
+        shiftId: currentShift.shiftId,
+        openingCash: currentShift.openingCash || 0,
+        closingCash: currentShift.closingCash || 0,
+        netCash: currentShift.netCash || 0,
+        lastInvoiceId: currentShift.lastInvoiceId,
+      };
+    }
+
     const totalBills = bills.length;
     const completedBills = bills.filter((bill) => bill.completed).length;
     const pendingBills = totalBills - completedBills;
@@ -146,9 +247,13 @@ export default function Home() {
       netRevenue,
       startTime: shiftStartTime,
     };
-  }, [bills, shiftStartTime]);
+  }, [bills, shiftStartTime, currentShift]);
 
   const fetchPaymentMethods = async () => {
+    if (paymentMethodsFetchedRef.current) {
+      return;
+    }
+
     try {
       setPaymentMethodsLoading(true);
       const response = await axiosInstance.get("/api/Payment/GetAll");
@@ -162,6 +267,7 @@ export default function Home() {
           color: getPaymentMethodColor(method.id),
         }));
         setPaymentMethods(formattedMethods);
+        paymentMethodsFetchedRef.current = true;
       } else {
         setPaymentMethods([]);
       }
@@ -172,6 +278,156 @@ export default function Home() {
     } finally {
       setPaymentMethodsLoading(false);
     }
+  };
+
+  const searchCustomerByPhone = async (phone) => {
+    if (!phone || phone.length < 11) {
+      setCustomerName("");
+      setCustomerAddress("");
+      setCustomerNationalId("");
+      setCustomerId(null);
+      return;
+    }
+
+    try {
+      setIsSearchingCustomer(true);
+      const response = await axiosInstance.get(`/api/Reports/GetCustomer`, {
+        params: { phone: phone },
+      });
+
+      if (response.status === 200 && response.data) {
+        setCustomerName(response.data.name || "");
+        setCustomerAddress(response.data.address || "");
+        setCustomerNationalId(response.data.nationalId || "");
+        setCustomerId(response.data.id);
+      } else {
+        setCustomerName("");
+        setCustomerAddress("");
+        setCustomerNationalId("");
+        setCustomerId(null);
+      }
+    } catch (error) {
+      console.error("خطأ في البحث عن العميل:", error);
+      setCustomerName("");
+      setCustomerAddress("");
+      setCustomerNationalId("");
+      setCustomerId(null);
+    } finally {
+      setIsSearchingCustomer(false);
+    }
+  };
+
+  const handleCustomerPhoneChange = (e) => {
+    const phone = e.target.value;
+    setCustomerPhone(phone);
+
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      searchCustomerByPhone(phone);
+    }, 500);
+
+    setSearchTimeout(timeout);
+  };
+
+  const createCustomer = async () => {
+    try {
+      const response = await axiosInstance.post("/api/Customers/Add", {
+        name: customerFormData.name,
+        phone: customerFormData.phone,
+        address: customerFormData.address || "",
+        nationalId: customerFormData.nationalId || "",
+      });
+
+      if (response.status === 200 && response.data) {
+        setCustomerName(customerFormData.name);
+        setCustomerAddress(customerFormData.address || "");
+        setCustomerNationalId(customerFormData.nationalId || "");
+        setCustomerId(response.data.id);
+        setShowCustomerModal(false);
+        setCustomerFormData({
+          name: "",
+          phone: "",
+          address: "",
+          nationalId: "",
+        });
+        toast.success("تم إضافة العميل بنجاح");
+      }
+    } catch (error) {
+      console.error("خطأ في إنشاء العميل:", error);
+      toast.error("حدث خطأ في إنشاء العميل");
+    }
+  };
+
+  const updateCustomer = async () => {
+    try {
+      const response = await axiosInstance.put(
+        `/api/Customers/UpDate/${customerId}`,
+        {
+          name: customerFormData.name,
+          phone: customerFormData.phone,
+          address: customerFormData.address || "",
+          nationalId: customerFormData.nationalId || "",
+        },
+      );
+
+      if (response.status === 200) {
+        setCustomerName(customerFormData.name);
+        setCustomerAddress(customerFormData.address || "");
+        setCustomerNationalId(customerFormData.nationalId || "");
+        setShowCustomerModal(false);
+        setCustomerFormData({
+          name: "",
+          phone: "",
+          address: "",
+          nationalId: "",
+        });
+        toast.success("تم تحديث بيانات العميل بنجاح");
+      }
+    } catch (error) {
+      console.error("خطأ في تحديث العميل:", error);
+      toast.error("حدث خطأ في تحديث العميل");
+    }
+  };
+
+  const openAddCustomerModal = () => {
+    setIsEditingCustomer(false);
+    setCustomerFormData({
+      name: "",
+      phone: customerPhone,
+      address: "",
+      nationalId: "",
+    });
+    setShowCustomerModal(true);
+  };
+
+  const openEditCustomerModal = () => {
+    setIsEditingCustomer(true);
+    setCustomerFormData({
+      name: customerName,
+      phone: customerPhone,
+      address: customerAddress,
+      nationalId: customerNationalId,
+    });
+    setShowCustomerModal(true);
+  };
+
+  const handleCustomerFormChange = (e) => {
+    const { name, value } = e.target;
+    setCustomerFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleFocus = (fieldName) => {
+    setFocusedField(fieldName);
+  };
+
+  const handleBlur = () => {
+    setFocusedField(null);
   };
 
   const getPaymentMethodIcon = (name) => {
@@ -221,12 +477,17 @@ export default function Home() {
   };
 
   const fetchHalls = async () => {
+    if (hallsFetchedRef.current) {
+      return;
+    }
+
     try {
       setHallsLoading(true);
       const response = await axiosInstance.get("/api/Hall/GetAll");
 
       if (response.status === 200 && response.data) {
         setHalls(response.data);
+        hallsFetchedRef.current = true;
 
         if (response.data.length > 0 && !selectedHall) {
           setSelectedHall(response.data[0]);
@@ -243,12 +504,17 @@ export default function Home() {
   };
 
   const fetchTables = async () => {
+    if (tablesFetchedRef.current) {
+      return;
+    }
+
     try {
       setTablesLoading(true);
       const response = await axiosInstance.get("/api/Table/GetAll");
 
       if (response.status === 200 && response.data) {
         setTables(response.data);
+        tablesFetchedRef.current = true;
       } else {
         toast.error("فشل في جلب بيانات الطاولات");
       }
@@ -261,6 +527,10 @@ export default function Home() {
   };
 
   const fetchMainCategories = async () => {
+    if (mainCategoriesFetchedRef.current) {
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await axiosInstance.get(
@@ -318,6 +588,7 @@ export default function Home() {
 
         setSubCategories(allSubCategories);
         setAllProducts(allProductsList);
+        mainCategoriesFetchedRef.current = true;
 
         if (activeMainCategories.length > 0) {
           setSelectedMainCategory(activeMainCategories[0]);
@@ -334,6 +605,10 @@ export default function Home() {
   };
 
   const fetchOptions = async () => {
+    if (optionsFetchedRef.current) {
+      return;
+    }
+
     try {
       const response = await axiosInstance.post("/api/Options/GetAll", {
         pageNumber: 1,
@@ -345,18 +620,117 @@ export default function Home() {
         const items = response.data.items || [];
         const activeOptions = items.filter((option) => option.isActive);
         setOptions(activeOptions);
+        optionsFetchedRef.current = true;
       }
     } catch (error) {
       console.error("خطأ في جلب الإضافات:", error);
     }
   };
 
+  const createInvoice = async (isPending = true, paymentMethodId = null) => {
+    const currentBill = bills[currentBillIndex];
+
+    if (!currentShift?.shiftId) {
+      toast.error("لا توجد وردية نشطة");
+      return null;
+    }
+
+    const invoiceData = {
+      shiftId: currentShift.shiftId,
+      tableId: selectedTable?.id || null,
+      customerId: customerId || null,
+      isPending: isPending,
+      type: getInvoiceTypeFromBillType(currentBill.billType),
+      paidAmount: isPending ? 0 : total,
+      paymentMethodId: paymentMethodId,
+      items: cart.map((item) => ({
+        itemId: item.id,
+        quantity: item.quantity,
+        discount: item.discount || 0,
+        discountType: DiscountType.Percentage,
+        notes: item.note || "",
+        options:
+          item.selectedOptions?.map((opt) => ({
+            optionId: opt.id,
+            quantity: item.quantity,
+          })) || [],
+      })),
+    };
+
+    try {
+      const response = await axiosInstance.post(
+        "/api/Invoices/CreateInvoice",
+        invoiceData,
+      );
+
+      if (response.status === 200 && response.data) {
+        shiftFetchedRef.current = false;
+        await fetchShiftDetails();
+        return response.data;
+      }
+    } catch (error) {
+      console.error("خطأ في إنشاء الفاتورة:", error);
+      throw error;
+    }
+  };
+
+  const resumeInvoice = async (invoiceId) => {
+    try {
+      const response = await axiosInstance.put(
+        `/api/Invoices/ResumeInvoice/${invoiceId}/resume`,
+      );
+      return response.status === 200;
+    } catch (error) {
+      console.error("خطأ في استئناف الفاتورة:", error);
+      throw error;
+    }
+  };
+
+  const createFullReturn = async (invoiceNumber) => {
+    try {
+      const response = await axiosInstance.post(
+        "/api/Invoices/CreateFullReturn/returns",
+        {
+          invoiceNumber: invoiceNumber,
+        },
+      );
+
+      if (response.status === 200) {
+        shiftFetchedRef.current = false;
+        await fetchShiftDetails();
+        return response.data;
+      }
+    } catch (error) {
+      console.error("خطأ في إنشاء مرتجع:", error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
-    fetchHalls();
-    fetchTables();
-    fetchMainCategories();
-    fetchPaymentMethods();
-    fetchOptions();
+    if (initializedRef.current) {
+      return;
+    }
+
+    initializedRef.current = true;
+
+    const initializeData = async () => {
+      await Promise.all([
+        fetchShiftDetails(),
+        fetchHalls(),
+        fetchTables(),
+        fetchMainCategories(),
+        fetchPaymentMethods(),
+        fetchOptions(),
+      ]);
+    };
+
+    initializeData();
+
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -524,9 +898,11 @@ export default function Home() {
         setTax(tableBill.tax);
         setDiscount(tableBill.discount);
         setDeliveryFee(0);
-        setCustomerName(tableBill.customerName || "");
         setCustomerPhone(tableBill.customerPhone || "");
-        setGeneralNote(tableBill.generalNote || "");
+        setCustomerName(tableBill.customerName || "");
+        setCustomerAddress(tableBill.customerAddress || "");
+        setCustomerNationalId(tableBill.customerNationalId || "");
+        setCustomerId(tableBill.customerId || null);
         setSelectedHall(halls.find((h) => h.id === tableBill.tableInfo.hallId));
         setSelectedTable(table);
         setShowTableInfo(true);
@@ -554,7 +930,6 @@ export default function Home() {
         tableNumber: table.number,
       },
       tableStatus: "available",
-      preparedItems: [],
     };
     setBills(updatedBills);
 
@@ -633,6 +1008,7 @@ export default function Home() {
                   billType: "takeaway",
                   generalNote: "",
                   paymentMethod: null,
+                  invoiceId: null,
                 };
                 setBills(updatedBills);
 
@@ -640,9 +1016,11 @@ export default function Home() {
                 setTax(14);
                 setDiscount(0);
                 setDeliveryFee(0);
-                setCustomerName("");
                 setCustomerPhone("");
-                setGeneralNote("");
+                setCustomerName("");
+                setCustomerAddress("");
+                setCustomerNationalId("");
+                setCustomerId(null);
                 setTableStatus("available");
                 setSelectedTable(null);
                 setSelectedHall(null);
@@ -707,17 +1085,21 @@ export default function Home() {
         deliveryFee:
           bills[currentBillIndex]?.billType === "delivery" ? deliveryFee : 0,
         billType: updatedBills[currentBillIndex]?.billType || "takeaway",
-        customerName: customerName,
         customerPhone: customerPhone,
+        customerName: customerName,
+        customerAddress: customerAddress,
+        customerNationalId: customerNationalId,
+        customerId: customerId,
         generalNote: generalNote,
         paymentMethod: updatedBills[currentBillIndex]?.paymentMethod || null,
         completed: updatedBills[currentBillIndex]?.completed || false,
         completedDate: updatedBills[currentBillIndex]?.completedDate || null,
         tableInfo: updatedBills[currentBillIndex]?.tableInfo || null,
         tableStatus: updatedBills[currentBillIndex]?.tableStatus || null,
-        preparedItems: updatedBills[currentBillIndex]?.preparedItems || [],
         isReturned: updatedBills[currentBillIndex]?.isReturned || false,
         returnReason: updatedBills[currentBillIndex]?.returnReason || "",
+        invoiceId: updatedBills[currentBillIndex]?.invoiceId || null,
+        isPending: updatedBills[currentBillIndex]?.isPending !== false,
       };
       setBills(updatedBills);
     };
@@ -729,16 +1111,22 @@ export default function Home() {
     tax,
     discount,
     deliveryFee,
-    customerName,
     customerPhone,
+    customerName,
+    customerAddress,
+    customerNationalId,
+    customerId,
     generalNote,
   ]);
 
   useEffect(() => {
     const currentBill = bills[currentBillIndex];
     if (currentBill) {
-      setCustomerName(currentBill.customerName || "");
       setCustomerPhone(currentBill.customerPhone || "");
+      setCustomerName(currentBill.customerName || "");
+      setCustomerAddress(currentBill.customerAddress || "");
+      setCustomerNationalId(currentBill.customerNationalId || "");
+      setCustomerId(currentBill.customerId || null);
       setGeneralNote(currentBill.generalNote || "");
 
       if (currentBill.billType === "delivery") {
@@ -967,6 +1355,13 @@ export default function Home() {
       return;
     }
 
+    if (bills[currentBillIndex]?.billType === "delivery") {
+      if (!customerPhone || customerPhone.length < 11) {
+        toast.error("يرجى إدخال رقم هاتف صحيح للتوصيل");
+        return;
+      }
+    }
+
     setShowPaymentModal(true);
   };
 
@@ -975,138 +1370,217 @@ export default function Home() {
     setSelectedPaymentMethod(null);
   };
 
-  const handleCompletePayment = () => {
+  const handleCompletePayment = async () => {
     if (!selectedPaymentMethod) {
       toast.error("يرجى اختيار طريقة الدفع");
       return;
     }
 
-    const updatedBills = [...bills];
-    updatedBills[currentBillIndex] = {
-      ...updatedBills[currentBillIndex],
-      completed: true,
-      completedDate: new Date().toLocaleString(),
-      paymentMethod: selectedPaymentMethod,
-      isReturned: false,
-      returnReason: "",
-    };
-    setBills(updatedBills);
+    try {
+      const invoiceResponse = await createInvoice(false, selectedPaymentMethod);
 
-    if (selectedTable && selectedHall) {
-      updateTableStatus(selectedHall.id, selectedTable.id, "available", null);
+      if (invoiceResponse) {
+        const updatedBills = [...bills];
+        updatedBills[currentBillIndex] = {
+          ...updatedBills[currentBillIndex],
+          completed: true,
+          completedDate: new Date().toLocaleString(),
+          paymentMethod: selectedPaymentMethod,
+          isReturned: false,
+          returnReason: "",
+          invoiceId: invoiceResponse.id,
+          isPending: false,
+        };
+        setBills(updatedBills);
+
+        if (selectedTable && selectedHall) {
+          updateTableStatus(
+            selectedHall.id,
+            selectedTable.id,
+            "available",
+            null,
+          );
+        }
+
+        const currentBillType = bills[currentBillIndex]?.billType || "takeaway";
+        const currentDeliveryFee =
+          currentBillType === "delivery" ? deliveryFee : 0;
+
+        const paymentMethod = paymentMethods.find(
+          (p) => p.id === selectedPaymentMethod,
+        );
+
+        toast.success(
+          <div>
+            <p className="font-bold">
+              تم إتمام الفاتورة رقم {currentBillIndex + 1}
+            </p>
+            {selectedTable && (
+              <p className="text-sm mt-1">
+                الطاولة: {selectedTable.number} ({selectedHall.name})
+              </p>
+            )}
+            <p className="text-sm mt-1">
+              نوع الفاتورة: {getBillTypeLabel(currentBillType)}
+            </p>
+            <p className="text-sm mt-1">
+              طريقة الدفع: {paymentMethod?.name || "غير معروفة"}{" "}
+              {paymentMethod?.icon}
+            </p>
+            {customerName && (
+              <p className="text-sm mt-1">العميل: {customerName}</p>
+            )}
+            {customerPhone && (
+              <p className="text-xs text-gray-600 mt-1">
+                هاتف: {customerPhone}
+              </p>
+            )}
+            {customerAddress && (
+              <p className="text-xs text-gray-600 mt-1">
+                العنوان: {customerAddress}
+              </p>
+            )}
+            {customerNationalId && (
+              <p className="text-xs text-gray-600 mt-1">
+                الرقم القومي: {customerNationalId}
+              </p>
+            )}
+            {generalNote && (
+              <p className="text-sm mt-1 text-blue-600">
+                ملاحظة: {generalNote}
+              </p>
+            )}
+            {currentDeliveryFee > 0 && (
+              <p className="text-sm mt-1">
+                رسوم التوصيل: {currentDeliveryFee.toFixed(2)} ج.م
+              </p>
+            )}
+            <p className="text-sm mt-1">الإجمالي: {total.toFixed(2)} ج.م</p>
+            <p className="text-xs text-gray-600 mt-1">
+              تم حفظ الفاتورة في النظام
+            </p>
+          </div>,
+          { autoClose: 5000 },
+        );
+
+        const newBill = {
+          id: bills.length + 1,
+          cart: [],
+          tax: 14,
+          discount: 0,
+          deliveryFee: 0,
+          billType: "takeaway",
+          customerPhone: "",
+          customerName: "",
+          customerAddress: "",
+          customerNationalId: "",
+          customerId: null,
+          generalNote: "",
+          paymentMethod: null,
+          completed: false,
+          completedDate: null,
+          tableInfo: null,
+          tableStatus: null,
+          isReturned: false,
+          returnReason: "",
+          invoiceId: null,
+          isPending: true,
+        };
+        const newBills = [...updatedBills, newBill];
+        setBills(newBills);
+        setCurrentBillIndex(newBills.length - 1);
+        setCart([]);
+        setTax(14);
+        setDiscount(0);
+        setDeliveryFee(0);
+        setCustomerPhone("");
+        setCustomerName("");
+        setCustomerAddress("");
+        setCustomerNationalId("");
+        setCustomerId(null);
+        setGeneralNote("");
+        setSelectedHall(null);
+        setSelectedTable(null);
+        setShowTableInfo(false);
+        setTableStatus("available");
+        setShowPaymentModal(false);
+        setSelectedPaymentMethod(null);
+      }
+    } catch (error) {
+      console.error("خطأ في إتمام الدفع:", error);
+      toast.error("حدث خطأ في إتمام عملية الدفع");
     }
-
-    const currentBillType = bills[currentBillIndex]?.billType || "takeaway";
-    const currentDeliveryFee = currentBillType === "delivery" ? deliveryFee : 0;
-
-    const paymentMethod = paymentMethods.find(
-      (p) => p.id === selectedPaymentMethod,
-    );
-
-    toast.success(
-      <div>
-        <p className="font-bold">
-          تم إتمام الفاتورة رقم {currentBillIndex + 1}
-        </p>
-        {selectedTable && (
-          <p className="text-sm mt-1">
-            الطاولة: {selectedTable.number} ({selectedHall.name})
-          </p>
-        )}
-        <p className="text-sm mt-1">
-          نوع الفاتورة: {getBillTypeLabel(currentBillType)}
-        </p>
-        <p className="text-sm mt-1">
-          طريقة الدفع: {paymentMethod?.name || "غير معروفة"}{" "}
-          {paymentMethod?.icon}
-        </p>
-        {customerName && <p className="text-sm mt-1">العميل: {customerName}</p>}
-        {generalNote && (
-          <p className="text-sm mt-1 text-blue-600">ملاحظة: {generalNote}</p>
-        )}
-        {currentDeliveryFee > 0 && (
-          <p className="text-sm mt-1">
-            رسوم التوصيل: {currentDeliveryFee.toFixed(2)} ج.م
-          </p>
-        )}
-        <p className="text-sm mt-1">الإجمالي: {total.toFixed(2)} ج.م</p>
-        <p className="text-xs text-gray-600 mt-1">تم حفظ الفاتورة في النظام</p>
-      </div>,
-      { autoClose: 5000 },
-    );
-
-    const newBill = {
-      id: bills.length + 1,
-      cart: [],
-      tax: 14,
-      discount: 0,
-      deliveryFee: 0,
-      billType: "takeaway",
-      customerName: "",
-      customerPhone: "",
-      generalNote: "",
-      paymentMethod: null,
-      completed: false,
-      completedDate: null,
-      tableInfo: null,
-      tableStatus: null,
-      preparedItems: [],
-      isReturned: false,
-      returnReason: "",
-    };
-    const newBills = [...updatedBills, newBill];
-    setBills(newBills);
-    setCurrentBillIndex(newBills.length - 1);
-    setCart([]);
-    setTax(14);
-    setDiscount(0);
-    setDeliveryFee(0);
-    setCustomerName("");
-    setCustomerPhone("");
-    setGeneralNote("");
-    setSelectedHall(null);
-    setSelectedTable(null);
-    setShowTableInfo(false);
-    setTableStatus("available");
-    setShowPaymentModal(false);
-    setSelectedPaymentMethod(null);
   };
 
-  const goToNextBill = () => {
+  const goToNextBill = async () => {
     const updatedBills = [...bills];
-    updatedBills[currentBillIndex] = {
-      id: currentBillIndex + 1,
-      cart: [...cart],
-      tax,
-      discount,
-      deliveryFee:
-        bills[currentBillIndex]?.billType === "delivery" ? deliveryFee : 0,
-      billType: updatedBills[currentBillIndex]?.billType || "takeaway",
-      customerName: customerName,
-      customerPhone: customerPhone,
-      generalNote: generalNote,
-      paymentMethod: updatedBills[currentBillIndex]?.paymentMethod || null,
-      completed: updatedBills[currentBillIndex]?.completed || false,
-      completedDate: updatedBills[currentBillIndex]?.completedDate || null,
-      tableInfo: updatedBills[currentBillIndex]?.tableInfo || null,
-      tableStatus: updatedBills[currentBillIndex]?.tableStatus || null,
-      preparedItems: updatedBills[currentBillIndex]?.preparedItems || [],
-      isReturned: updatedBills[currentBillIndex]?.isReturned || false,
-      returnReason: updatedBills[currentBillIndex]?.returnReason || "",
-    };
+    const currentBill = updatedBills[currentBillIndex];
+
+    if (!currentBill.completed && cart.length > 0 && !currentBill.invoiceId) {
+      try {
+        const invoiceResponse = await createInvoice(true, null);
+        updatedBills[currentBillIndex] = {
+          ...currentBill,
+          cart: [...cart],
+          tax,
+          discount,
+          deliveryFee: currentBill.billType === "delivery" ? deliveryFee : 0,
+          billType: currentBill.billType || "takeaway",
+          customerPhone: customerPhone,
+          customerName: customerName,
+          customerAddress: customerAddress,
+          customerNationalId: customerNationalId,
+          customerId: customerId,
+          generalNote: generalNote,
+          invoiceId: invoiceResponse.id,
+          isPending: true,
+        };
+      } catch (error) {
+        console.error("خطأ في حفظ الفاتورة المعلقة:", error);
+        toast.error("حدث خطأ في حفظ الفاتورة");
+        return;
+      }
+    } else {
+      updatedBills[currentBillIndex] = {
+        ...currentBill,
+        cart: [...cart],
+        tax,
+        discount,
+        deliveryFee: currentBill.billType === "delivery" ? deliveryFee : 0,
+        billType: currentBill.billType || "takeaway",
+        customerPhone: customerPhone,
+        customerName: customerName,
+        customerAddress: customerAddress,
+        customerNationalId: customerNationalId,
+        customerId: customerId,
+        generalNote: generalNote,
+      };
+    }
 
     const nextIndex = currentBillIndex + 1;
     if (nextIndex < bills.length) {
-      setCurrentBillIndex(nextIndex);
       const nextBill = bills[nextIndex];
+
+      if (nextBill.invoiceId && nextBill.isPending) {
+        try {
+          await resumeInvoice(nextBill.invoiceId);
+        } catch (error) {
+          console.error("خطأ في استئناف الفاتورة:", error);
+        }
+      }
+
+      setCurrentBillIndex(nextIndex);
       setCart([...nextBill.cart]);
       setTax(nextBill.tax);
       setDiscount(nextBill.discount);
       setDeliveryFee(
         nextBill.billType === "delivery" ? nextBill.deliveryFee : 0,
       );
-      setCustomerName(nextBill.customerName || "");
       setCustomerPhone(nextBill.customerPhone || "");
+      setCustomerName(nextBill.customerName || "");
+      setCustomerAddress(nextBill.customerAddress || "");
+      setCustomerNationalId(nextBill.customerNationalId || "");
+      setCustomerId(nextBill.customerId || null);
       setGeneralNote(nextBill.generalNote || "");
 
       if (nextBill.tableInfo) {
@@ -1141,17 +1615,21 @@ export default function Home() {
         discount: 0,
         deliveryFee: 0,
         billType: "takeaway",
-        customerName: "",
         customerPhone: "",
+        customerName: "",
+        customerAddress: "",
+        customerNationalId: "",
+        customerId: null,
         generalNote: "",
         paymentMethod: null,
         completed: false,
         completedDate: null,
         tableInfo: null,
         tableStatus: null,
-        preparedItems: [],
         isReturned: false,
         returnReason: "",
+        invoiceId: null,
+        isPending: true,
       };
       const newBills = [...updatedBills, newBill];
       setBills(newBills);
@@ -1160,8 +1638,11 @@ export default function Home() {
       setTax(14);
       setDiscount(0);
       setDeliveryFee(0);
-      setCustomerName("");
       setCustomerPhone("");
+      setCustomerName("");
+      setCustomerAddress("");
+      setCustomerNationalId("");
+      setCustomerId(null);
       setGeneralNote("");
       setSelectedHall(null);
       setSelectedTable(null);
@@ -1176,39 +1657,56 @@ export default function Home() {
   const goToPreviousBill = () => {
     if (currentBillIndex > 0) {
       const updatedBills = [...bills];
-      updatedBills[currentBillIndex] = {
-        id: currentBillIndex + 1,
-        cart: [...cart],
-        tax,
-        discount,
-        deliveryFee:
-          bills[currentBillIndex]?.billType === "delivery" ? deliveryFee : 0,
-        billType: updatedBills[currentBillIndex]?.billType || "takeaway",
-        customerName: customerName,
-        customerPhone: customerPhone,
-        generalNote: generalNote,
-        paymentMethod: updatedBills[currentBillIndex]?.paymentMethod || null,
-        completed: updatedBills[currentBillIndex]?.completed || false,
-        completedDate: updatedBills[currentBillIndex]?.completedDate || null,
-        tableInfo: updatedBills[currentBillIndex]?.tableInfo || null,
-        tableStatus: updatedBills[currentBillIndex]?.tableStatus || null,
-        preparedItems: updatedBills[currentBillIndex]?.preparedItems || [],
-        isReturned: updatedBills[currentBillIndex]?.isReturned || false,
-        returnReason: updatedBills[currentBillIndex]?.returnReason || "",
-      };
+      const currentBill = updatedBills[currentBillIndex];
+
+      if (!currentBill.completed && cart.length > 0 && !currentBill.invoiceId) {
+        updatedBills[currentBillIndex] = {
+          ...currentBill,
+          cart: [...cart],
+          tax,
+          discount,
+          deliveryFee: currentBill.billType === "delivery" ? deliveryFee : 0,
+          billType: currentBill.billType || "takeaway",
+          customerPhone: customerPhone,
+          customerName: customerName,
+          customerAddress: customerAddress,
+          customerNationalId: customerNationalId,
+          customerId: customerId,
+          generalNote: generalNote,
+        };
+      } else {
+        updatedBills[currentBillIndex] = {
+          ...currentBill,
+          cart: [...cart],
+          tax,
+          discount,
+          deliveryFee: currentBill.billType === "delivery" ? deliveryFee : 0,
+          billType: currentBill.billType || "takeaway",
+          customerPhone: customerPhone,
+          customerName: customerName,
+          customerAddress: customerAddress,
+          customerNationalId: customerNationalId,
+          customerId: customerId,
+          generalNote: generalNote,
+        };
+      }
       setBills(updatedBills);
 
       const prevIndex = currentBillIndex - 1;
-      setCurrentBillIndex(prevIndex);
       const prevBill = bills[prevIndex];
+
+      setCurrentBillIndex(prevIndex);
       setCart([...prevBill.cart]);
       setTax(prevBill.tax);
       setDiscount(prevBill.discount);
       setDeliveryFee(
         prevBill.billType === "delivery" ? prevBill.deliveryFee : 0,
       );
-      setCustomerName(prevBill.customerName || "");
       setCustomerPhone(prevBill.customerPhone || "");
+      setCustomerName(prevBill.customerName || "");
+      setCustomerAddress(prevBill.customerAddress || "");
+      setCustomerNationalId(prevBill.customerNationalId || "");
+      setCustomerId(prevBill.customerId || null);
       setGeneralNote(prevBill.generalNote || "");
 
       if (prevBill.tableInfo) {
@@ -1252,7 +1750,7 @@ export default function Home() {
     totalDiscount +
     (bills[currentBillIndex]?.billType === "delivery" ? deliveryFee : 0);
 
-  const handlePrepareOrder = () => {
+  const handlePrepareOrder = async () => {
     if (cart.length === 0) {
       toast.error("الفاتورة فارغة");
       return;
@@ -1263,79 +1761,97 @@ export default function Home() {
       return;
     }
 
-    const updatedBills = [...bills];
-    updatedBills[currentBillIndex] = {
-      id: currentBillIndex + 1,
-      cart: [...cart],
-      tax,
-      discount,
-      deliveryFee:
-        bills[currentBillIndex]?.billType === "delivery" ? deliveryFee : 0,
-      billType: "dinein",
-      customerName: customerName,
-      customerPhone: customerPhone,
-      generalNote: generalNote,
-      paymentMethod: null,
-      completed: false,
-      completedDate: null,
-      tableInfo: {
-        hallId: selectedHall.id,
-        hallName: selectedHall.name,
-        tableId: selectedTable.id,
-        tableNumber: selectedTable.number,
-      },
-      tableStatus: "occupied",
-      preparedItems: [...cart],
-      isReturned: false,
-      returnReason: "",
-    };
+    try {
+      const invoiceResponse = await createInvoice(true, null);
 
-    updateTableStatus(
-      selectedHall.id,
-      selectedTable.id,
-      "occupied",
-      currentBillIndex + 1,
-    );
-    setTableStatus("occupied");
+      const updatedBills = [...bills];
+      updatedBills[currentBillIndex] = {
+        id: currentBillIndex + 1,
+        cart: [...cart],
+        tax,
+        discount,
+        deliveryFee:
+          bills[currentBillIndex]?.billType === "delivery" ? deliveryFee : 0,
+        billType: "dinein",
+        customerPhone: customerPhone,
+        customerName: customerName,
+        customerAddress: customerAddress,
+        customerNationalId: customerNationalId,
+        customerId: customerId,
+        generalNote: generalNote,
+        paymentMethod: null,
+        completed: false,
+        completedDate: null,
+        tableInfo: {
+          hallId: selectedHall.id,
+          hallName: selectedHall.name,
+          tableId: selectedTable.id,
+          tableNumber: selectedTable.number,
+        },
+        tableStatus: "occupied",
+        isReturned: false,
+        returnReason: "",
+        invoiceId: invoiceResponse.id,
+        isPending: true,
+      };
 
-    const newBill = {
-      id: bills.length + 1,
-      cart: [],
-      tax: 14,
-      discount: 0,
-      deliveryFee: 0,
-      billType: "takeaway",
-      customerName: "",
-      customerPhone: "",
-      generalNote: "",
-      paymentMethod: null,
-      completed: false,
-      completedDate: null,
-      tableInfo: null,
-      tableStatus: null,
-      preparedItems: [],
-      isReturned: false,
-      returnReason: "",
-    };
-    const newBills = [...updatedBills, newBill];
-    setBills(newBills);
+      updateTableStatus(
+        selectedHall.id,
+        selectedTable.id,
+        "occupied",
+        currentBillIndex + 1,
+      );
+      setTableStatus("occupied");
 
-    setCurrentBillIndex(newBills.length - 1);
-    setCart([]);
-    setTax(14);
-    setDiscount(0);
-    setDeliveryFee(0);
-    setCustomerName("");
-    setCustomerPhone("");
-    setGeneralNote("");
-    setSelectedHall(null);
-    setSelectedTable(null);
-    setShowTableInfo(false);
-    setTableStatus("available");
+      const newBill = {
+        id: bills.length + 1,
+        cart: [],
+        tax: 14,
+        discount: 0,
+        deliveryFee: 0,
+        billType: "takeaway",
+        customerPhone: "",
+        customerName: "",
+        customerAddress: "",
+        customerNationalId: "",
+        customerId: null,
+        generalNote: "",
+        paymentMethod: null,
+        completed: false,
+        completedDate: null,
+        tableInfo: null,
+        tableStatus: null,
+        isReturned: false,
+        returnReason: "",
+        invoiceId: null,
+        isPending: true,
+      };
+      const newBills = [...updatedBills, newBill];
+      setBills(newBills);
 
-    toast.success(
-      `تم تحضير طلب الطاولة ${selectedTable.number} وفتح فاتورة جديدة`,
-    );
+      setCurrentBillIndex(newBills.length - 1);
+      setCart([]);
+      setTax(14);
+      setDiscount(0);
+      setDeliveryFee(0);
+      setCustomerPhone("");
+      setCustomerName("");
+      setCustomerAddress("");
+      setCustomerNationalId("");
+      setCustomerId(null);
+      setGeneralNote("");
+      setSelectedHall(null);
+      setSelectedTable(null);
+      setShowTableInfo(false);
+      setTableStatus("available");
+
+      toast.success(
+        `تم تحضير طلب الطاولة ${selectedTable.number} وفتح فاتورة جديدة`,
+      );
+    } catch (error) {
+      console.error("خطأ في تحضير الطلب:", error);
+      toast.error("حدث خطأ في تحضير الطلب");
+    }
   };
 
   const handleCompleteBill = () => {
@@ -1405,35 +1921,44 @@ export default function Home() {
       return;
     }
 
-    const updatedBills = [...bills];
-    updatedBills[currentBillIndex] = {
-      ...currentBill,
-      isReturned: true,
-      returnReason: returnReason || "بدون سبب",
-      returnedDate: new Date().toLocaleString(),
-    };
-    setBills(updatedBills);
+    try {
+      if (currentBill.invoiceId) {
+        await createFullReturn(currentBill.invoiceId.toString());
+      }
 
-    if (currentBill.tableInfo && selectedHall && selectedTable) {
-      updateTableStatus(selectedHall.id, selectedTable.id, "available", null);
-      setTableStatus("available");
+      const updatedBills = [...bills];
+      updatedBills[currentBillIndex] = {
+        ...currentBill,
+        isReturned: true,
+        returnReason: returnReason || "بدون سبب",
+        returnedDate: new Date().toLocaleString(),
+      };
+      setBills(updatedBills);
+
+      if (currentBill.tableInfo && selectedHall && selectedTable) {
+        updateTableStatus(selectedHall.id, selectedTable.id, "available", null);
+        setTableStatus("available");
+      }
+
+      Swal.fire({
+        title: "تم الإرجاع بنجاح!",
+        html: `
+          <div class="text-right">
+            <p>تم تحويل الفاتورة #${currentBill.id} إلى فاتورة مرتجعة</p>
+            <p class="mt-2 text-gray-600">${returnReason ? `السبب: ${returnReason}` : "بدون سبب محدد"}</p>
+            <p class="mt-2 text-sm text-gray-500">التاريخ: ${new Date().toLocaleString()}</p>
+          </div>
+        `,
+        icon: "success",
+        confirmButtonText: "تم",
+        confirmButtonColor: "#10B981",
+      });
+
+      toast.success(`تم إرجاع الفاتورة رقم ${currentBill.id} بنجاح`);
+    } catch (error) {
+      console.error("خطأ في إرجاع الفاتورة:", error);
+      toast.error("حدث خطأ في إرجاع الفاتورة");
     }
-
-    Swal.fire({
-      title: "تم الإرجاع بنجاح!",
-      html: `
-        <div class="text-right">
-          <p>تم تحويل الفاتورة #${currentBill.id} إلى فاتورة مرتجعة</p>
-          <p class="mt-2 text-gray-600">${returnReason ? `السبب: ${returnReason}` : "بدون سبب محدد"}</p>
-          <p class="mt-2 text-sm text-gray-500">التاريخ: ${new Date().toLocaleString()}</p>
-        </div>
-      `,
-      icon: "success",
-      confirmButtonText: "تم",
-      confirmButtonColor: "#10B981",
-    });
-
-    toast.success(`تم إرجاع الفاتورة رقم ${currentBill.id} بنجاح`);
   };
 
   const handleReprintBill = () => {
@@ -1480,6 +2005,19 @@ export default function Home() {
         </p>
         {customerName && (
           <p className="text-xs text-gray-600 mb-1">العميل: {customerName}</p>
+        )}
+        {customerPhone && (
+          <p className="text-xs text-gray-600 mb-1">هاتف: {customerPhone}</p>
+        )}
+        {customerAddress && (
+          <p className="text-xs text-gray-600 mb-1">
+            العنوان: {customerAddress}
+          </p>
+        )}
+        {customerNationalId && (
+          <p className="text-xs text-gray-600 mb-1">
+            الرقم القومي: {customerNationalId}
+          </p>
         )}
         {generalNote && (
           <p className="text-xs text-blue-600 mb-1">ملاحظة: {generalNote}</p>
@@ -1560,26 +2098,13 @@ export default function Home() {
     setTax(14);
     setDiscount(0);
     setDeliveryFee(bills[currentBillIndex]?.billType === "delivery" ? 25 : 0);
-    setCustomerName("");
     setCustomerPhone("");
+    setCustomerName("");
+    setCustomerAddress("");
+    setCustomerNationalId("");
+    setCustomerId(null);
     setGeneralNote("");
     toast.info("تم إعادة تعيين الفاتورة");
-  };
-
-  const handleCustomerNameChange = (e) => {
-    if (bills[currentBillIndex]?.completed) {
-      toast.error("لا يمكن تعديل فاتورة مكتملة");
-      return;
-    }
-    setCustomerName(e.target.value);
-  };
-
-  const handleCustomerPhoneChange = (e) => {
-    if (bills[currentBillIndex]?.completed) {
-      toast.error("لا يمكن تعديل فاتورة مكتملة");
-      return;
-    }
-    setCustomerPhone(e.target.value);
   };
 
   const handleDeliveryFeeChange = (e) => {
@@ -1594,7 +2119,6 @@ export default function Home() {
 
   const handleShiftClose = () => {
     setIsShiftOpen(false);
-
     toast.success("تم إغلاق الوردية بنجاح!");
   };
 
@@ -1682,9 +2206,7 @@ export default function Home() {
                     </label>
                   </div>
 
-                  {/* Options Grid with Side Arrows */}
                   <div className="relative flex items-center">
-                    {/* Left Arrow */}
                     <button
                       onClick={handlePrevOptionsPage}
                       disabled={optionsCurrentPage === 1}
@@ -1710,7 +2232,6 @@ export default function Home() {
                       </svg>
                     </button>
 
-                    {/* Options Grid */}
                     <div className="border border-gray-200 rounded-lg p-2 bg-gray-50 w-full mx-6">
                       <div className="grid grid-cols-4 gap-1">
                         {paginatedOptions.map((option) => {
@@ -1754,7 +2275,6 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Right Arrow */}
                     <button
                       onClick={handleNextOptionsPage}
                       disabled={optionsCurrentPage === totalOptionsPages}
@@ -1834,6 +2354,262 @@ export default function Home() {
                   تأكيد الإضافة
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCustomerModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3
+                    className="text-2xl font-bold"
+                    style={{ color: "#193F94" }}
+                  >
+                    {isEditingCustomer
+                      ? "تعديل بيانات العميل"
+                      : "إضافة عميل جديد"}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {isEditingCustomer
+                      ? "قم بتعديل بيانات العميل"
+                      : "أدخل بيانات العميل الجديد"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowCustomerModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (isEditingCustomer) {
+                    updateCustomer();
+                  } else {
+                    createCustomer();
+                  }
+                }}
+              >
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="name"
+                      value={customerFormData.name}
+                      onChange={handleCustomerFormChange}
+                      onFocus={() => handleFocus("name")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      required
+                      dir="rtl"
+                    />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "name" || customerFormData.name
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                        اسم العميل *
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={customerFormData.phone}
+                      onChange={handleCustomerFormChange}
+                      onFocus={() => handleFocus("phone")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      required
+                      dir="rtl"
+                    />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "phone" || customerFormData.phone
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                          />
+                        </svg>
+                        رقم الهاتف *
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="address"
+                      value={customerFormData.address}
+                      onChange={handleCustomerFormChange}
+                      onFocus={() => handleFocus("address")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      dir="rtl"
+                    />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "address" || customerFormData.address
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                        العنوان
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="nationalId"
+                      value={customerFormData.nationalId}
+                      onChange={handleCustomerFormChange}
+                      onFocus={() => handleFocus("nationalId")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      dir="rtl"
+                    />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "nationalId" ||
+                        customerFormData.nationalId
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
+                          />
+                        </svg>
+                        الرقم القومي
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t-2 border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomerModal(false)}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                  >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
+                    style={{ backgroundColor: "#193F94" }}
+                  >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      {isEditingCustomer ? (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                        />
+                      ) : (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      )}
+                    </svg>
+                    {isEditingCustomer ? "حفظ التعديلات" : "إضافة عميل"}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -2130,7 +2906,7 @@ export default function Home() {
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-lg p-4 h-full overflow-hidden flex flex-col">
-              {loading ? (
+              {loading || shiftLoading ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                 </div>
@@ -2303,6 +3079,12 @@ export default function Home() {
                             مرتجعة
                           </span>
                         )}
+                        {bills[currentBillIndex]?.isPending &&
+                          !bills[currentBillIndex]?.completed && (
+                            <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded-full">
+                              معلقة
+                            </span>
+                          )}
                       </div>
                     </div>
                     <button
@@ -2421,32 +3203,112 @@ export default function Home() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      اسم العميل
-                    </label>
-                    <input
-                      type="text"
-                      value={customerName}
-                      onChange={handleCustomerNameChange}
-                      disabled={bills[currentBillIndex]?.completed}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                      placeholder="اسم العميل"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      رقم الهاتف
-                    </label>
-                    <input
-                      type="tel"
-                      value={customerPhone}
-                      onChange={handleCustomerPhoneChange}
-                      disabled={bills[currentBillIndex]?.completed}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                      placeholder="رقم الهاتف"
-                    />
+                <div className="mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="tel"
+                        value={customerPhone}
+                        onChange={handleCustomerPhoneChange}
+                        onFocus={() => handleFocus("phone")}
+                        onBlur={handleBlur}
+                        disabled={bills[currentBillIndex]?.completed}
+                        className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white disabled:bg-gray-100"
+                        dir="rtl"
+                      />
+                      <label
+                        className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                          focusedField === "phone" || customerPhone
+                            ? "-top-2 text-xs text-blue-500 font-medium"
+                            : "top-2 text-gray-400 text-sm"
+                        }`}
+                      >
+                        <span className="flex items-center">
+                          <svg
+                            className="w-4 h-4 ml-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                            />
+                          </svg>
+                          رقم الهاتف
+                        </span>
+                      </label>
+                      {isSearchingCustomer && (
+                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      )}
+                    </div>
+
+                    {customerId && (
+                      <div className="flex items-center bg-gradient-to-r from-blue-50 to-white px-3 py-1.5 rounded-xl border border-blue-200 shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-blue-800">
+                              {customerName}
+                            </span>
+                            {customerAddress && (
+                              <span className="text-[10px] text-gray-600 truncate max-w-[150px]">
+                                {customerAddress}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            onClick={openEditCustomerModal}
+                            disabled={bills[currentBillIndex]?.completed}
+                            className="p-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 transition-all border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="تعديل بيانات العميل"
+                          >
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!customerId &&
+                      customerPhone &&
+                      customerPhone.length >= 11 && (
+                        <button
+                          onClick={openAddCustomerModal}
+                          disabled={bills[currentBillIndex]?.completed}
+                          className="p-2 rounded-xl bg-green-50 hover:bg-green-100 text-green-700 transition-all border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="إضافة عميل جديد"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                            />
+                          </svg>
+                        </button>
+                      )}
                   </div>
                 </div>
 

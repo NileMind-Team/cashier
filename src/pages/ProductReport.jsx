@@ -7,6 +7,7 @@ export default function ProductsReports() {
   const navigate = useNavigate();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [orderBy, setOrderBy] = useState("mostSold");
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -38,6 +39,7 @@ export default function ProductsReports() {
         params: {
           from: startDate,
           to: endDate,
+          orderBy: orderBy,
         },
       });
 
@@ -80,6 +82,7 @@ export default function ProductsReports() {
             startDate: startDate,
             endDate: endDate,
           },
+          orderBy: orderBy,
         });
 
         toast.success(
@@ -134,6 +137,17 @@ export default function ProductsReports() {
       .split("")
       .reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[hash % colors.length];
+  };
+
+  const getOrderByText = (orderValue) => {
+    const orderOptions = {
+      mostSold: "الأكثر مبيعاً",
+      highestRevenue: "الأعلى إيراداً",
+      name: "الترتيب الأبجدي",
+      SubCategory: "حسب الفئة",
+      price: "الأعلى سعراً",
+    };
+    return orderOptions[orderValue] || "الأكثر مبيعاً";
   };
 
   return (
@@ -256,6 +270,54 @@ export default function ProductsReports() {
                   </label>
                 </div>
 
+                <div className="relative">
+                  <select
+                    value={orderBy}
+                    onChange={(e) => setOrderBy(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white appearance-none cursor-pointer"
+                    dir="rtl"
+                  >
+                    <option value="mostSold">الأكثر مبيعاً</option>
+                    <option value="highestRevenue">الأعلى إيراداً</option>
+                    <option value="name">الترتيب الأبجدي</option>
+                    <option value="SubCategory">حسب الفئة</option>
+                    <option value="price">الأعلى سعراً</option>
+                  </select>
+                  <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
+                    <span className="flex items-center">
+                      <svg
+                        className="w-4 h-4 ml-1"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
+                        />
+                      </svg>
+                      ترتيب حسب
+                    </span>
+                  </label>
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <svg
+                      className="w-5 h-5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
                 <div className="pt-4">
                   <button
                     onClick={generateReport}
@@ -321,10 +383,15 @@ export default function ProductsReports() {
                         {reportData.dateRange.end}
                       </span>
                     </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {reportData.stats.totalProducts} منتج |{" "}
-                      {reportData.stats.totalQuantitySold} وحدة مباعة
-                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <p className="text-sm text-gray-500">
+                        {reportData.stats.totalProducts} منتج |{" "}
+                        {reportData.stats.totalQuantitySold} وحدة مباعة
+                      </p>
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                        مرتب حسب: {getOrderByText(reportData.orderBy)}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse print:hidden">
                     <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
@@ -686,7 +753,8 @@ export default function ProductsReports() {
                   تقارير أداء المنتجات
                 </h3>
                 <p className="text-gray-500 text-center mb-6 max-w-md">
-                  اختر تاريخ البداية والنهاية لعرض تقرير أداء المنتجات
+                  اختر تاريخ البداية والنهاية وطريقة الترتيب لعرض تقرير أداء
+                  المنتجات
                 </p>
                 <div className="text-center space-y-3">
                   <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg">
@@ -706,6 +774,23 @@ export default function ProductsReports() {
                     </svg>
                     اختر التاريخ من وإلى
                   </div>
+                  <div className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 ml-2"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
+                      />
+                    </svg>
+                    اختر طريقة الترتيب
+                  </div>
                 </div>
               </div>
             )}
@@ -715,4 +800,3 @@ export default function ProductsReports() {
     </div>
   );
 }
- 
