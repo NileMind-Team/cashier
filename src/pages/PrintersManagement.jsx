@@ -94,12 +94,13 @@ export default function PrintersManagement() {
     }
 
     try {
-      const response = await axiosInstance.put(
-        `/api/SubCategories/UpdateSubCategory/${editForm.id}`,
+      const response = await axiosInstance.post(
+        `/api/SubCategories/Print/${editForm.id}/Print`,
+        null,
         {
-          name: editForm.name,
-          mainCategoryId: parseInt(editForm.mainCategoryId),
-          printIP: editForm.printIP,
+          params: {
+            printIP: editForm.printIP,
+          },
         },
       );
 

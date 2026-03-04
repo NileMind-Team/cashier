@@ -454,16 +454,15 @@ export default function CustomersReports() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 print:grid-cols-2">
+                {/* البطاقات الرئيسية */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 print:grid-cols-2">
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-blue-800">
-                          إجمالي المشتريات
-                        </p>
+                        <p className="text-sm text-blue-800">إجمالي المبيعات</p>
                         <p className="text-2xl font-bold text-blue-900 mt-1">
                           {formatCurrency(
-                            reportData.customer.analytics.totalPurchases,
+                            reportData.customer.analytics.totalSales,
                           )}{" "}
                           ج.م
                         </p>
@@ -490,16 +489,12 @@ export default function CustomersReports() {
                   <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-green-800">
-                          إجمالي الفواتير
-                        </p>
+                        <p className="text-sm text-green-800">صافي الإيرادات</p>
                         <p className="text-2xl font-bold text-green-900 mt-1">
-                          {reportData.customer.analytics.totalInvoices}
-                        </p>
-                        <p className="text-xs text-green-600 mt-1">
-                          {reportData.customer.analytics.totalInvoices > 0
-                            ? `متوسط ${formatCurrency(reportData.customer.analytics.averageSpending)} ج.م/فاتورة`
-                            : "لا توجد فواتير"}
+                          {formatCurrency(
+                            reportData.customer.analytics.netRevenue,
+                          )}{" "}
+                          ج.م
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
@@ -514,7 +509,7 @@ export default function CustomersReports() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
                           />
                         </svg>
                       </div>
@@ -525,7 +520,7 @@ export default function CustomersReports() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-purple-800">
-                          إجمالي المدفوع
+                          إجمالي المدفوعات
                         </p>
                         <p className="text-2xl font-bold text-purple-900 mt-1">
                           {formatCurrency(
@@ -552,64 +547,198 @@ export default function CustomersReports() {
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  <div
-                    className={`bg-gradient-to-r rounded-xl p-4 border ${
-                      reportData.customer.analytics.hasDebt
-                        ? "from-red-50 to-red-100 border-red-200"
-                        : "from-amber-50 to-amber-100 border-amber-200"
-                    }`}
-                  >
+                {/* إحصائيات إضافية */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p
-                          className={`text-sm ${
-                            reportData.customer.analytics.hasDebt
-                              ? "text-red-800"
-                              : "text-amber-800"
-                          }`}
-                        >
-                          المتبقي
+                        <p className="text-sm text-amber-800">
+                          إجمالي المشتريات
                         </p>
-                        <p
-                          className={`text-2xl font-bold mt-1 ${
-                            reportData.customer.analytics.hasDebt
-                              ? "text-red-900"
-                              : "text-amber-900"
-                          }`}
+                        <p className="text-2xl font-bold text-amber-900 mt-1">
+                          {formatCurrency(
+                            reportData.customer.analytics.totalPurchases,
+                          )}{" "}
+                          ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-amber-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-red-800">إجمالي المرتجعات</p>
+                        <p className="text-2xl font-bold text-red-900 mt-1">
+                          {formatCurrency(
+                            reportData.customer.analytics.totalReturns,
+                          )}{" "}
+                          ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-red-200 rounded-full flex items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-red-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 3v6a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V15z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-teal-50 to-teal-100 rounded-xl p-4 border border-teal-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-teal-800">إجمالي الضرائب</p>
+                        <p className="text-2xl font-bold text-teal-900 mt-1">
+                          {formatCurrency(
+                            reportData.customer.analytics.totalTax,
+                          )}{" "}
+                          ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-teal-200 rounded-full flex items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-teal-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-xl p-4 border border-indigo-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-indigo-800">
+                          إجمالي الخصومات
+                        </p>
+                        <p className="text-2xl font-bold text-indigo-900 mt-1">
+                          {formatCurrency(
+                            reportData.customer.analytics.totalDiscount,
+                          )}{" "}
+                          ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-indigo-200 rounded-full flex items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-indigo-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* إحصائيات الفواتير */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-4 border border-blue-200">
+                    <h4 className="font-bold mb-3 text-blue-800">
+                      إحصائيات المبيعات
+                    </h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">عدد عمليات البيع:</span>
+                        <span className="font-bold">
+                          {reportData.customer.analytics.salesCount}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">
+                          عدد عمليات المرتجع:
+                        </span>
+                        <span className="font-bold">
+                          {reportData.customer.analytics.returnsCount}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">إجمالي الفواتير:</span>
+                        <span className="font-bold">
+                          {reportData.customer.analytics.totalInvoices}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-purple-50 to-white rounded-xl p-4 border border-purple-200">
+                    <h4 className="font-bold mb-3 text-purple-800">
+                      متوسطات العميل
+                    </h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">متوسط الإنفاق:</span>
+                        <span className="font-bold">
+                          {formatCurrency(
+                            reportData.customer.analytics.averageSpending,
+                          )}{" "}
+                          ج.م
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">المتبقي:</span>
+                        <span
+                          className={`font-bold ${reportData.customer.analytics.hasDebt ? "text-red-600" : "text-green-600"}`}
                         >
                           {formatCurrency(
                             reportData.customer.analytics.totalRemaining,
                           )}{" "}
                           ج.م
-                        </p>
-                        <p
-                          className={`text-xs mt-1 ${
-                            reportData.customer.analytics.hasDebt
-                              ? "text-red-600"
-                              : "text-amber-600"
-                          }`}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">الحالة:</span>
+                        <span
+                          className={`font-bold ${reportData.customer.analytics.hasDebt ? "text-red-600" : "text-green-600"}`}
                         >
                           {reportData.customer.analytics.hasDebt
-                            ? "مدفوعات ناقصة"
-                            : "جميع المدفوعات مكتملة"}
-                        </p>
-                      </div>
-                      <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                          reportData.customer.analytics.hasDebt
-                            ? "bg-red-200"
-                            : "bg-amber-200"
-                        }`}
-                      >
-                        <span
-                          className={`text-xl ${
-                            reportData.customer.analytics.hasDebt
-                              ? "text-red-700"
-                              : "text-amber-700"
-                          }`}
-                        >
-                          {reportData.customer.analytics.hasDebt ? "⚠️" : "✓"}
+                            ? "عليه مدفوعات"
+                            : "مدفوع بالكامل"}
                         </span>
                       </div>
                     </div>
@@ -727,11 +856,11 @@ export default function CustomersReports() {
                         style={{ color: "#10B981" }}
                       >
                         {formatCurrency(
-                          reportData.customer.analytics.totalPurchases,
+                          reportData.customer.analytics.totalSales,
                         )}
                       </div>
                       <div className="text-sm text-gray-600">
-                        إجمالي المشتريات
+                        إجمالي المبيعات
                       </div>
                     </div>
                     <div className="text-center">
@@ -740,11 +869,11 @@ export default function CustomersReports() {
                         style={{ color: "#8B5CF6" }}
                       >
                         {formatCurrency(
-                          reportData.customer.analytics.totalPaid,
+                          reportData.customer.analytics.netRevenue,
                         )}
                       </div>
                       <div className="text-sm text-gray-600">
-                        إجمالي المدفوع
+                        صافي الإيرادات
                       </div>
                     </div>
                     <div className="text-center">

@@ -35,8 +35,8 @@ export default function PaymentMethodsManagement() {
           id: method.id,
           name: method.name || "",
           isActive: method.isActive || false,
-          totalTransactions: 0,
-          totalAmount: 0,
+          transactionsCount: method.transactionsCount || 0,
+          totalAmount: method.totalAmount || 0,
         }));
         setMethods(formattedMethods);
       } else {
@@ -588,8 +588,7 @@ export default function PaymentMethodsManagement() {
                                   المعاملات:
                                 </span>
                                 <span className="font-bold">
-                                  {method.totalTransactions?.toLocaleString() ||
-                                    0}
+                                  {method.transactionsCount?.toLocaleString()}
                                 </span>
                               </div>
                               <div className="flex justify-between items-center">
@@ -597,7 +596,7 @@ export default function PaymentMethodsManagement() {
                                   المبالغ:
                                 </span>
                                 <span className="font-bold text-green-700">
-                                  {formatCurrency(method.totalAmount || 0)} ج.م
+                                  {formatCurrency(method.totalAmount)} ج.م
                                 </span>
                               </div>
                             </div>

@@ -90,6 +90,14 @@ export default function SalesReports() {
     }).format(amount);
   };
 
+  const formatAverage = (amount) => {
+    if (amount === undefined || amount === null) return "0.00";
+    return new Intl.NumberFormat("ar-EG", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
   return (
     <div
       dir="rtl"
@@ -384,6 +392,92 @@ export default function SalesReports() {
                   </div>
                 </div>
 
+                {/* إحصائيات إضافية */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-green-800">
+                          الإجمالي الفرعي
+                        </p>
+                        <p className="text-2xl font-bold text-green-900 mt-1">
+                          {formatCurrency(reportData.totalSubTotal || 0)} ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-green-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-red-800">إجمالي المرتجعات</p>
+                        <p className="text-2xl font-bold text-red-900 mt-1">
+                          {formatCurrency(reportData.totalReturns || 0)} ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-red-200 rounded-full flex items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-red-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 3v6a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V15z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-teal-50 to-teal-100 rounded-xl p-4 border border-teal-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-teal-800">إجمالي الخصومات</p>
+                        <p className="text-2xl font-bold text-teal-900 mt-1">
+                          {formatCurrency(reportData.totalDiscount || 0)} ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-teal-200 rounded-full flex items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-teal-700"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {reportData.payments && reportData.payments.length > 0 && (
                   <div className="mb-6">
                     <h3
@@ -486,7 +580,7 @@ export default function SalesReports() {
                         className="text-2xl font-bold"
                         style={{ color: "#8B5CF6" }}
                       >
-                        {formatCurrency(reportData.averageInvoice || 0)}
+                        {formatAverage(reportData.averageInvoice || 0)}
                       </div>
                       <div className="text-sm text-gray-600">
                         متوسط الفاتورة

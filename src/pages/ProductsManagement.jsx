@@ -15,6 +15,11 @@ export default function ProductsManagement() {
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [selectedMainCategoryId, setSelectedMainCategoryId] = useState("");
   const [focusedField, setFocusedField] = useState(null);
+  const [showTaxModal, setShowTaxModal] = useState(false);
+  const [taxForm, setTaxForm] = useState({
+    isIncludeTax: true,
+    taxValue: "",
+  });
   const [pagination, setPagination] = useState({
     currentPage: 1,
     pageSize: 5,
@@ -242,6 +247,25 @@ export default function ProductsManagement() {
     setFocusedField(null);
   };
 
+  const handleOpenTaxModal = () => {
+    const productsWithTax = products.filter((p) => p.valueAddedTax);
+
+    if (productsWithTax.length > 0) {
+      const firstProductWithTax = productsWithTax[0];
+      setTaxForm({
+        isIncludeTax: firstProductWithTax.isTaxInclusive ?? true,
+        taxValue: firstProductWithTax.valueAddedTax?.toString() || "",
+      });
+    } else {
+      setTaxForm({
+        isIncludeTax: true,
+        taxValue: "",
+      });
+    }
+
+    setShowTaxModal(true);
+  };
+
   const handleProductFormChange = (e) => {
     const { name, value, type, checked } = e.target;
     setProductForm((prev) => ({
@@ -254,6 +278,14 @@ export default function ProductsManagement() {
               name === "subCategoryId"
             ? value
             : value,
+    }));
+  };
+
+  const handleTaxFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setTaxForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -392,6 +424,49 @@ export default function ProductsManagement() {
         setEditingProduct(null);
       } else {
         toast.error("حدث خطأ في حفظ المنتج");
+      }
+    }
+  };
+
+  const handleAddTax = async (e) => {
+    e.preventDefault();
+
+    if (!taxForm.taxValue || parseFloat(taxForm.taxValue) <= 0) {
+      toast.error("يرجى إدخال قيمة ضريبة صحيحة");
+      return;
+    }
+
+    try {
+      const response = await axiosInstance.post("/api/Items/AddTax", null, {
+        params: {
+          isIncludeTax: taxForm.isIncludeTax,
+          taxValue: parseFloat(taxForm.taxValue),
+        },
+      });
+
+      if (response.status === 200) {
+        toast.success("تم إضافة الضريبة بنجاح على جميع المنتجات");
+        setShowTaxModal(false);
+        setTaxForm({
+          isIncludeTax: true,
+          taxValue: "",
+        });
+        await fetchProducts(pagination.currentPage, false);
+      } else {
+        toast.error("فشل في إضافة الضريبة");
+      }
+    } catch (error) {
+      console.error("خطأ في إضافة الضريبة:", error);
+      if (error.response?.status === 200) {
+        toast.success("تم إضافة الضريبة بنجاح على جميع المنتجات");
+        setShowTaxModal(false);
+        setTaxForm({
+          isIncludeTax: true,
+          taxValue: "",
+        });
+        await fetchProducts(pagination.currentPage, false);
+      } else {
+        toast.error("حدث خطأ في إضافة الضريبة");
       }
     }
   };
@@ -717,27 +792,49 @@ export default function ProductsManagement() {
                 إدارة جميع المنتجات في النظام
               </p>
             </div>
-            <button
-              onClick={handleAddProduct}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center whitespace-nowrap shadow-md"
-              style={{ backgroundColor: "#193F94" }}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            <div className="flex gap-2">
+              <button
+                onClick={handleOpenTaxModal}
+                className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center whitespace-nowrap shadow-md"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-              إضافة منتج جديد
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 ml-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2zm-8-5h.01M9 14l6-6m-5.5.5h.01m4.99 5h.01"
+                  />
+                </svg>
+                إضافة الضريبة
+              </button>
+              <button
+                onClick={handleAddProduct}
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center whitespace-nowrap shadow-md"
+                style={{ backgroundColor: "#193F94" }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 ml-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
+                إضافة منتج جديد
+              </button>
+            </div>
           </div>
         </div>
 
@@ -766,6 +863,9 @@ export default function ProductsManagement() {
                         السعر
                       </th>
                       <th className="py-4 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
+                        الضريبة
+                      </th>
+                      <th className="py-4 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
                         الحالة
                       </th>
                       <th className="py-4 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
@@ -777,7 +877,7 @@ export default function ProductsManagement() {
                     {products.length === 0 ? (
                       <tr>
                         <td
-                          colSpan="5"
+                          colSpan="6"
                           className="py-8 px-4 text-center text-gray-500"
                         >
                           <div className="flex flex-col items-center justify-center">
@@ -855,6 +955,26 @@ export default function ProductsManagement() {
                                     {formatCurrency(product.finalPrice)} ج.م
                                   </div>
                                 )}
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="text-sm">
+                              {product.valueAddedTax ? (
+                                <>
+                                  <span className="font-medium text-amber-700">
+                                    {product.valueAddedTax}%
+                                  </span>
+                                  <div className="text-xs text-gray-500">
+                                    {product.isTaxInclusive
+                                      ? "السعر شامل الضريبة"
+                                      : "السعر غير شامل الضريبة"}
+                                  </div>
+                                </>
+                              ) : (
+                                <span className="text-xs text-gray-400">
+                                  لا توجد ضريبة
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td className="py-4 px-4 text-right">
@@ -1134,6 +1254,162 @@ export default function ProductsManagement() {
         </div>
       </div>
 
+      {/* Tax Modal */}
+      {showTaxModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3
+                    className="text-2xl font-bold"
+                    style={{ color: "#193F94" }}
+                  >
+                    إضافة الضريبة
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    إضافة ضريبة على جميع المنتجات
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowTaxModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleAddTax}>
+                <div className="mb-6">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="taxValue"
+                      value={taxForm.taxValue}
+                      onChange={handleTaxFormChange}
+                      onFocus={() => handleFocus("taxValue")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      required
+                      dir="ltr"
+                      inputMode="numeric"
+                      pattern="\d*\.?\d*"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ MozAppearance: "textfield" }}
+                    />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "taxValue" || taxForm.taxValue
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2zm-8-5h.01M9 14l6-6m-5.5.5h.01m4.99 5h.01"
+                          />
+                        </svg>
+                        قيمة الضريبة (%) *
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl">
+                    <span className="text-sm font-medium text-gray-700">
+                      {taxForm.isIncludeTax
+                        ? "الئعر شامل الضريبة"
+                        : "السعر غير شامل الضريبة"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTaxForm((prev) => ({
+                          ...prev,
+                          isIncludeTax: !prev.isIncludeTax,
+                        }))
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                        taxForm.isIncludeTax ? "bg-blue-600" : "bg-gray-200"
+                      }`}
+                      role="switch"
+                      aria-checked={taxForm.isIncludeTax}
+                    >
+                      <span className="sr-only">تبديل حالة الضريبة</span>
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                          taxForm.isIncludeTax
+                            ? "translate-x-6 rtl:-translate-x-6"
+                            : "translate-x-1 rtl:-translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 text-right">
+                    {taxForm.isIncludeTax
+                      ? "الضريبة مضمنة في سعر المنتج"
+                      : "الضريبة تضاف على سعر المنتج"}
+                  </p>
+                </div>
+
+                <div className="flex space-x-3 rtl:space-x-reverse pt-4 border-t-2 border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowTaxModal(false)}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                  >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
+                  >
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                      />
+                    </svg>
+                    إضافة الضريبة
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Product Modal */}
       {showProductModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">

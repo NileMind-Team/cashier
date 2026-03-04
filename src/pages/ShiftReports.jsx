@@ -131,6 +131,10 @@ export default function ShiftReports() {
     return `${diffHrs} ساعة ${diffMins} دقيقة`;
   };
 
+  const formatNumber = (value) => {
+    return (value || 0).toFixed(2);
+  };
+
   const stats = {
     totalShifts: shifts.length,
     openShifts: shifts.filter((s) => !s.endTime).length,
@@ -345,7 +349,7 @@ export default function ShiftReports() {
                       className="text-2xl font-bold"
                       style={{ color: "#193F94" }}
                     >
-                      تقرير الوردية
+                      تقرير الوردية #{reportData.shiftId}
                     </h2>
                     <p className="text-gray-600 mt-1">
                       {formatDate(reportData.startTime)}
@@ -413,13 +417,14 @@ export default function ShiftReports() {
                   </div>
                 </div>
 
+                {/* البطاقات الرئيسية */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-blue-800">إجمالي المبيعات</p>
                         <p className="text-2xl font-bold text-blue-900 mt-1">
-                          {reportData.totalSales?.toFixed(2) || "0.00"} ج.م
+                          {formatNumber(reportData.totalSales)} ج.م
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
@@ -483,6 +488,26 @@ export default function ShiftReports() {
                             </svg>
                             {reportData.suspendedInvoicesCount || 0} معلقة
                           </span>
+                          {reportData.partailPaidInvoicesCount > 0 && (
+                            <span className="text-orange-600 flex items-center">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-3 w-3 ml-1"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                                />
+                              </svg>
+                              {reportData.partailPaidInvoicesCount} مدفوعة
+                              جزئياً
+                            </span>
+                          )}
                           {reportData.returnedInvoicesCount > 0 && (
                             <span className="text-red-600 flex items-center">
                               <svg
@@ -530,7 +555,7 @@ export default function ShiftReports() {
                           صافي الإيرادات
                         </p>
                         <p className="text-2xl font-bold text-purple-900 mt-1">
-                          {reportData.netRevenue?.toFixed(2) || "0.00"} ج.م
+                          {formatNumber(reportData.netRevenue)} ج.م
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
@@ -558,10 +583,10 @@ export default function ShiftReports() {
                         <p className="text-sm text-amber-800">متوسط الفاتورة</p>
                         <p className="text-2xl font-bold text-amber-900 mt-1">
                           {reportData.doneInvoicesCount > 0
-                            ? (
+                            ? formatNumber(
                                 reportData.totalSales /
-                                reportData.doneInvoicesCount
-                              ).toFixed(2)
+                                  reportData.doneInvoicesCount,
+                              )
                             : "0.00"}{" "}
                           ج.م
                         </p>
@@ -632,7 +657,7 @@ export default function ShiftReports() {
                           </div>
                           <div className="text-right">
                             <p className="text-2xl font-bold">
-                              {payment.amount?.toFixed(2) || "0.00"} ج.م
+                              {formatNumber(payment.amount)} ج.م
                             </p>
                             <p className="text-sm text-gray-600 mt-1">
                               {reportData.totalSales > 0
@@ -667,9 +692,15 @@ export default function ShiftReports() {
                   </h4>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                      <span className="text-gray-600">الإجمالي الفرعي:</span>
+                      <span className="font-bold">
+                        {formatNumber(reportData.totalSubTotal)} ج.م
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
                       <span className="text-gray-600">إجمالي المبيعات:</span>
                       <span className="font-bold">
-                        {reportData.totalSales?.toFixed(2) || "0.00"} ج.م
+                        {formatNumber(reportData.totalSales)} ج.م
                       </span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
@@ -684,7 +715,7 @@ export default function ShiftReports() {
                         %):
                       </span>
                       <span className="font-bold">
-                        {reportData.totalTax?.toFixed(2) || "0.00"} ج.م
+                        {formatNumber(reportData.totalTax)} ج.م
                       </span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
@@ -700,7 +731,13 @@ export default function ShiftReports() {
                         %):
                       </span>
                       <span className="font-bold text-red-600">
-                        {reportData.totalDiscount?.toFixed(2) || "0.00"} ج.م
+                        {formatNumber(reportData.totalDiscount)} ج.م
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                      <span className="text-gray-600">إجمالي المرتجعات:</span>
+                      <span className="font-bold text-red-600">
+                        {formatNumber(reportData.totalReturns)} ج.م
                       </span>
                     </div>
                     <div className="pt-3 border-t border-gray-200">
@@ -712,7 +749,7 @@ export default function ShiftReports() {
                           className="font-bold text-lg"
                           style={{ color: "#10B981" }}
                         >
-                          {reportData.netRevenue?.toFixed(2) || "0.00"} ج.م
+                          {formatNumber(reportData.netRevenue)} ج.م
                         </span>
                       </div>
                     </div>

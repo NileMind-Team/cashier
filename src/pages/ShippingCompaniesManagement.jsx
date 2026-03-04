@@ -43,7 +43,7 @@ export default function ShippingCompaniesManagement() {
           phone: company.contactNumber || "",
           deliveryRate: company.deliveryCost || 0,
           isActive: company.isActive || false,
-          totalDeliveries: 0,
+          shipmentsCount: company.shipmentsCount || 0,
           imgUrl: company.imgUrl || "",
           websiteUrl: company.websiteUrl || "",
           commercialRegistrationNumber:
@@ -304,7 +304,6 @@ export default function ShippingCompaniesManagement() {
               ? parseFloat(formData.deliveryCost)
               : 0,
             isActive: true,
-            totalDeliveries: 0,
             imgUrl: formData.imgUrl,
             websiteUrl: formData.websiteUrl,
             commercialRegistrationNumber: formData.commercialRegistrationNumber,
@@ -723,8 +722,7 @@ export default function ShippingCompaniesManagement() {
                           <td className="py-4 px-4 text-right">
                             <div className="space-y-1">
                               <div className="text-sm text-gray-800">
-                                إجمالي الشحنات:{" "}
-                                {company.totalDeliveries?.toLocaleString() || 0}
+                                إجمالي الشحنات: {company.shipmentsCount}
                               </div>
                               {company.commercialRegistrationNumber && (
                                 <div className="text-xs text-gray-500">
