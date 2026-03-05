@@ -11,22 +11,48 @@ export default function PendingBillsReport() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const hasFetched = useRef(false);
 
+  // Pagination states
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    pageSize: 10,
+    totalCount: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
+
   useEffect(() => {
     if (!hasFetched.current) {
-      fetchPendingBills();
+      fetchPendingBills(1);
       hasFetched.current = true;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchPendingBills = async () => {
+  const fetchPendingBills = async (pageNumber = 1) => {
     setLoading(true);
     try {
-      const response = await axiosInstance.get(
+      const response = await axiosInstance.post(
         "/api/Reports/PendingBillsReport",
+        {
+          pageNumber: pageNumber,
+          pageSize: pagination.pageSize,
+          skip: (pageNumber - 1) * pagination.pageSize,
+        },
       );
 
       if (response.status === 200 && response.data) {
         const data = response.data;
+
+        // Update pagination from response
+        setPagination({
+          currentPage: data.pageNumber || pageNumber,
+          pageSize: data.pageSize || 10,
+          totalCount: data.totalCount || 0,
+          totalPages: data.totalPages || 1,
+          hasNextPage: data.hasNext || false,
+          hasPreviousPage: data.hasPrevious || false,
+        });
 
         const billsWithDetails = (data.invoices || []).map((bill) => ({
           id: bill.invoiceId,
@@ -49,12 +75,62 @@ export default function PendingBillsReport() {
       if (error.response?.status === 404) {
         toast.error("لا توجد فواتير معلقة");
         setPendingBills([]);
+        setPagination({
+          ...pagination,
+          totalCount: 0,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        });
       } else {
         toast.error("حدث خطأ في جلب الفواتير المعلقة");
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      fetchPendingBills(newPage);
+
+      const tableElement = document.getElementById("bills-table-container");
+      if (tableElement) {
+        tableElement.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
+
+  const getPageNumbers = () => {
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+    let l;
+
+    for (let i = 1; i <= pagination.totalPages; i++) {
+      if (
+        i === 1 ||
+        i === pagination.totalPages ||
+        (i >= pagination.currentPage - delta &&
+          i <= pagination.currentPage + delta)
+      ) {
+        range.push(i);
+      }
+    }
+
+    range.forEach((i) => {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push("...");
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    });
+
+    return rangeWithDots;
   };
 
   const formatDate = (dateString) => {
@@ -116,7 +192,7 @@ export default function PendingBillsReport() {
       Object.entries(employeeCount).sort((a, b) => b[1] - a[1])[0] || null;
 
     return {
-      totalCount: pendingBills.length,
+      totalCount: pagination.totalCount,
       totalAmount: totalPendingAmount,
       averageAmount: averageBillAmount,
       billTypeCount,
@@ -298,7 +374,7 @@ export default function PendingBillsReport() {
                     {Object.entries(stats.billTypeCount).map(
                       ([type, count]) => {
                         const billType = getBillTypeLabel(parseInt(type));
-                        const percentage = (count / stats.totalCount) * 100;
+                        const percentage = (count / pendingBills.length) * 100;
                         return (
                           <div key={type} className="space-y-1">
                             <div className="flex justify-between text-xs">
@@ -369,13 +445,13 @@ export default function PendingBillsReport() {
                       عرض الفواتير غير المكتملة في النظام
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      {pendingBills.length} فاتورة معلقة | {stats.employeeCount}{" "}
-                      موظف
+                      {pagination.totalCount} فاتورة معلقة |{" "}
+                      {stats.employeeCount} موظف
                     </p>
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse print:hidden">
                     <div className="px-3 py-1 bg-amber-100 text-amber-800 text-xs rounded-full font-medium">
-                      {pendingBills.length} معلقة
+                      {pagination.totalCount} معلقة
                     </div>
                     <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
                       {formatCurrency(stats.totalAmount)} ج.م
@@ -391,7 +467,7 @@ export default function PendingBillsReport() {
                           الفواتير المعلقة
                         </p>
                         <p className="text-2xl font-bold text-amber-900 mt-1">
-                          {stats.totalCount}
+                          {pagination.totalCount}
                         </p>
                         <p className="text-xs text-amber-600 mt-1">
                           فاتورة غير مكتملة
@@ -468,12 +544,13 @@ export default function PendingBillsReport() {
                   </div>
                 </div>
 
-                <div className="mb-6">
+                <div id="bills-table-container" className="mb-6">
                   <h3
                     className="text-lg font-bold mb-4"
                     style={{ color: "#193F94" }}
                   >
-                    قائمة الفواتير المعلقة ({pendingBills.length} فاتورة)
+                    قائمة الفواتير المعلقة ({pendingBills.length} فاتورة من
+                    إجمالي {pagination.totalCount})
                   </h3>
 
                   <div className="overflow-x-auto">
@@ -574,6 +651,151 @@ export default function PendingBillsReport() {
                       </tfoot>
                     </table>
                   </div>
+
+                  {/* Pagination Controls */}
+                  {pagination.totalPages > 1 && (
+                    <div className="px-4 py-4 border-t border-gray-200 bg-gray-50 mt-4">
+                      <div className="flex justify-end">
+                        <div className="flex items-center gap-2">
+                          {/* First Page Button */}
+                          <button
+                            onClick={() => handlePageChange(1)}
+                            disabled={!pagination.hasPreviousPage}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              pagination.hasPreviousPage
+                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                                : "text-gray-300 cursor-not-allowed"
+                            }`}
+                            title="الصفحة الأولى"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                              />
+                            </svg>
+                          </button>
+
+                          {/* Previous Page Button */}
+                          <button
+                            onClick={() =>
+                              handlePageChange(pagination.currentPage - 1)
+                            }
+                            disabled={!pagination.hasPreviousPage}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              pagination.hasPreviousPage
+                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                                : "text-gray-300 cursor-not-allowed"
+                            }`}
+                            title="الصفحة السابقة"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5l7 7-7 7"
+                              />
+                            </svg>
+                          </button>
+
+                          {/* Page Numbers */}
+                          <div className="flex items-center gap-1">
+                            {getPageNumbers().map((page, index) =>
+                              page === "..." ? (
+                                <span
+                                  key={`dots-${index}`}
+                                  className="px-3 py-2 text-gray-500"
+                                >
+                                  ...
+                                </span>
+                              ) : (
+                                <button
+                                  key={page}
+                                  onClick={() => handlePageChange(page)}
+                                  className={`min-w-[40px] h-10 rounded-lg text-sm font-medium transition-all ${
+                                    pagination.currentPage === page
+                                      ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:from-blue-700 hover:to-blue-800"
+                                      : "text-gray-700 hover:bg-gray-200 hover:text-gray-900 border border-gray-200"
+                                  }`}
+                                >
+                                  {page}
+                                </button>
+                              ),
+                            )}
+                          </div>
+
+                          {/* Next Page Button */}
+                          <button
+                            onClick={() =>
+                              handlePageChange(pagination.currentPage + 1)
+                            }
+                            disabled={!pagination.hasNextPage}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              pagination.hasNextPage
+                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                                : "text-gray-300 cursor-not-allowed"
+                            }`}
+                            title="الصفحة التالية"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 19l-7-7 7-7"
+                              />
+                            </svg>
+                          </button>
+
+                          {/* Last Page Button */}
+                          <button
+                            onClick={() =>
+                              handlePageChange(pagination.totalPages)
+                            }
+                            disabled={!pagination.hasNextPage}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              pagination.hasNextPage
+                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                                : "text-gray-300 cursor-not-allowed"
+                            }`}
+                            title="الصفحة الأخيرة"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-200">
@@ -589,7 +811,7 @@ export default function PendingBillsReport() {
                         className="text-2xl font-bold"
                         style={{ color: "#193F94" }}
                       >
-                        {pendingBills.length}
+                        {pagination.totalCount}
                       </div>
                       <div className="text-sm text-gray-600">عدد الفواتير</div>
                     </div>

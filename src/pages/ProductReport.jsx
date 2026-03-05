@@ -10,6 +10,14 @@ export default function ProductsReports() {
   const [orderBy, setOrderBy] = useState("mostSold");
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    pageSize: 10,
+    totalCount: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -21,7 +29,7 @@ export default function ProductsReports() {
     setEndDate(today);
   }, []);
 
-  const generateReport = async () => {
+  const generateReport = async (pageNumber = 1) => {
     if (!startDate || !endDate) {
       toast.error("يرجى اختيار تاريخ البداية والنهاية");
       return;
@@ -35,16 +43,33 @@ export default function ProductsReports() {
     setLoading(true);
 
     try {
-      const response = await axiosInstance.get("/api/Reports/ProductsReport", {
-        params: {
-          from: startDate,
-          to: endDate,
-          orderBy: orderBy,
+      const response = await axiosInstance.post(
+        "/api/Reports/ProductsReport",
+        {
+          pageNumber: pageNumber,
+          pageSize: pagination.pageSize,
+          skip: (pageNumber - 1) * pagination.pageSize,
         },
-      });
+        {
+          params: {
+            from: startDate,
+            to: endDate,
+            orderBy: orderBy,
+          },
+        },
+      );
 
       if (response.status === 200 && response.data) {
         const data = response.data;
+
+        setPagination({
+          currentPage: data.pageNumber || pageNumber,
+          pageSize: data.pageSize || 10,
+          totalCount: data.totalCount || 0,
+          totalPages: data.totalPages || 1,
+          hasNextPage: data.hasNext || false,
+          hasPreviousPage: data.hasPrevious || false,
+        });
 
         const categoryBreakdown = (data.products || []).reduce(
           (acc, product) => {
@@ -63,12 +88,12 @@ export default function ProductsReports() {
         );
 
         const stats = {
-          totalProducts: data.products?.length || 0,
+          totalProducts: data.totalCount || 0,
           totalQuantitySold: data.totalQuantitySold || 0,
           totalRevenue: data.totalRevenue || 0,
           averageRevenuePerProduct:
-            data.products?.length > 0
-              ? (data.totalRevenue || 0) / data.products.length
+            data.totalCount > 0
+              ? (data.totalRevenue || 0) / data.totalCount
               : 0,
           categoryBreakdown: categoryBreakdown,
         };
@@ -86,7 +111,7 @@ export default function ProductsReports() {
         });
 
         toast.success(
-          `تم إنشاء التقرير للفترة من ${formatArabicDate(startDate)} إلى ${formatArabicDate(endDate)} (${data.products?.length || 0} منتج)`,
+          `تم إنشاء التقرير للفترة من ${formatArabicDate(startDate)} إلى ${formatArabicDate(endDate)} (${data.totalCount || 0} منتج)`,
         );
       }
     } catch (error) {
@@ -101,6 +126,49 @@ export default function ProductsReports() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      generateReport(newPage);
+
+      const tableElement = document.getElementById("report-table-container");
+      if (tableElement) {
+        tableElement.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
+
+  const getPageNumbers = () => {
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+    let l;
+
+    for (let i = 1; i <= pagination.totalPages; i++) {
+      if (
+        i === 1 ||
+        i === pagination.totalPages ||
+        (i >= pagination.currentPage - delta &&
+          i <= pagination.currentPage + delta)
+      ) {
+        range.push(i);
+      }
+    }
+
+    range.forEach((i) => {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push("...");
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    });
+
+    return rangeWithDots;
   };
 
   const formatArabicDate = (dateString) => {
@@ -320,7 +388,7 @@ export default function ProductsReports() {
 
                 <div className="pt-4">
                   <button
-                    onClick={generateReport}
+                    onClick={() => generateReport(1)}
                     disabled={loading || !startDate || !endDate}
                     className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
                       loading || !startDate || !endDate
@@ -585,12 +653,12 @@ export default function ProductsReports() {
                   </div>
                 )}
 
-                <div className="mb-6">
+                <div id="report-table-container" className="mb-6">
                   <h3
                     className="text-lg font-bold mb-4"
                     style={{ color: "#193F94" }}
                   >
-                    تفاصيل أداء المنتجات ({reportData.products.length} منتج)
+                    تفاصيل أداء المنتجات ({pagination.totalCount} منتج)
                   </h3>
 
                   <div className="overflow-x-auto">
@@ -689,6 +757,176 @@ export default function ProductsReports() {
                       </tfoot>
                     </table>
                   </div>
+
+                  {/* Pagination Controls */}
+                  {pagination.totalPages > 0 && (
+                    <div className="px-4 py-4 border-t border-gray-200 bg-gray-50 mt-4">
+                      <div className="flex justify-end">
+                        <div className="flex items-center gap-2">
+                          {/* First Page Button */}
+                          <button
+                            onClick={() => handlePageChange(1)}
+                            disabled={!pagination.hasPreviousPage}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              pagination.hasPreviousPage
+                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                                : "text-gray-300 cursor-not-allowed"
+                            }`}
+                            title="الصفحة الأولى"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                              />
+                            </svg>
+                          </button>
+
+                          {/* Previous Page Button */}
+                          <button
+                            onClick={() =>
+                              handlePageChange(pagination.currentPage - 1)
+                            }
+                            disabled={!pagination.hasPreviousPage}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              pagination.hasPreviousPage
+                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                                : "text-gray-300 cursor-not-allowed"
+                            }`}
+                            title="الصفحة السابقة"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5l7 7-7 7"
+                              />
+                            </svg>
+                          </button>
+
+                          {/* Page Numbers */}
+                          <div className="flex items-center gap-1">
+                            {getPageNumbers().map((page, index) =>
+                              page === "..." ? (
+                                <span
+                                  key={`dots-${index}`}
+                                  className="px-3 py-2 text-gray-500"
+                                >
+                                  ...
+                                </span>
+                              ) : (
+                                <button
+                                  key={page}
+                                  onClick={() => handlePageChange(page)}
+                                  className={`min-w-[40px] h-10 rounded-lg text-sm font-medium transition-all ${
+                                    pagination.currentPage === page
+                                      ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:from-blue-700 hover:to-blue-800"
+                                      : "text-gray-700 hover:bg-gray-200 hover:text-gray-900 border border-gray-200"
+                                  }`}
+                                >
+                                  {page}
+                                </button>
+                              ),
+                            )}
+                          </div>
+
+                          {/* Next Page Button */}
+                          <button
+                            onClick={() =>
+                              handlePageChange(pagination.currentPage + 1)
+                            }
+                            disabled={!pagination.hasNextPage}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              pagination.hasNextPage
+                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                                : "text-gray-300 cursor-not-allowed"
+                            }`}
+                            title="الصفحة التالية"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 19l-7-7 7-7"
+                              />
+                            </svg>
+                          </button>
+
+                          {/* Last Page Button */}
+                          <button
+                            onClick={() =>
+                              handlePageChange(pagination.totalPages)
+                            }
+                            disabled={!pagination.hasNextPage}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              pagination.hasNextPage
+                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                                : "text-gray-300 cursor-not-allowed"
+                            }`}
+                            title="الصفحة الأخيرة"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Quick Jump to Page (for large page counts) */}
+                      {pagination.totalPages > 10 && (
+                        <div className="mt-3 flex items-center justify-end gap-2">
+                          <span className="text-sm text-gray-600">
+                            انتقل إلى صفحة:
+                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            max={pagination.totalPages}
+                            value={pagination.currentPage}
+                            onChange={(e) => {
+                              const page = parseInt(e.target.value);
+                              if (page >= 1 && page <= pagination.totalPages) {
+                                handlePageChange(page);
+                              }
+                            }}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <span className="text-sm text-gray-600">
+                            من {pagination.totalPages}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-200">
