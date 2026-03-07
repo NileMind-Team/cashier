@@ -11,7 +11,7 @@ export default function Home() {
   const tablesFetchedRef = useRef(false);
   const mainCategoriesFetchedRef = useRef(false);
   const paymentMethodsFetchedRef = useRef(false);
-  const optionsFetchedRef = useRef(false);
+  const invoicesFetchedRef = useRef(false);
   const [isShiftOpen, setIsShiftOpen] = useState(true);
   const [shiftStartTime, setShiftStartTime] = useState(
     new Date().toLocaleTimeString("ar-EG"),
@@ -27,12 +27,23 @@ export default function Home() {
   const [optionsPerPage] = useState(8);
   const [currentShift, setCurrentShift] = useState(null);
   const [shiftLoading, setShiftLoading] = useState(false);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [discountValue, setDiscountValue] = useState(0);
+  const [discountType, setDiscountType] = useState(0);
+  // eslint-disable-next-line no-unused-vars
+  const [invoices, setInvoices] = useState([]);
+  // eslint-disable-next-line no-unused-vars
+  const [totalInvoicesCount, setTotalInvoicesCount] = useState(0);
+  const [currentInvoicePage, setCurrentInvoicePage] = useState(1);
+  const [pageSize] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [bills, setBills] = useState([
     {
       id: 1,
       cart: [],
       tax: 14,
       discount: 0,
+      discountType: 0,
       deliveryFee: 25,
       completed: false,
       isReturned: false,
@@ -48,6 +59,10 @@ export default function Home() {
       paymentMethod: null,
       invoiceId: null,
       isPending: true,
+      invoiceNumber: null,
+      invoiceDate: null,
+      tableId: null,
+      tableName: null,
     },
   ]);
   const [currentBillIndex, setCurrentBillIndex] = useState(0);
@@ -80,6 +95,10 @@ export default function Home() {
   const [subCategories, setSubCategories] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
   const [options, setOptions] = useState([]);
+  const [optionsTotalPages, setOptionsTotalPages] = useState(1);
+  // eslint-disable-next-line no-unused-vars
+  const [optionsTotalCount, setOptionsTotalCount] = useState(0);
+  const [optionsLoading, setOptionsLoading] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
   const [halls, setHalls] = useState([]);
@@ -93,6 +112,7 @@ export default function Home() {
     nationalId: "",
   });
   const [focusedField, setFocusedField] = useState(null);
+  const [isNewBillActive, setIsNewBillActive] = useState(true);
 
   const TableStatus = {
     Available: 0,
@@ -110,6 +130,14 @@ export default function Home() {
   const DiscountType = {
     Percentage: 0,
     Fixed: 1,
+  };
+
+  const InvoiceStatus = {
+    Open: 0,
+    Done: 1,
+    Suspended: 2,
+    Returned: 3,
+    PartialPaid: 4,
   };
 
   const getTableStatusText = (status) => {
@@ -155,6 +183,40 @@ export default function Home() {
     }
   };
 
+  const getInvoiceStatusText = (status) => {
+    switch (status) {
+      case InvoiceStatus.Open:
+        return "مفتوحة";
+      case InvoiceStatus.Done:
+        return "مكتملة";
+      case InvoiceStatus.Suspended:
+        return "معلقة";
+      case InvoiceStatus.Returned:
+        return "مرتجعة";
+      case InvoiceStatus.PartialPaid:
+        return "آجل";
+      default:
+        return "غير معروفة";
+    }
+  };
+
+  const getInvoiceStatusStyle = (status) => {
+    switch (status) {
+      case InvoiceStatus.Open:
+        return "bg-blue-100 text-blue-800";
+      case InvoiceStatus.Done:
+        return "bg-green-100 text-green-800";
+      case InvoiceStatus.Suspended:
+        return "bg-orange-100 text-orange-800";
+      case InvoiceStatus.Returned:
+        return "bg-red-100 text-red-800";
+      case InvoiceStatus.PartialPaid:
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   const fetchShiftDetails = async () => {
     if (shiftFetchedRef.current) {
       return currentShift;
@@ -171,6 +233,10 @@ export default function Home() {
           new Date(response.data.startTime).toLocaleTimeString("ar-EG"),
         );
         shiftFetchedRef.current = true;
+
+        const totalInvoice = response.data.totalInvoice || 0;
+        setTotalPages(totalInvoice);
+
         return response.data;
       } else {
         toast.error("فشل في جلب بيانات الوردية");
@@ -222,7 +288,10 @@ export default function Home() {
           0,
         );
         const billTax = (subtotal * bill.tax) / 100;
-        const billDiscount = (subtotal * bill.discount) / 100;
+        const billDiscount =
+          bill.discountType === DiscountType.Fixed
+            ? bill.discount
+            : (subtotal * bill.discount) / 100;
         const billTotal =
           subtotal +
           billTax -
@@ -247,6 +316,7 @@ export default function Home() {
       netRevenue,
       startTime: shiftStartTime,
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bills, shiftStartTime, currentShift]);
 
   const fetchPaymentMethods = async () => {
@@ -604,27 +674,242 @@ export default function Home() {
     }
   };
 
-  const fetchOptions = async () => {
-    if (optionsFetchedRef.current) {
-      return;
-    }
-
+  const fetchOptions = async (pageNumber = 1) => {
     try {
+      setOptionsLoading(true);
       const response = await axiosInstance.post("/api/Options/GetAll", {
-        pageNumber: 1,
-        pageSize: 100,
-        skip: 0,
+        pageNumber: pageNumber,
+        pageSize: optionsPerPage,
+        skip: (pageNumber - 1) * optionsPerPage,
       });
 
       if (response.status === 200 && response.data) {
         const items = response.data.items || [];
         const activeOptions = items.filter((option) => option.isActive);
         setOptions(activeOptions);
-        optionsFetchedRef.current = true;
+        setOptionsTotalPages(response.data.totalPages || 1);
+        setOptionsTotalCount(response.data.totalCount || 0);
+        setOptionsCurrentPage(response.data.pageNumber || 1);
       }
     } catch (error) {
       console.error("خطأ في جلب الإضافات:", error);
+      toast.error("حدث خطأ في جلب الإضافات");
+      setOptions([]);
+    } finally {
+      setOptionsLoading(false);
     }
+  };
+
+  const fetchLastInvoice = async () => {
+    try {
+      const lastPage = totalPages;
+
+      const response = await axiosInstance.post("/api/Invoices/GetAll/all", {
+        pageNumber: lastPage,
+        pageSize: pageSize,
+        skip: lastPage - 1,
+      });
+
+      if (response.status === 200 && response.data) {
+        const invoicesData = response.data.items || [];
+        setInvoices(invoicesData);
+        setTotalInvoicesCount(response.data.totalCount || 0);
+        setTotalPages(response.data.totalPages || 1);
+        setCurrentInvoicePage(response.data.pageNumber || 1);
+
+        return invoicesData;
+      }
+    } catch (error) {
+      console.error("خطأ في جلب آخر فاتورة:", error);
+      toast.error("حدث خطأ في جلب آخر فاتورة");
+    }
+  };
+
+  const fetchInvoiceByPage = async (pageNumber) => {
+    try {
+      const response = await axiosInstance.post("/api/Invoices/GetAll/all", {
+        pageNumber: pageNumber,
+        pageSize: pageSize,
+        skip: pageNumber - 1,
+      });
+
+      if (response.status === 200 && response.data) {
+        const invoicesData = response.data.items || [];
+        setInvoices(invoicesData);
+        setTotalInvoicesCount(response.data.totalCount || 0);
+        setTotalPages(response.data.totalPages || 1);
+        setCurrentInvoicePage(response.data.pageNumber || 1);
+
+        if (invoicesData.length > 0) {
+          const invoice = invoicesData[0];
+          convertInvoiceToBill(invoice, 0);
+          setIsNewBillActive(false);
+        }
+
+        invoicesFetchedRef.current = true;
+      }
+    } catch (error) {
+      console.error(`خطأ في جلب الفواتير للصفحة ${pageNumber}:`, error);
+      toast.error("حدث خطأ في جلب الفواتير");
+    }
+  };
+
+  const convertInvoiceToBill = (invoice, index) => {
+    const cartItems =
+      invoice.items?.map((item) => ({
+        id: item.itemId,
+        name: item.itemName,
+        price: item.itemPriceSnapShoot || 0,
+        quantity: item.quantity,
+        image: "",
+        uniqueId: `${item.itemId}_${Date.now()}_${Math.random()}`,
+        selectedOptions:
+          item.invoiceItemOptions?.map((opt) => ({
+            id: opt.optionId,
+            name: opt.optionNameSnapShoot,
+            price: opt.optionPriceSnapShoot || 0,
+          })) || [],
+        optionsTotal:
+          item.invoiceItemOptions?.reduce(
+            (sum, opt) => sum + (opt.optionPriceSnapShoot || 0),
+            0,
+          ) * item.quantity || 0,
+        note: "",
+      })) || [];
+
+    const invoiceStatus = invoice.invoiceStatus;
+    const isCompleted = invoiceStatus === InvoiceStatus.Done;
+    const isPending =
+      invoiceStatus === InvoiceStatus.Open ||
+      invoiceStatus === InvoiceStatus.Suspended;
+    const isReturned = invoiceStatus === InvoiceStatus.Returned;
+    const isPartialPaid = invoiceStatus === InvoiceStatus.PartialPaid;
+
+    const billType = "takeaway";
+
+    const bill = {
+      id: index + 1,
+      cart: cartItems,
+      tax:
+        invoice.taxTotal > 0
+          ? (invoice.taxTotal / (invoice.subTotal || 1)) * 100
+          : 14,
+      discount: invoice.invoiceDiscount || 0,
+      discountType: invoice.invoiceDiscountType || 0,
+      deliveryFee: invoice.deliveryFee || 0,
+      billType: billType,
+      customerName: invoice.customerName || "",
+      customerPhone: invoice.customerPhone || "",
+      customerAddress: "",
+      customerNationalId: "",
+      customerId: invoice.customerId || null,
+      tableStatus: invoice.tableId ? "occupied" : null,
+      generalNote: "",
+      paymentMethod: null,
+      completed: isCompleted,
+      isReturned: isReturned,
+      isPartialPaid: isPartialPaid,
+      returnReason: "",
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceDate: invoice.invoiceDate,
+      invoiceStatus: invoiceStatus,
+      tableId: invoice.tableId || null,
+      tableName: invoice.tableName || null,
+      isPending: isPending,
+    };
+
+    setBills((prev) => {
+      const newBills = [...prev];
+      if (newBills[index]) {
+        newBills[index] = bill;
+      } else {
+        newBills.push(bill);
+      }
+      return newBills;
+    });
+
+    setCurrentBillIndex(index);
+    setCart(cartItems);
+    setTax(bill.tax);
+    setDiscount(bill.discount);
+    setDeliveryFee(bill.deliveryFee);
+    setCustomerPhone(bill.customerPhone || "");
+    setCustomerName(bill.customerName || "");
+    setCustomerId(bill.customerId || null);
+    setGeneralNote(bill.generalNote || "");
+
+    if (invoice.tableId && invoice.tableName) {
+      const table = tables.find((t) => t.id === invoice.tableId);
+      const hall = table ? halls.find((h) => h.id === table.hallId) : null;
+
+      if (table && hall) {
+        setSelectedTable({
+          id: table.id,
+          number: table.name,
+          status: "occupied",
+        });
+        setSelectedHall(hall);
+        setShowTableInfo(true);
+        setTableStatus("occupied");
+      }
+    } else {
+      setSelectedTable(null);
+      setSelectedHall(null);
+      setShowTableInfo(false);
+      setTableStatus("available");
+    }
+  };
+
+  const addNewBill = () => {
+    const newBill = {
+      id: bills.length + 1,
+      cart: [],
+      tax: 14,
+      discount: 0,
+      discountType: 0,
+      deliveryFee: 0,
+      billType: "takeaway",
+      customerPhone: "",
+      customerName: "",
+      customerAddress: "",
+      customerNationalId: "",
+      customerId: null,
+      generalNote: "",
+      paymentMethod: null,
+      completed: false,
+      completedDate: null,
+      tableInfo: null,
+      tableStatus: null,
+      isReturned: false,
+      isPartialPaid: false,
+      returnReason: "",
+      invoiceId: null,
+      invoiceNumber: null,
+      invoiceDate: null,
+      invoiceStatus: InvoiceStatus.Open,
+      tableId: null,
+      tableName: null,
+      isPending: true,
+    };
+
+    setBills((prev) => [...prev, newBill]);
+    setCurrentBillIndex(bills.length);
+    setCart([]);
+    setTax(14);
+    setDiscount(0);
+    setDeliveryFee(0);
+    setCustomerPhone("");
+    setCustomerName("");
+    setCustomerAddress("");
+    setCustomerNationalId("");
+    setCustomerId(null);
+    setGeneralNote("");
+    setSelectedHall(null);
+    setSelectedTable(null);
+    setShowTableInfo(false);
+    setTableStatus("available");
+    setIsNewBillActive(true);
   };
 
   const createInvoice = async (isPending = true, paymentMethodId = null) => {
@@ -666,6 +951,10 @@ export default function Home() {
       if (response.status === 200 && response.data) {
         shiftFetchedRef.current = false;
         await fetchShiftDetails();
+
+        invoicesFetchedRef.current = false;
+        await fetchLastInvoice();
+
         return response.data;
       }
     } catch (error) {
@@ -674,14 +963,22 @@ export default function Home() {
     }
   };
 
-  const resumeInvoice = async (invoiceId) => {
+  const applyDiscount = async (invoiceId, discountValue, discountType) => {
     try {
       const response = await axiosInstance.put(
-        `/api/Invoices/ResumeInvoice/${invoiceId}/resume`,
+        `/api/Invoices/ApplyDiscount/${invoiceId}/discount`,
+        {
+          discount: discountValue,
+          discountType: discountType,
+        },
       );
-      return response.status === 200;
+
+      if (response.status === 200) {
+        return true;
+      }
+      return false;
     } catch (error) {
-      console.error("خطأ في استئناف الفاتورة:", error);
+      console.error("خطأ في تطبيق الخصم:", error);
       throw error;
     }
   };
@@ -698,6 +995,9 @@ export default function Home() {
       if (response.status === 200) {
         shiftFetchedRef.current = false;
         await fetchShiftDetails();
+        invoicesFetchedRef.current = false;
+        await fetchLastInvoice();
+
         return response.data;
       }
     } catch (error) {
@@ -714,14 +1014,12 @@ export default function Home() {
     initializedRef.current = true;
 
     const initializeData = async () => {
-      await Promise.all([
-        fetchShiftDetails(),
-        fetchHalls(),
-        fetchTables(),
-        fetchMainCategories(),
-        fetchPaymentMethods(),
-        fetchOptions(),
-      ]);
+      fetchShiftDetails();
+      fetchHalls();
+      fetchTables();
+      fetchMainCategories();
+      fetchPaymentMethods();
+      addNewBill();
     };
 
     initializeData();
@@ -755,23 +1053,17 @@ export default function Home() {
     );
   }, [selectedSubCategory, allProducts]);
 
-  const paginatedOptions = useMemo(() => {
-    const startIndex = (optionsCurrentPage - 1) * optionsPerPage;
-    const endIndex = startIndex + optionsPerPage;
-    return options.slice(startIndex, endIndex);
-  }, [options, optionsCurrentPage, optionsPerPage]);
-
-  const totalOptionsPages = Math.ceil(options.length / optionsPerPage);
+  const paginatedOptions = options;
 
   const handleNextOptionsPage = () => {
-    if (optionsCurrentPage < totalOptionsPages) {
-      setOptionsCurrentPage(optionsCurrentPage + 1);
+    if (optionsCurrentPage < optionsTotalPages) {
+      fetchOptions(optionsCurrentPage + 1);
     }
   };
 
   const handlePrevOptionsPage = () => {
     if (optionsCurrentPage > 1) {
-      setOptionsCurrentPage(optionsCurrentPage - 1);
+      fetchOptions(optionsCurrentPage - 1);
     }
   };
 
@@ -863,6 +1155,8 @@ export default function Home() {
         deliveryFee: type === "delivery" ? deliveryFee : 0,
         tableInfo: null,
         tableStatus: null,
+        tableId: null,
+        tableName: null,
       };
       setBills(updatedBills);
 
@@ -885,10 +1179,7 @@ export default function Home() {
       toast.info("جاري تحميل الفاتورة الخاصة بهذه الطاولة");
 
       const tableBillIndex = bills.findIndex(
-        (bill) =>
-          bill.tableInfo?.tableId === table.id &&
-          bill.tableInfo?.hallId === selectedHall.id &&
-          !bill.completed,
+        (bill) => bill.tableId === table.id && !bill.completed,
       );
 
       if (tableBillIndex !== -1) {
@@ -903,7 +1194,7 @@ export default function Home() {
         setCustomerAddress(tableBill.customerAddress || "");
         setCustomerNationalId(tableBill.customerNationalId || "");
         setCustomerId(tableBill.customerId || null);
-        setSelectedHall(halls.find((h) => h.id === tableBill.tableInfo.hallId));
+        setSelectedHall(halls.find((h) => h.id === table.hallId));
         setSelectedTable(table);
         setShowTableInfo(true);
         setTableStatus(tableBill.tableStatus || "occupied");
@@ -929,6 +1220,8 @@ export default function Home() {
         tableId: table.id,
         tableNumber: table.number,
       },
+      tableId: table.id,
+      tableName: table.number,
       tableStatus: "available",
     };
     setBills(updatedBills);
@@ -957,6 +1250,8 @@ export default function Home() {
         billType: "takeaway",
         tableInfo: null,
         tableStatus: null,
+        tableId: null,
+        tableName: null,
       };
       setBills(updatedBills);
 
@@ -1009,6 +1304,9 @@ export default function Home() {
                   generalNote: "",
                   paymentMethod: null,
                   invoiceId: null,
+                  invoiceNumber: null,
+                  tableId: null,
+                  tableName: null,
                 };
                 setBills(updatedBills);
 
@@ -1062,6 +1360,8 @@ export default function Home() {
         tableInfo: null,
         tableStatus: null,
         billType: "takeaway",
+        tableId: null,
+        tableName: null,
       };
       setBills(updatedBills);
 
@@ -1082,6 +1382,7 @@ export default function Home() {
         cart: [...cart],
         tax,
         discount,
+        discountType: bills[currentBillIndex]?.discountType || 0,
         deliveryFee:
           bills[currentBillIndex]?.billType === "delivery" ? deliveryFee : 0,
         billType: updatedBills[currentBillIndex]?.billType || "takeaway",
@@ -1096,9 +1397,16 @@ export default function Home() {
         completedDate: updatedBills[currentBillIndex]?.completedDate || null,
         tableInfo: updatedBills[currentBillIndex]?.tableInfo || null,
         tableStatus: updatedBills[currentBillIndex]?.tableStatus || null,
+        tableId: updatedBills[currentBillIndex]?.tableId || null,
+        tableName: updatedBills[currentBillIndex]?.tableName || null,
         isReturned: updatedBills[currentBillIndex]?.isReturned || false,
+        isPartialPaid: updatedBills[currentBillIndex]?.isPartialPaid || false,
         returnReason: updatedBills[currentBillIndex]?.returnReason || "",
         invoiceId: updatedBills[currentBillIndex]?.invoiceId || null,
+        invoiceNumber: updatedBills[currentBillIndex]?.invoiceNumber || null,
+        invoiceDate: updatedBills[currentBillIndex]?.invoiceDate || null,
+        invoiceStatus:
+          updatedBills[currentBillIndex]?.invoiceStatus || InvoiceStatus.Open,
         isPending: updatedBills[currentBillIndex]?.isPending !== false,
       };
       setBills(updatedBills);
@@ -1135,19 +1443,19 @@ export default function Home() {
         setDeliveryFee(0);
       }
 
-      if (currentBill.tableInfo) {
-        const hall = halls.find((h) => h.id === currentBill.tableInfo.hallId);
-        if (hall) {
+      if (currentBill.tableId) {
+        const table = tables.find((t) => t.id === currentBill.tableId);
+        const hall = table ? halls.find((h) => h.id === table.hallId) : null;
+
+        if (table && hall) {
           setSelectedHall(hall);
-          const tablesList = getTablesForCurrentHall();
-          const table = tablesList.find(
-            (t) => t.id === currentBill.tableInfo.tableId,
-          );
-          if (table) {
-            setSelectedTable(table);
-            setShowTableInfo(true);
-            setTableStatus(currentBill.tableStatus || "available");
-          }
+          setSelectedTable({
+            id: table.id,
+            number: table.name,
+            status: currentBill.tableStatus || "occupied",
+          });
+          setShowTableInfo(true);
+          setTableStatus(currentBill.tableStatus || "occupied");
         }
       } else {
         setSelectedHall(null);
@@ -1156,8 +1464,7 @@ export default function Home() {
         setTableStatus("available");
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentBillIndex, bills, halls]);
+  }, [currentBillIndex, bills, halls, tables]);
 
   const handleProductClick = (product) => {
     if (bills[currentBillIndex]?.completed) {
@@ -1169,6 +1476,7 @@ export default function Home() {
     setProductQuantity(1);
     setSelectedOptions([]);
     setOptionsCurrentPage(1);
+    fetchOptions(1);
     setShowProductModal(true);
   };
 
@@ -1370,6 +1678,86 @@ export default function Home() {
     setSelectedPaymentMethod(null);
   };
 
+  const openDiscountModal = () => {
+    if (cart.length === 0) {
+      toast.error("الفاتورة فارغة");
+      return;
+    }
+
+    if (bills[currentBillIndex]?.completed) {
+      toast.error("لا يمكن تطبيق خصم على فاتورة مكتملة");
+      return;
+    }
+
+    setDiscountValue(discount);
+    setDiscountType(bills[currentBillIndex]?.discountType || 0);
+    setShowDiscountModal(true);
+  };
+
+  const closeDiscountModal = () => {
+    setShowDiscountModal(false);
+  };
+
+  const handleApplyDiscount = async () => {
+    const currentBill = bills[currentBillIndex];
+
+    if (discountValue < 0) {
+      toast.error("قيمة الخصم يجب أن تكون أكبر من صفر");
+      return;
+    }
+
+    if (discountType === DiscountType.Percentage && discountValue > 100) {
+      toast.error("نسبة الخصم لا يمكن أن تزيد عن 100%");
+      return;
+    }
+
+    if (discountType === DiscountType.Fixed && discountValue > subtotal) {
+      toast.error("قيمة الخصم لا يمكن أن تزيد عن إجمالي الفاتورة");
+      return;
+    }
+
+    if (currentBill.invoiceId) {
+      try {
+        const success = await applyDiscount(
+          currentBill.invoiceId,
+          discountValue,
+          discountType,
+        );
+
+        if (success) {
+          setDiscount(discountValue);
+
+          const updatedBills = [...bills];
+          updatedBills[currentBillIndex] = {
+            ...currentBill,
+            discount: discountValue,
+            discountType: discountType,
+          };
+          setBills(updatedBills);
+
+          setShowDiscountModal(false);
+          toast.success("تم تطبيق الخصم بنجاح");
+        }
+      } catch (error) {
+        console.error("خطأ في تطبيق الخصم:", error);
+        toast.error("حدث خطأ في تطبيق الخصم");
+      }
+    } else {
+      setDiscount(discountValue);
+
+      const updatedBills = [...bills];
+      updatedBills[currentBillIndex] = {
+        ...currentBill,
+        discount: discountValue,
+        discountType: discountType,
+      };
+      setBills(updatedBills);
+
+      setShowDiscountModal(false);
+      toast.success("تم تطبيق الخصم بنجاح");
+    }
+  };
+
   const handleCompletePayment = async () => {
     if (!selectedPaymentMethod) {
       toast.error("يرجى اختيار طريقة الدفع");
@@ -1387,8 +1775,11 @@ export default function Home() {
           completedDate: new Date().toLocaleString(),
           paymentMethod: selectedPaymentMethod,
           isReturned: false,
+          isPartialPaid: false,
           returnReason: "",
           invoiceId: invoiceResponse.id,
+          invoiceNumber: invoiceResponse.invoiceNumber,
+          invoiceStatus: InvoiceStatus.Done,
           isPending: false,
         };
         setBills(updatedBills);
@@ -1410,10 +1801,16 @@ export default function Home() {
           (p) => p.id === selectedPaymentMethod,
         );
 
+        const discountAmount =
+          discountType === DiscountType.Fixed
+            ? discount
+            : (subtotal * discount) / 100;
+
         toast.success(
           <div>
             <p className="font-bold">
-              تم إتمام الفاتورة رقم {currentBillIndex + 1}
+              تم إتمام الفاتورة رقم{" "}
+              {invoiceResponse.invoiceNumber || currentBillIndex + 1}
             </p>
             {selectedTable && (
               <p className="text-sm mt-1">
@@ -1455,6 +1852,14 @@ export default function Home() {
                 رسوم التوصيل: {currentDeliveryFee.toFixed(2)} ج.م
               </p>
             )}
+            {discount > 0 && (
+              <p className="text-sm mt-1 text-green-600">
+                الخصم: {discountAmount.toFixed(2)} ج.م
+                {discountType === DiscountType.Percentage
+                  ? ` (${discount}%)`
+                  : ""}
+              </p>
+            )}
             <p className="text-sm mt-1">الإجمالي: {total.toFixed(2)} ج.م</p>
             <p className="text-xs text-gray-600 mt-1">
               تم حفظ الفاتورة في النظام
@@ -1463,46 +1868,7 @@ export default function Home() {
           { autoClose: 5000 },
         );
 
-        const newBill = {
-          id: bills.length + 1,
-          cart: [],
-          tax: 14,
-          discount: 0,
-          deliveryFee: 0,
-          billType: "takeaway",
-          customerPhone: "",
-          customerName: "",
-          customerAddress: "",
-          customerNationalId: "",
-          customerId: null,
-          generalNote: "",
-          paymentMethod: null,
-          completed: false,
-          completedDate: null,
-          tableInfo: null,
-          tableStatus: null,
-          isReturned: false,
-          returnReason: "",
-          invoiceId: null,
-          isPending: true,
-        };
-        const newBills = [...updatedBills, newBill];
-        setBills(newBills);
-        setCurrentBillIndex(newBills.length - 1);
-        setCart([]);
-        setTax(14);
-        setDiscount(0);
-        setDeliveryFee(0);
-        setCustomerPhone("");
-        setCustomerName("");
-        setCustomerAddress("");
-        setCustomerNationalId("");
-        setCustomerId(null);
-        setGeneralNote("");
-        setSelectedHall(null);
-        setSelectedTable(null);
-        setShowTableInfo(false);
-        setTableStatus("available");
+        addNewBill();
         setShowPaymentModal(false);
         setSelectedPaymentMethod(null);
       }
@@ -1513,127 +1879,18 @@ export default function Home() {
   };
 
   const goToNextBill = async () => {
-    const updatedBills = [...bills];
-    const currentBill = updatedBills[currentBillIndex];
-
-    if (!currentBill.completed && cart.length > 0 && !currentBill.invoiceId) {
-      try {
-        const invoiceResponse = await createInvoice(true, null);
-        updatedBills[currentBillIndex] = {
-          ...currentBill,
-          cart: [...cart],
-          tax,
-          discount,
-          deliveryFee: currentBill.billType === "delivery" ? deliveryFee : 0,
-          billType: currentBill.billType || "takeaway",
-          customerPhone: customerPhone,
-          customerName: customerName,
-          customerAddress: customerAddress,
-          customerNationalId: customerNationalId,
-          customerId: customerId,
-          generalNote: generalNote,
-          invoiceId: invoiceResponse.id,
-          isPending: true,
-        };
-      } catch (error) {
-        console.error("خطأ في حفظ الفاتورة المعلقة:", error);
-        toast.error("حدث خطأ في حفظ الفاتورة");
-        return;
-      }
-    } else {
-      updatedBills[currentBillIndex] = {
-        ...currentBill,
-        cart: [...cart],
-        tax,
-        discount,
-        deliveryFee: currentBill.billType === "delivery" ? deliveryFee : 0,
-        billType: currentBill.billType || "takeaway",
-        customerPhone: customerPhone,
-        customerName: customerName,
-        customerAddress: customerAddress,
-        customerNationalId: customerNationalId,
-        customerId: customerId,
-        generalNote: generalNote,
-      };
+    if (isNewBillActive) {
+      toast.info("أنت في الفاتورة الجديدة");
+      return;
     }
 
-    const nextIndex = currentBillIndex + 1;
-    if (nextIndex < bills.length) {
-      const nextBill = bills[nextIndex];
-
-      if (nextBill.invoiceId && nextBill.isPending) {
-        try {
-          await resumeInvoice(nextBill.invoiceId);
-        } catch (error) {
-          console.error("خطأ في استئناف الفاتورة:", error);
-        }
-      }
-
-      setCurrentBillIndex(nextIndex);
-      setCart([...nextBill.cart]);
-      setTax(nextBill.tax);
-      setDiscount(nextBill.discount);
-      setDeliveryFee(
-        nextBill.billType === "delivery" ? nextBill.deliveryFee : 0,
-      );
-      setCustomerPhone(nextBill.customerPhone || "");
-      setCustomerName(nextBill.customerName || "");
-      setCustomerAddress(nextBill.customerAddress || "");
-      setCustomerNationalId(nextBill.customerNationalId || "");
-      setCustomerId(nextBill.customerId || null);
-      setGeneralNote(nextBill.generalNote || "");
-
-      if (nextBill.tableInfo) {
-        const hall = halls.find((h) => h.id === nextBill.tableInfo.hallId);
-        if (hall) {
-          setSelectedHall(hall);
-          const tablesList = getTablesForCurrentHall();
-          const table = tablesList.find(
-            (t) => t.id === nextBill.tableInfo.tableId,
-          );
-          if (table) {
-            setSelectedTable(table);
-            setShowTableInfo(true);
-            setTableStatus(nextBill.tableStatus || "available");
-          }
-        }
-      } else {
-        setSelectedHall(null);
-        setSelectedTable(null);
-        setShowTableInfo(false);
-        setTableStatus("available");
-      }
-
-      toast.info(
-        `الفاتورة رقم ${nextBill.id} (${getBillTypeLabel(nextBill.billType)})${nextBill.completed ? (nextBill.isReturned ? " (مرتجعة)" : " (مكتملة)") : " (معلقة)"}`,
-      );
+    if (currentInvoicePage < totalPages) {
+      const nextPage = currentInvoicePage + 1;
+      await fetchInvoiceByPage(nextPage);
     } else {
-      const newBill = {
-        id: bills.length + 1,
-        cart: [],
-        tax: 14,
-        discount: 0,
-        deliveryFee: 0,
-        billType: "takeaway",
-        customerPhone: "",
-        customerName: "",
-        customerAddress: "",
-        customerNationalId: "",
-        customerId: null,
-        generalNote: "",
-        paymentMethod: null,
-        completed: false,
-        completedDate: null,
-        tableInfo: null,
-        tableStatus: null,
-        isReturned: false,
-        returnReason: "",
-        invoiceId: null,
-        isPending: true,
-      };
-      const newBills = [...updatedBills, newBill];
-      setBills(newBills);
-      setCurrentBillIndex(nextIndex);
+      setIsNewBillActive(true);
+      setCurrentInvoicePage(totalPages + 1);
+
       setCart([]);
       setTax(14);
       setDiscount(0);
@@ -1648,93 +1905,43 @@ export default function Home() {
       setSelectedTable(null);
       setShowTableInfo(false);
       setTableStatus("available");
-      toast.success(
-        `فاتورة جديدة رقم ${newBill.id} (${getBillTypeLabel(newBill.billType)})`,
-      );
+
+      toast.info("فاتورة جديدة");
     }
   };
 
-  const goToPreviousBill = () => {
-    if (currentBillIndex > 0) {
-      const updatedBills = [...bills];
-      const currentBill = updatedBills[currentBillIndex];
-
-      if (!currentBill.completed && cart.length > 0 && !currentBill.invoiceId) {
-        updatedBills[currentBillIndex] = {
-          ...currentBill,
-          cart: [...cart],
-          tax,
-          discount,
-          deliveryFee: currentBill.billType === "delivery" ? deliveryFee : 0,
-          billType: currentBill.billType || "takeaway",
-          customerPhone: customerPhone,
-          customerName: customerName,
-          customerAddress: customerAddress,
-          customerNationalId: customerNationalId,
-          customerId: customerId,
-          generalNote: generalNote,
-        };
+  const goToPreviousBill = async () => {
+    if (isNewBillActive) {
+      if (totalPages > 0) {
+        await fetchInvoiceByPage(totalPages);
+        setIsNewBillActive(false);
       } else {
-        updatedBills[currentBillIndex] = {
-          ...currentBill,
-          cart: [...cart],
-          tax,
-          discount,
-          deliveryFee: currentBill.billType === "delivery" ? deliveryFee : 0,
-          billType: currentBill.billType || "takeaway",
-          customerPhone: customerPhone,
-          customerName: customerName,
-          customerAddress: customerAddress,
-          customerNationalId: customerNationalId,
-          customerId: customerId,
-          generalNote: generalNote,
-        };
+        toast.warning("لا توجد فواتير سابقة");
       }
-      setBills(updatedBills);
-
-      const prevIndex = currentBillIndex - 1;
-      const prevBill = bills[prevIndex];
-
-      setCurrentBillIndex(prevIndex);
-      setCart([...prevBill.cart]);
-      setTax(prevBill.tax);
-      setDiscount(prevBill.discount);
-      setDeliveryFee(
-        prevBill.billType === "delivery" ? prevBill.deliveryFee : 0,
-      );
-      setCustomerPhone(prevBill.customerPhone || "");
-      setCustomerName(prevBill.customerName || "");
-      setCustomerAddress(prevBill.customerAddress || "");
-      setCustomerNationalId(prevBill.customerNationalId || "");
-      setCustomerId(prevBill.customerId || null);
-      setGeneralNote(prevBill.generalNote || "");
-
-      if (prevBill.tableInfo) {
-        const hall = halls.find((h) => h.id === prevBill.tableInfo.hallId);
-        if (hall) {
-          setSelectedHall(hall);
-          const tablesList = getTablesForCurrentHall();
-          const table = tablesList.find(
-            (t) => t.id === prevBill.tableInfo.tableId,
-          );
-          if (table) {
-            setSelectedTable(table);
-            setShowTableInfo(true);
-            setTableStatus(prevBill.tableStatus || "available");
-          }
-        }
+    } else {
+      if (currentInvoicePage > 1) {
+        const prevPage = currentInvoicePage - 1;
+        await fetchInvoiceByPage(prevPage);
       } else {
+        setIsNewBillActive(true);
+        setCurrentInvoicePage(0);
+        setCart([]);
+        setTax(14);
+        setDiscount(0);
+        setDeliveryFee(0);
+        setCustomerPhone("");
+        setCustomerName("");
+        setCustomerAddress("");
+        setCustomerNationalId("");
+        setCustomerId(null);
+        setGeneralNote("");
         setSelectedHall(null);
         setSelectedTable(null);
         setShowTableInfo(false);
         setTableStatus("available");
-      }
 
-      toast.info(
-        `الفاتورة رقم ${prevBill.id} (${getBillTypeLabel(prevBill.billType)})${prevBill.completed ? (prevBill.isReturned ? " (مرتجعة)" : " (مكتملة)") : " (معلقة)"}`,
-      );
-    } else {
-      toast.warning("هذه أول فاتورة");
+        toast.info("فاتورة جديدة");
+      }
     }
   };
 
@@ -1743,11 +1950,14 @@ export default function Home() {
     0,
   );
   const totalTax = (subtotal * tax) / 100;
-  const totalDiscount = (subtotal * discount) / 100;
+  const discountAmount =
+    discountType === DiscountType.Fixed
+      ? discount
+      : (subtotal * discount) / 100;
   const total =
     subtotal +
     totalTax -
-    totalDiscount +
+    discountAmount +
     (bills[currentBillIndex]?.billType === "delivery" ? deliveryFee : 0);
 
   const handlePrepareOrder = async () => {
@@ -1770,6 +1980,7 @@ export default function Home() {
         cart: [...cart],
         tax,
         discount,
+        discountType: bills[currentBillIndex]?.discountType || 0,
         deliveryFee:
           bills[currentBillIndex]?.billType === "delivery" ? deliveryFee : 0,
         billType: "dinein",
@@ -1788,10 +1999,15 @@ export default function Home() {
           tableId: selectedTable.id,
           tableNumber: selectedTable.number,
         },
+        tableId: selectedTable.id,
+        tableName: selectedTable.number,
         tableStatus: "occupied",
         isReturned: false,
+        isPartialPaid: false,
         returnReason: "",
         invoiceId: invoiceResponse.id,
+        invoiceNumber: invoiceResponse.invoiceNumber,
+        invoiceStatus: InvoiceStatus.Open,
         isPending: true,
       };
 
@@ -1803,47 +2019,7 @@ export default function Home() {
       );
       setTableStatus("occupied");
 
-      const newBill = {
-        id: bills.length + 1,
-        cart: [],
-        tax: 14,
-        discount: 0,
-        deliveryFee: 0,
-        billType: "takeaway",
-        customerPhone: "",
-        customerName: "",
-        customerAddress: "",
-        customerNationalId: "",
-        customerId: null,
-        generalNote: "",
-        paymentMethod: null,
-        completed: false,
-        completedDate: null,
-        tableInfo: null,
-        tableStatus: null,
-        isReturned: false,
-        returnReason: "",
-        invoiceId: null,
-        isPending: true,
-      };
-      const newBills = [...updatedBills, newBill];
-      setBills(newBills);
-
-      setCurrentBillIndex(newBills.length - 1);
-      setCart([]);
-      setTax(14);
-      setDiscount(0);
-      setDeliveryFee(0);
-      setCustomerPhone("");
-      setCustomerName("");
-      setCustomerAddress("");
-      setCustomerNationalId("");
-      setCustomerId(null);
-      setGeneralNote("");
-      setSelectedHall(null);
-      setSelectedTable(null);
-      setShowTableInfo(false);
-      setTableStatus("available");
+      addNewBill();
 
       toast.success(
         `تم تحضير طلب الطاولة ${selectedTable.number} وفتح فاتورة جديدة`,
@@ -1871,11 +2047,16 @@ export default function Home() {
       return;
     }
 
+    if (!currentBill.invoiceNumber) {
+      toast.error("لا يوجد رقم فاتورة للإرجاع");
+      return;
+    }
+
     const { value: returnReason, isConfirmed } = await Swal.fire({
       title: "إرجاع الفاتورة",
       html: `
         <div class="text-right">
-          <p class="mb-3">فاتورة رقم #${currentBill.id}</p>
+          <p class="mb-3">فاتورة رقم #${currentBill.invoiceNumber}</p>
           <p class="mb-4 text-gray-600">المبلغ الإجمالي: ${total.toFixed(2)} ج.م</p>
           <div class="mb-4">
             <label class="block text-sm text-gray-700 mb-2">سبب الارتجاع (اختياري)</label>
@@ -1922,8 +2103,8 @@ export default function Home() {
     }
 
     try {
-      if (currentBill.invoiceId) {
-        await createFullReturn(currentBill.invoiceId.toString());
+      if (currentBill.invoiceNumber) {
+        await createFullReturn(currentBill.invoiceNumber);
       }
 
       const updatedBills = [...bills];
@@ -1932,10 +2113,11 @@ export default function Home() {
         isReturned: true,
         returnReason: returnReason || "بدون سبب",
         returnedDate: new Date().toLocaleString(),
+        invoiceStatus: InvoiceStatus.Returned,
       };
       setBills(updatedBills);
 
-      if (currentBill.tableInfo && selectedHall && selectedTable) {
+      if (currentBill.tableId && selectedHall && selectedTable) {
         updateTableStatus(selectedHall.id, selectedTable.id, "available", null);
         setTableStatus("available");
       }
@@ -1944,7 +2126,7 @@ export default function Home() {
         title: "تم الإرجاع بنجاح!",
         html: `
           <div class="text-right">
-            <p>تم تحويل الفاتورة #${currentBill.id} إلى فاتورة مرتجعة</p>
+            <p>تم تحويل الفاتورة #${currentBill.invoiceNumber} إلى فاتورة مرتجعة</p>
             <p class="mt-2 text-gray-600">${returnReason ? `السبب: ${returnReason}` : "بدون سبب محدد"}</p>
             <p class="mt-2 text-sm text-gray-500">التاريخ: ${new Date().toLocaleString()}</p>
           </div>
@@ -1954,7 +2136,7 @@ export default function Home() {
         confirmButtonColor: "#10B981",
       });
 
-      toast.success(`تم إرجاع الفاتورة رقم ${currentBill.id} بنجاح`);
+      toast.success(`تم إرجاع الفاتورة رقم ${currentBill.invoiceNumber} بنجاح`);
     } catch (error) {
       console.error("خطأ في إرجاع الفاتورة:", error);
       toast.error("حدث خطأ في إرجاع الفاتورة");
@@ -1967,10 +2149,10 @@ export default function Home() {
       return;
     }
 
-    const billNumber = currentBillIndex + 1;
+    const billNumber =
+      bills[currentBillIndex]?.invoiceNumber || currentBillIndex + 1;
     const currentBill = bills[currentBillIndex];
-    const isCompleted = currentBill?.completed || false;
-    const isReturned = currentBill?.isReturned || false;
+    const invoiceStatus = currentBill?.invoiceStatus;
     const currentBillType = currentBill?.billType || "takeaway";
     const currentDeliveryFee = currentBillType === "delivery" ? deliveryFee : 0;
     const currentPaymentMethod = currentBill?.paymentMethod;
@@ -1982,22 +2164,20 @@ export default function Home() {
 
     toast.info(
       <div>
-        <p className="font-bold">
-          {isReturned
-            ? "فاتورة مرتجعة"
-            : isCompleted
-              ? "فاتورة مكتملة"
-              : "فاتورة معلقة"}{" "}
-          رقم {billNumber}
-        </p>
-        {isReturned && currentBill.returnReason && (
+        <p className="font-bold">فاتورة رقم {billNumber}</p>
+        {invoiceStatus !== undefined && (
+          <p className="text-xs text-gray-500 mb-1">
+            الحالة: {getInvoiceStatusText(invoiceStatus)}
+          </p>
+        )}
+        {currentBill.returnReason && (
           <p className="text-xs text-red-600 mb-1">
             سبب الارتجاع: {currentBill.returnReason}
           </p>
         )}
         {selectedTable && (
           <p className="text-xs text-gray-600 mb-1">
-            الطاولة: {selectedTable.number} ({selectedHall.name})
+            الطاولة: {selectedTable.number} ({selectedHall?.name})
           </p>
         )}
         <p className="text-sm text-gray-600 mb-1">
@@ -2064,8 +2244,13 @@ export default function Home() {
             <span>{totalTax.toFixed(2)} ج.م</span>
           </div>
           <div className="flex justify-between text-xs">
-            <span>الخصم ({discount}%):</span>
-            <span>{totalDiscount.toFixed(2)} ج.م</span>
+            <span>الخصم:</span>
+            <span>
+              {discountAmount.toFixed(2)} ج.م
+              {discountType === DiscountType.Percentage
+                ? ` (${discount}%)`
+                : ""}
+            </span>
           </div>
           {currentDeliveryFee > 0 && (
             <div className="flex justify-between text-xs">
@@ -2209,9 +2394,9 @@ export default function Home() {
                   <div className="relative flex items-center">
                     <button
                       onClick={handlePrevOptionsPage}
-                      disabled={optionsCurrentPage === 1}
+                      disabled={optionsCurrentPage === 1 || optionsLoading}
                       className={`absolute right-0 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                        optionsCurrentPage === 1
+                        optionsCurrentPage === 1 || optionsLoading
                           ? "text-gray-300 cursor-not-allowed bg-gray-100"
                           : "text-gray-600 hover:bg-gray-200 hover:text-gray-800 bg-white shadow-md border border-gray-200"
                       }`}
@@ -2232,54 +2417,64 @@ export default function Home() {
                       </svg>
                     </button>
 
-                    <div className="border border-gray-200 rounded-lg p-2 bg-gray-50 w-full mx-6">
-                      <div className="grid grid-cols-4 gap-1">
-                        {paginatedOptions.map((option) => {
-                          const isSelected = selectedOptions.some(
-                            (o) => o.id === option.id,
-                          );
-                          return (
-                            <button
-                              key={option.id}
-                              onClick={() => toggleOption(option)}
-                              className={`h-12 px-2 rounded-lg border-2 flex items-center justify-between transition-all w-full ${
-                                isSelected
-                                  ? "border-blue-500 bg-blue-50 shadow-sm"
-                                  : "border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between w-full">
-                                <div className="flex items-center space-x-1 rtl:space-x-reverse overflow-hidden">
-                                  <div
-                                    className={`w-3 h-3 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
-                                      isSelected
-                                        ? "border-blue-500 bg-blue-500"
-                                        : "border-gray-300"
-                                    }`}
-                                  >
-                                    {isSelected && (
-                                      <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
-                                    )}
+                    <div className="border border-gray-200 rounded-lg p-2 bg-gray-50 w-full mx-6 min-h-[120px]">
+                      {optionsLoading ? (
+                        <div className="flex items-center justify-center h-20">
+                          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-4 gap-1">
+                          {paginatedOptions.map((option) => {
+                            const isSelected = selectedOptions.some(
+                              (o) => o.id === option.id,
+                            );
+                            return (
+                              <button
+                                key={option.id}
+                                onClick={() => toggleOption(option)}
+                                className={`h-12 px-2 rounded-lg border-2 flex items-center justify-between transition-all w-full ${
+                                  isSelected
+                                    ? "border-blue-500 bg-blue-50 shadow-sm"
+                                    : "border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="flex items-center space-x-1 rtl:space-x-reverse overflow-hidden">
+                                    <div
+                                      className={`w-3 h-3 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                                        isSelected
+                                          ? "border-blue-500 bg-blue-500"
+                                          : "border-gray-300"
+                                      }`}
+                                    >
+                                      {isSelected && (
+                                        <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
+                                      )}
+                                    </div>
+                                    <span className="font-medium text-xs truncate max-w-[60px]">
+                                      {option.name}
+                                    </span>
                                   </div>
-                                  <span className="font-medium text-xs truncate max-w-[60px]">
-                                    {option.name}
+                                  <span className="text-[10px] text-gray-600 whitespace-nowrap mr-1 flex-shrink-0">
+                                    +{option.price} ج.م
                                   </span>
                                 </div>
-                                <span className="text-[10px] text-gray-600 whitespace-nowrap mr-1 flex-shrink-0">
-                                  +{option.price} ج.م
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
 
                     <button
                       onClick={handleNextOptionsPage}
-                      disabled={optionsCurrentPage === totalOptionsPages}
+                      disabled={
+                        optionsCurrentPage === optionsTotalPages ||
+                        optionsLoading
+                      }
                       className={`absolute left-0 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                        optionsCurrentPage === totalOptionsPages
+                        optionsCurrentPage === optionsTotalPages ||
+                        optionsLoading
                           ? "text-gray-300 cursor-not-allowed bg-gray-100"
                           : "text-gray-600 hover:bg-gray-200 hover:text-gray-800 bg-white shadow-md border border-gray-200"
                       }`}
@@ -2352,6 +2547,148 @@ export default function Home() {
                   }}
                 >
                   تأكيد الإضافة
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDiscountModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold" style={{ color: "#193F94" }}>
+                  تطبيق خصم
+                </h3>
+                <button
+                  onClick={closeDiscountModal}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mb-6">
+                <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm text-gray-600">المجموع الفرعي</p>
+                      <p
+                        className="text-xl font-bold"
+                        style={{ color: "#193F94" }}
+                      >
+                        {subtotal.toFixed(2)} ج.م
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">الفاتورة الحالية</p>
+                      <p className="text-xs text-gray-500">
+                        {cart.length} منتج
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      نوع الخصم
+                    </label>
+                    <div className="flex space-x-2 rtl:space-x-reverse">
+                      <button
+                        onClick={() => setDiscountType(DiscountType.Percentage)}
+                        className={`flex-1 py-2 px-3 rounded-lg border-2 transition-all ${
+                          discountType === DiscountType.Percentage
+                            ? "border-blue-500 bg-blue-50 text-blue-700"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        نسبة مئوية (%)
+                      </button>
+                      <button
+                        onClick={() => setDiscountType(DiscountType.Fixed)}
+                        className={`flex-1 py-2 px-3 rounded-lg border-2 transition-all ${
+                          discountType === DiscountType.Fixed
+                            ? "border-blue-500 bg-blue-50 text-blue-700"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        قيمة ثابتة (ج.م)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {discountType === DiscountType.Percentage
+                        ? "نسبة الخصم (%)"
+                        : "قيمة الخصم (ج.م)"}
+                    </label>
+                    <input
+                      type="number"
+                      value={discountValue}
+                      onChange={(e) => setDiscountValue(Number(e.target.value))}
+                      className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm"
+                      min="0"
+                      max={
+                        discountType === DiscountType.Percentage
+                          ? 100
+                          : subtotal
+                      }
+                      step={discountType === DiscountType.Percentage ? 1 : 0.01}
+                      dir="ltr"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">قيمة الخصم:</span>
+                      <span className="font-bold text-blue-600">
+                        {discountType === DiscountType.Percentage
+                          ? `${((subtotal * discountValue) / 100).toFixed(2)} ج.م (${discountValue}%)`
+                          : `${discountValue.toFixed(2)} ج.م`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-sm text-gray-600">
+                        الإجمالي بعد الخصم:
+                      </span>
+                      <span className="font-bold text-green-600">
+                        {discountType === DiscountType.Percentage
+                          ? (
+                              subtotal -
+                              (subtotal * discountValue) / 100
+                            ).toFixed(2)
+                          : (subtotal - discountValue).toFixed(2)}{" "}
+                        ج.م
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-3 rtl:space-x-reverse">
+                <button
+                  onClick={closeDiscountModal}
+                  className="flex-1 py-3 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleApplyDiscount}
+                  className="flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors"
+                  style={{ backgroundColor: "#193F94" }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "#0f2a6b";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "#193F94";
+                  }}
+                >
+                  تطبيق الخصم
                 </button>
               </div>
             </div>
@@ -2815,13 +3152,23 @@ export default function Home() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-600">
-                        فاتورة #{currentBillIndex + 1}
+                        فاتورة #
+                        {bills[currentBillIndex]?.invoiceNumber ||
+                          (isNewBillActive ? "جديدة" : currentBillIndex + 1)}
                       </p>
                       <p className="text-xs text-gray-500">
                         {cart.length} منتج
                       </p>
                     </div>
                   </div>
+                  {discount > 0 && (
+                    <div className="mt-2 text-xs text-green-600">
+                      الخصم: {discountAmount.toFixed(2)} ج.م
+                      {discountType === DiscountType.Percentage
+                        ? ` (${discount}%)`
+                        : ""}
+                    </div>
+                  )}
                 </div>
 
                 {paymentMethodsLoading ? (
@@ -2906,6 +3253,7 @@ export default function Home() {
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-lg p-4 h-full overflow-hidden flex flex-col">
+              {/* جزء المنتجات - لم يتغير */}
               {loading || shiftLoading ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -3051,9 +3399,15 @@ export default function Home() {
                   <div className="flex items-center space-x-1 rtl:space-x-reverse">
                     <button
                       onClick={goToPreviousBill}
-                      disabled={currentBillIndex === 0}
+                      disabled={
+                        !isNewBillActive &&
+                        currentInvoicePage === 1 &&
+                        totalPages === 0
+                      }
                       className={`px-2 py-1 rounded text-xs transition-all ${
-                        currentBillIndex === 0
+                        !isNewBillActive &&
+                        currentInvoicePage === 1 &&
+                        totalPages === 0
                           ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400"
                           : "bg-blue-100 text-blue-800 hover:bg-blue-200"
                       }`}
@@ -3066,25 +3420,31 @@ export default function Home() {
                           className="text-sm font-bold"
                           style={{ color: "#193F94" }}
                         >
-                          فاتورة #{currentBillIndex + 1}
+                          فاتورة
                         </span>
-                        {bills[currentBillIndex]?.completed &&
-                          !bills[currentBillIndex]?.isReturned && (
-                            <span className="text-[10px] bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full">
-                              مكتملة
-                            </span>
-                          )}
-                        {bills[currentBillIndex]?.isReturned && (
-                          <span className="text-[10px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded-full">
-                            مرتجعة
+                        {isNewBillActive ? (
+                          <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded-full">
+                            جديدة
                           </span>
-                        )}
-                        {bills[currentBillIndex]?.isPending &&
-                          !bills[currentBillIndex]?.completed && (
-                            <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded-full">
-                              معلقة
+                        ) : (
+                          <>
+                            <span>
+                              #
+                              {bills[currentBillIndex]?.invoiceNumber ||
+                                currentBillIndex + 1}
                             </span>
-                          )}
+                            {bills[currentBillIndex]?.invoiceStatus !==
+                              undefined && (
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded-full ${getInvoiceStatusStyle(bills[currentBillIndex].invoiceStatus)}`}
+                              >
+                                {getInvoiceStatusText(
+                                  bills[currentBillIndex].invoiceStatus,
+                                )}
+                              </span>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                     <button
@@ -3404,24 +3764,22 @@ export default function Home() {
                 <div className="flex justify-between items-center mb-2">
                   <span
                     className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      bills[currentBillIndex]?.isReturned
-                        ? "bg-red-100 text-red-800"
-                        : bills[currentBillIndex]?.completed
-                          ? "bg-green-100 text-green-800"
-                          : "bg-blue-100 text-blue-800"
+                      isNewBillActive
+                        ? "bg-purple-100 text-purple-800"
+                        : getInvoiceStatusStyle(
+                            bills[currentBillIndex]?.invoiceStatus,
+                          )
                     }`}
                   >
                     {cart.length} منتج
-                    {bills[currentBillIndex]?.completed &&
-                      (bills[currentBillIndex]?.isReturned
-                        ? " (مرتجعة)"
-                        : " (مكتملة)")}
+                    {isNewBillActive && " (جديدة)"}
                   </span>
-                  {bills[currentBillIndex]?.completedDate && (
-                    <span className="text-[10px] text-gray-500">
-                      {bills[currentBillIndex].completedDate}
-                    </span>
-                  )}
+                  {!isNewBillActive &&
+                    bills[currentBillIndex]?.completedDate && (
+                      <span className="text-[10px] text-gray-500">
+                        {bills[currentBillIndex].completedDate}
+                      </span>
+                    )}
                 </div>
               </div>
 
@@ -3730,17 +4088,22 @@ export default function Home() {
                 <div className="flex justify-between items-center text-xs">
                   <span>الخصم:</span>
                   <div className="flex items-center">
-                    <input
-                      type="number"
-                      value={discount}
-                      onChange={(e) => setDiscount(Number(e.target.value))}
-                      className="w-12 text-right px-1 py-1 border rounded mr-1.5 text-xs"
-                      min="0"
-                      max="100"
+                    <button
+                      onClick={openDiscountModal}
                       disabled={bills[currentBillIndex]?.completed}
-                    />
+                      className={`w-12 text-center px-1 py-1 border rounded mr-1.5 text-xs ${
+                        bills[currentBillIndex]?.completed
+                          ? "bg-gray-100 cursor-not-allowed"
+                          : "bg-blue-50 hover:bg-blue-100 cursor-pointer border-blue-200"
+                      }`}
+                    >
+                      {discount}
+                    </button>
                     <span className="font-bold">
-                      {totalDiscount.toFixed(2)} ج.م
+                      {discountAmount.toFixed(2)} ج.م
+                      {discountType === DiscountType.Percentage &&
+                        discount > 0 &&
+                        ` (${discount}%)`}
                     </span>
                   </div>
                 </div>
@@ -3799,7 +4162,8 @@ export default function Home() {
                 إعادة تعيين
               </button>
 
-              {bills[currentBillIndex]?.completed &&
+              {!isNewBillActive &&
+              bills[currentBillIndex]?.completed &&
               !bills[currentBillIndex]?.isReturned ? (
                 <button
                   onClick={handleReturnBill}
@@ -3814,7 +4178,7 @@ export default function Home() {
                 >
                   ارتجاع
                 </button>
-              ) : bills[currentBillIndex]?.completed ? (
+              ) : !isNewBillActive && bills[currentBillIndex]?.completed ? (
                 <button
                   onClick={handleReprintBill}
                   className="py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 hover:scale-[1.02] active:scale-[0.98]"
@@ -3828,7 +4192,8 @@ export default function Home() {
                 >
                   عرض الفاتورة
                 </button>
-              ) : bills[currentBillIndex]?.billType === "dinein" &&
+              ) : !isNewBillActive &&
+                bills[currentBillIndex]?.billType === "dinein" &&
                 selectedTable &&
                 cart.length > 0 ? (
                 tableStatus === "occupied" ? (
