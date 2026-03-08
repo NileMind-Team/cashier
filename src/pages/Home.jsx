@@ -2035,35 +2035,95 @@ export default function Home() {
 
   const goToNextBill = async () => {
     if (isNewBillActive) {
-      toast.info("أنت في الفاتورة الجديدة");
-      return;
-    }
+      if (cart.length === 0) {
+        toast.error("الفاتورة فارغة، أضف منتجات أولاً");
+        return;
+      }
 
-    if (currentInvoicePage < totalPages) {
-      const nextPage = currentInvoicePage + 1;
-      await fetchInvoiceByPage(nextPage);
+      if (bills[currentBillIndex]?.billType === "delivery") {
+        if (!customerPhone || customerPhone.length < 11) {
+          toast.error("يرجى إدخال رقم هاتف صحيح للتوصيل");
+          return;
+        }
+        if (!deliveryType) {
+          toast.error("يرجى اختيار نوع التوصيل");
+          setShowDeliveryTypeModal(true);
+          return;
+        }
+      }
+
+      if (bills[currentBillIndex]?.billType === "dinein" && !selectedTable) {
+        toast.error("يرجى اختيار طاولة أولاً");
+        setShowTableSelection(true);
+        return;
+      }
+
+      try {
+        const invoiceResponse = await createInvoice(false, null);
+
+        if (invoiceResponse) {
+          const updatedBills = [...bills];
+          updatedBills[currentBillIndex] = {
+            ...updatedBills[currentBillIndex],
+            completed: true,
+            completedDate: new Date().toLocaleString(),
+            invoiceId: invoiceResponse.id,
+            invoiceNumber: invoiceResponse.invoiceNumber,
+            invoiceStatus: InvoiceStatus.Done,
+            isPending: false,
+          };
+          setBills(updatedBills);
+
+          if (selectedTable && selectedHall) {
+            updateTableStatus(
+              selectedHall.id,
+              selectedTable.id,
+              "available",
+              null,
+            );
+          }
+
+          const currentBillType =
+            bills[currentBillIndex]?.billType || "takeaway";
+          toast.success(
+            <div>
+              <p className="font-bold">
+                تم إنشاء الفاتورة رقم {invoiceResponse.invoiceNumber}
+              </p>
+              <p className="text-sm mt-1">
+                نوع الفاتورة: {getBillTypeLabel(currentBillType)}
+              </p>
+              {selectedTable && (
+                <p className="text-sm mt-1">
+                  الطاولة: {selectedTable.number} ({selectedHall?.name})
+                </p>
+              )}
+              {customerName && (
+                <p className="text-sm mt-1">العميل: {customerName}</p>
+              )}
+              <p className="text-sm mt-1">الإجمالي: {total.toFixed(2)} ج.م</p>
+            </div>,
+            { autoClose: 4000 },
+          );
+
+          setIsNewBillActive(false);
+          setCurrentInvoicePage(totalPages + 1);
+          addNewBill();
+        }
+      } catch (error) {
+        console.error("خطأ في إنشاء الفاتورة:", error);
+        toast.error("حدث خطأ في إنشاء الفاتورة");
+      }
     } else {
-      setIsNewBillActive(true);
-      setCurrentInvoicePage(totalPages + 1);
-
-      setCart([]);
-      setTax(14);
-      setDiscount(0);
-      setDeliveryFee(0);
-      setCustomerPhone("");
-      setCustomerName("");
-      setCustomerAddress("");
-      setCustomerNationalId("");
-      setCustomerId(null);
-      setGeneralNote("");
-      setSelectedHall(null);
-      setSelectedTable(null);
-      setShowTableInfo(false);
-      setTableStatus("available");
-      setDeliveryType(null);
-      setSelectedDeliveryCompany(null);
-
-      toast.info("فاتورة جديدة");
+      if (currentInvoicePage < totalPages) {
+        const nextPage = currentInvoicePage + 1;
+        await fetchInvoiceByPage(nextPage);
+      } else {
+        setIsNewBillActive(true);
+        setCurrentInvoicePage(totalPages + 1);
+        addNewBill();
+        toast.info("فاتورة جديدة");
+      }
     }
   };
 
@@ -2082,23 +2142,7 @@ export default function Home() {
       } else {
         setIsNewBillActive(true);
         setCurrentInvoicePage(0);
-        setCart([]);
-        setTax(14);
-        setDiscount(0);
-        setDeliveryFee(0);
-        setCustomerPhone("");
-        setCustomerName("");
-        setCustomerAddress("");
-        setCustomerNationalId("");
-        setCustomerId(null);
-        setGeneralNote("");
-        setSelectedHall(null);
-        setSelectedTable(null);
-        setShowTableInfo(false);
-        setTableStatus("available");
-        setDeliveryType(null);
-        setSelectedDeliveryCompany(null);
-
+        addNewBill();
         toast.info("فاتورة جديدة");
       }
     }
