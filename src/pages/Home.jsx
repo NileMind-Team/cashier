@@ -12,6 +12,7 @@ export default function Home() {
   const mainCategoriesFetchedRef = useRef(false);
   const paymentMethodsFetchedRef = useRef(false);
   const invoicesFetchedRef = useRef(false);
+  const deliveryCompaniesFetchedRef = useRef(false);
   const [isShiftOpen, setIsShiftOpen] = useState(true);
   const [shiftStartTime, setShiftStartTime] = useState(
     new Date().toLocaleTimeString("ar-EG"),
@@ -44,7 +45,7 @@ export default function Home() {
       tax: 14,
       discount: 0,
       discountType: 0,
-      deliveryFee: 25,
+      deliveryFee: 0,
       completed: false,
       isReturned: false,
       returnReason: "",
@@ -63,13 +64,17 @@ export default function Home() {
       invoiceDate: null,
       tableId: null,
       tableName: null,
+      deliveryType: null,
+      deliveryCompanyId: null,
+      deliveryCompanyName: null,
+      deliveryCompanyContact: null,
     },
   ]);
   const [currentBillIndex, setCurrentBillIndex] = useState(0);
   const [cart, setCart] = useState([]);
   const [tax, setTax] = useState(14);
   const [discount, setDiscount] = useState(0);
-  const [deliveryFee, setDeliveryFee] = useState(25);
+  const [deliveryFee, setDeliveryFee] = useState(0);
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
@@ -101,6 +106,9 @@ export default function Home() {
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
+  const [deliveryCompanies, setDeliveryCompanies] = useState([]);
+  const [deliveryCompaniesLoading, setDeliveryCompaniesLoading] =
+    useState(false);
   const [halls, setHalls] = useState([]);
   const [tables, setTables] = useState([]);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -113,6 +121,16 @@ export default function Home() {
   });
   const [focusedField, setFocusedField] = useState(null);
   const [isNewBillActive, setIsNewBillActive] = useState(true);
+  const [showDeliveryTypeModal, setShowDeliveryTypeModal] = useState(false);
+  const [showDeliveryCompanyModal, setShowDeliveryCompanyModal] =
+    useState(false);
+  const [deliveryType, setDeliveryType] = useState(null);
+  const [selectedDeliveryCompany, setSelectedDeliveryCompany] = useState(null);
+
+  const DeliveryType = {
+    Store: "store",
+    Company: "company",
+  };
 
   const TableStatus = {
     Available: 0,
@@ -347,6 +365,33 @@ export default function Home() {
       setPaymentMethods([]);
     } finally {
       setPaymentMethodsLoading(false);
+    }
+  };
+
+  const fetchDeliveryCompanies = async () => {
+    if (deliveryCompaniesFetchedRef.current) {
+      return;
+    }
+
+    try {
+      setDeliveryCompaniesLoading(true);
+      const response = await axiosInstance.get("/api/DeliveryCompany/GetAll");
+
+      if (response.status === 200 && Array.isArray(response.data)) {
+        const activeCompanies = response.data.filter(
+          (company) => company.isActive,
+        );
+        setDeliveryCompanies(activeCompanies);
+        deliveryCompaniesFetchedRef.current = true;
+      } else {
+        setDeliveryCompanies([]);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب شركات التوصيل:", error);
+      toast.error("حدث خطأ في جلب شركات التوصيل");
+      setDeliveryCompanies([]);
+    } finally {
+      setDeliveryCompaniesLoading(false);
     }
   };
 
@@ -817,6 +862,10 @@ export default function Home() {
       tableId: invoice.tableId || null,
       tableName: invoice.tableName || null,
       isPending: isPending,
+      deliveryType: null,
+      deliveryCompanyId: null,
+      deliveryCompanyName: null,
+      deliveryCompanyContact: null,
     };
 
     setBills((prev) => {
@@ -891,6 +940,10 @@ export default function Home() {
       tableId: null,
       tableName: null,
       isPending: true,
+      deliveryType: null,
+      deliveryCompanyId: null,
+      deliveryCompanyName: null,
+      deliveryCompanyContact: null,
     };
 
     setBills((prev) => [...prev, newBill]);
@@ -910,6 +963,8 @@ export default function Home() {
     setShowTableInfo(false);
     setTableStatus("available");
     setIsNewBillActive(true);
+    setDeliveryType(null);
+    setSelectedDeliveryCompany(null);
   };
 
   const createInvoice = async (isPending = true, paymentMethodId = null) => {
@@ -1019,6 +1074,7 @@ export default function Home() {
       fetchTables();
       fetchMainCategories();
       fetchPaymentMethods();
+      fetchDeliveryCompanies();
       addNewBill();
     };
 
@@ -1139,6 +1195,11 @@ export default function Home() {
         setSelectedHall(halls[0]);
       }
       return;
+    } else if (type === "delivery") {
+      setShowDeliveryTypeModal(true);
+      setDeliveryType(null);
+      setSelectedDeliveryCompany(null);
+      setDeliveryFee(0);
     } else {
       if (selectedTable && selectedHall) {
         updateTableStatus(selectedHall.id, selectedTable.id, "available", null);
@@ -1152,19 +1213,21 @@ export default function Home() {
       updatedBills[currentBillIndex] = {
         ...updatedBills[currentBillIndex],
         billType: type,
-        deliveryFee: type === "delivery" ? deliveryFee : 0,
+        deliveryFee: 0,
         tableInfo: null,
         tableStatus: null,
         tableId: null,
         tableName: null,
+        deliveryType: null,
+        deliveryCompanyId: null,
+        deliveryCompanyName: null,
+        deliveryCompanyContact: null,
       };
       setBills(updatedBills);
 
-      if (type === "delivery") {
-        setDeliveryFee(25);
-      } else {
-        setDeliveryFee(0);
-      }
+      setDeliveryFee(0);
+      setDeliveryType(null);
+      setSelectedDeliveryCompany(null);
 
       toast.info(`تم تغيير نوع الفاتورة إلى ${getBillTypeLabel(type)}`);
     }
@@ -1257,6 +1320,61 @@ export default function Home() {
 
       toast.info("تم إلغاء اختيار الطاولة");
     }
+  };
+
+  const handleCloseDeliveryTypeModal = () => {
+    setShowDeliveryTypeModal(false);
+  };
+
+  const handleSelectDeliveryType = (type) => {
+    setDeliveryType(type);
+
+    if (type === DeliveryType.Store) {
+      setShowDeliveryCompanyModal(false);
+      setShowDeliveryTypeModal(false);
+      setDeliveryFee(25);
+      setSelectedDeliveryCompany(null);
+
+      const updatedBills = [...bills];
+      updatedBills[currentBillIndex] = {
+        ...updatedBills[currentBillIndex],
+        billType: "delivery",
+        deliveryFee: 25,
+        deliveryType: DeliveryType.Store,
+        deliveryCompanyId: null,
+        deliveryCompanyName: null,
+        deliveryCompanyContact: null,
+      };
+      setBills(updatedBills);
+
+      toast.success("تم اختيار دليفري المحل");
+    } else if (type === DeliveryType.Company) {
+      setShowDeliveryCompanyModal(true);
+    }
+  };
+
+  const handleSelectDeliveryCompany = (company) => {
+    setSelectedDeliveryCompany(company);
+    setDeliveryType(DeliveryType.Company);
+    setDeliveryFee(company.deliveryCost || 0);
+    setShowDeliveryCompanyModal(false);
+    setShowDeliveryTypeModal(false);
+
+    const updatedBills = [...bills];
+    updatedBills[currentBillIndex] = {
+      ...updatedBills[currentBillIndex],
+      billType: "delivery",
+      deliveryFee: company.deliveryCost || 0,
+      deliveryType: DeliveryType.Company,
+      deliveryCompanyId: company.id,
+      deliveryCompanyName: company.name,
+      deliveryCompanyContact: company.contactNumber,
+    };
+    setBills(updatedBills);
+
+    toast.success(
+      `تم اختيار شركة ${company.name} (رسوم التوصيل: ${company.deliveryCost || 0} ج.م)`,
+    );
   };
 
   const handleRemoveTable = () => {
@@ -1376,38 +1494,45 @@ export default function Home() {
 
   useEffect(() => {
     const saveCurrentBill = () => {
+      const currentBill = bills[currentBillIndex];
       const updatedBills = [...bills];
       updatedBills[currentBillIndex] = {
         id: currentBillIndex + 1,
         cart: [...cart],
         tax,
         discount,
-        discountType: bills[currentBillIndex]?.discountType || 0,
-        deliveryFee:
-          bills[currentBillIndex]?.billType === "delivery" ? deliveryFee : 0,
-        billType: updatedBills[currentBillIndex]?.billType || "takeaway",
+        discountType: currentBill?.discountType || 0,
+        deliveryFee: currentBill?.billType === "delivery" ? deliveryFee : 0,
+        billType: currentBill?.billType || "takeaway",
         customerPhone: customerPhone,
         customerName: customerName,
         customerAddress: customerAddress,
         customerNationalId: customerNationalId,
         customerId: customerId,
         generalNote: generalNote,
-        paymentMethod: updatedBills[currentBillIndex]?.paymentMethod || null,
-        completed: updatedBills[currentBillIndex]?.completed || false,
-        completedDate: updatedBills[currentBillIndex]?.completedDate || null,
-        tableInfo: updatedBills[currentBillIndex]?.tableInfo || null,
-        tableStatus: updatedBills[currentBillIndex]?.tableStatus || null,
-        tableId: updatedBills[currentBillIndex]?.tableId || null,
-        tableName: updatedBills[currentBillIndex]?.tableName || null,
-        isReturned: updatedBills[currentBillIndex]?.isReturned || false,
-        isPartialPaid: updatedBills[currentBillIndex]?.isPartialPaid || false,
-        returnReason: updatedBills[currentBillIndex]?.returnReason || "",
-        invoiceId: updatedBills[currentBillIndex]?.invoiceId || null,
-        invoiceNumber: updatedBills[currentBillIndex]?.invoiceNumber || null,
-        invoiceDate: updatedBills[currentBillIndex]?.invoiceDate || null,
-        invoiceStatus:
-          updatedBills[currentBillIndex]?.invoiceStatus || InvoiceStatus.Open,
-        isPending: updatedBills[currentBillIndex]?.isPending !== false,
+        paymentMethod: currentBill?.paymentMethod || null,
+        completed: currentBill?.completed || false,
+        completedDate: currentBill?.completedDate || null,
+        tableInfo: currentBill?.tableInfo || null,
+        tableStatus: currentBill?.tableStatus || null,
+        tableId: currentBill?.tableId || null,
+        tableName: currentBill?.tableName || null,
+        isReturned: currentBill?.isReturned || false,
+        isPartialPaid: currentBill?.isPartialPaid || false,
+        returnReason: currentBill?.returnReason || "",
+        invoiceId: currentBill?.invoiceId || null,
+        invoiceNumber: currentBill?.invoiceNumber || null,
+        invoiceDate: currentBill?.invoiceDate || null,
+        invoiceStatus: currentBill?.invoiceStatus || InvoiceStatus.Open,
+        isPending: currentBill?.isPending !== false,
+        deliveryType: currentBill?.deliveryType || deliveryType,
+        deliveryCompanyId:
+          currentBill?.deliveryCompanyId || selectedDeliveryCompany?.id,
+        deliveryCompanyName:
+          currentBill?.deliveryCompanyName || selectedDeliveryCompany?.name,
+        deliveryCompanyContact:
+          currentBill?.deliveryCompanyContact ||
+          selectedDeliveryCompany?.contactNumber,
       };
       setBills(updatedBills);
     };
@@ -1425,6 +1550,8 @@ export default function Home() {
     customerNationalId,
     customerId,
     generalNote,
+    deliveryType,
+    selectedDeliveryCompany,
   ]);
 
   useEffect(() => {
@@ -1438,9 +1565,18 @@ export default function Home() {
       setGeneralNote(currentBill.generalNote || "");
 
       if (currentBill.billType === "delivery") {
-        setDeliveryFee(currentBill.deliveryFee || 25);
+        setDeliveryFee(currentBill.deliveryFee || 0);
+        setDeliveryType(currentBill.deliveryType || null);
+        if (currentBill.deliveryCompanyId) {
+          const company = deliveryCompanies.find(
+            (c) => c.id === currentBill.deliveryCompanyId,
+          );
+          setSelectedDeliveryCompany(company || null);
+        }
       } else {
         setDeliveryFee(0);
+        setDeliveryType(null);
+        setSelectedDeliveryCompany(null);
       }
 
       if (currentBill.tableId) {
@@ -1464,7 +1600,7 @@ export default function Home() {
         setTableStatus("available");
       }
     }
-  }, [currentBillIndex, bills, halls, tables]);
+  }, [currentBillIndex, bills, halls, tables, deliveryCompanies]);
 
   const handleProductClick = (product) => {
     if (bills[currentBillIndex]?.completed) {
@@ -1668,6 +1804,11 @@ export default function Home() {
         toast.error("يرجى إدخال رقم هاتف صحيح للتوصيل");
         return;
       }
+      if (!deliveryType) {
+        toast.error("يرجى اختيار نوع التوصيل");
+        setShowDeliveryTypeModal(true);
+        return;
+      }
     }
 
     setShowPaymentModal(true);
@@ -1820,6 +1961,20 @@ export default function Home() {
             <p className="text-sm mt-1">
               نوع الفاتورة: {getBillTypeLabel(currentBillType)}
             </p>
+            {currentBillType === "delivery" && deliveryType && (
+              <p className="text-sm mt-1">
+                نوع التوصيل:{" "}
+                {deliveryType === DeliveryType.Store
+                  ? "دليفري المحل"
+                  : selectedDeliveryCompany?.name}
+                {deliveryType === DeliveryType.Company &&
+                  selectedDeliveryCompany?.contactNumber && (
+                    <span className="text-xs text-gray-600 mr-1">
+                      (رقم: {selectedDeliveryCompany.contactNumber})
+                    </span>
+                  )}
+              </p>
+            )}
             <p className="text-sm mt-1">
               طريقة الدفع: {paymentMethod?.name || "غير معروفة"}{" "}
               {paymentMethod?.icon}
@@ -1905,6 +2060,8 @@ export default function Home() {
       setSelectedTable(null);
       setShowTableInfo(false);
       setTableStatus("available");
+      setDeliveryType(null);
+      setSelectedDeliveryCompany(null);
 
       toast.info("فاتورة جديدة");
     }
@@ -1939,6 +2096,8 @@ export default function Home() {
         setSelectedTable(null);
         setShowTableInfo(false);
         setTableStatus("available");
+        setDeliveryType(null);
+        setSelectedDeliveryCompany(null);
 
         toast.info("فاتورة جديدة");
       }
@@ -2009,6 +2168,10 @@ export default function Home() {
         invoiceNumber: invoiceResponse.invoiceNumber,
         invoiceStatus: InvoiceStatus.Open,
         isPending: true,
+        deliveryType: null,
+        deliveryCompanyId: null,
+        deliveryCompanyName: null,
+        deliveryCompanyContact: null,
       };
 
       updateTableStatus(
@@ -2183,6 +2346,20 @@ export default function Home() {
         <p className="text-sm text-gray-600 mb-1">
           نوع الفاتورة: {getBillTypeLabel(currentBillType)}
         </p>
+        {currentBillType === "delivery" && currentBill.deliveryType && (
+          <p className="text-xs text-gray-600 mb-1">
+            نوع التوصيل:{" "}
+            {currentBill.deliveryType === DeliveryType.Store
+              ? "دليفري المحل"
+              : currentBill.deliveryCompanyName}
+            {currentBill.deliveryType === DeliveryType.Company &&
+              currentBill.deliveryCompanyContact && (
+                <span className="text-[10px] text-gray-500 mr-1">
+                  (رقم: {currentBill.deliveryCompanyContact})
+                </span>
+              )}
+          </p>
+        )}
         {customerName && (
           <p className="text-xs text-gray-600 mb-1">العميل: {customerName}</p>
         )}
@@ -2282,24 +2459,16 @@ export default function Home() {
     setCart([]);
     setTax(14);
     setDiscount(0);
-    setDeliveryFee(bills[currentBillIndex]?.billType === "delivery" ? 25 : 0);
+    setDeliveryFee(0);
     setCustomerPhone("");
     setCustomerName("");
     setCustomerAddress("");
     setCustomerNationalId("");
     setCustomerId(null);
     setGeneralNote("");
+    setDeliveryType(null);
+    setSelectedDeliveryCompany(null);
     toast.info("تم إعادة تعيين الفاتورة");
-  };
-
-  const handleDeliveryFeeChange = (e) => {
-    if (bills[currentBillIndex]?.completed) {
-      toast.error("لا يمكن تعديل فاتورة مكتملة");
-      return;
-    }
-    if (bills[currentBillIndex]?.billType === "delivery") {
-      setDeliveryFee(Number(e.target.value));
-    }
   };
 
   const handleShiftClose = () => {
@@ -2952,6 +3121,209 @@ export default function Home() {
         </div>
       )}
 
+      {showDeliveryTypeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3
+                    className="text-2xl font-bold"
+                    style={{ color: "#193F94" }}
+                  >
+                    اختيار نوع التوصيل
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    اختر نوع التوصيل المناسب
+                  </p>
+                </div>
+                <button
+                  onClick={handleCloseDeliveryTypeModal}
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <button
+                  onClick={() => handleSelectDeliveryType(DeliveryType.Store)}
+                  className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-gray-50 transition-all flex items-center justify-between"
+                >
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-50 rounded-lg flex items-center justify-center border border-blue-300">
+                      <span className="text-blue-700 font-bold text-xl">
+                        🏪
+                      </span>
+                    </div>
+                    <div className="mr-3 text-right">
+                      <h4 className="font-bold text-gray-800">دليفري المحل</h4>
+                      <p className="text-xs text-gray-600 mt-1">
+                        رسوم التوصيل: 25 ج.م (قابلة للتعديل)
+                      </p>
+                    </div>
+                  </div>
+                  <svg
+                    className="w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+
+                <button
+                  onClick={() => handleSelectDeliveryType(DeliveryType.Company)}
+                  className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-gray-50 transition-all flex items-center justify-between"
+                >
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-50 rounded-lg flex items-center justify-center border border-purple-300">
+                      <span className="text-purple-700 font-bold text-xl">
+                        🚚
+                      </span>
+                    </div>
+                    <div className="mr-3 text-right">
+                      <h4 className="font-bold text-gray-800">شركة توصيل</h4>
+                      <p className="text-xs text-gray-600 mt-1">
+                        اختر من شركات التوصيل المتاحة
+                      </p>
+                    </div>
+                  </div>
+                  <svg
+                    className="w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mt-6 pt-4 border-t-2 border-gray-100">
+                <button
+                  onClick={handleCloseDeliveryTypeModal}
+                  className="w-full py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeliveryCompanyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3
+                    className="text-2xl font-bold"
+                    style={{ color: "#193F94" }}
+                  >
+                    اختيار شركة التوصيل
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    اختر شركة التوصيل المناسبة
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDeliveryCompanyModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="max-h-[400px] overflow-y-auto pr-1">
+                {deliveryCompaniesLoading ? (
+                  <div className="text-center py-8">
+                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      جاري تحميل الشركات...
+                    </p>
+                  </div>
+                ) : deliveryCompanies.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>لا توجد شركات توصيل متاحة</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {deliveryCompanies.map((company) => (
+                      <button
+                        key={company.id}
+                        onClick={() => handleSelectDeliveryCompany(company)}
+                        className={`p-4 border-2 rounded-xl transition-all flex items-center justify-between ${
+                          selectedDeliveryCompany?.id === company.id
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-purple-50 rounded-lg flex items-center justify-center border border-purple-300">
+                            <span className="text-purple-700 font-bold text-base">
+                              🚚
+                            </span>
+                          </div>
+                          <div className="mr-2 text-right">
+                            <h4 className="font-bold text-gray-800 text-sm">
+                              {company.name}
+                            </h4>
+                            <div className="flex flex-col items-start mt-1">
+                              <p className="text-xs text-gray-600">
+                                رسوم: {company.deliveryCost || 0} ج.م
+                              </p>
+                              {company.contactNumber && (
+                                <p className="text-[10px] text-blue-600">
+                                  {company.contactNumber}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                            selectedDeliveryCompany?.id === company.id
+                              ? "border-blue-500 bg-blue-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          {selectedDeliveryCompany?.id === company.id && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 pt-4 border-t-2 border-gray-100">
+                <button
+                  onClick={() => setShowDeliveryCompanyModal(false)}
+                  className="w-full py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showTableSelection && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
@@ -3253,7 +3625,6 @@ export default function Home() {
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-lg p-4 h-full overflow-hidden flex flex-col">
-              {/* جزء المنتجات - لم يتغير */}
               {loading || shiftLoading ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -3562,6 +3933,60 @@ export default function Home() {
                     </div>
                   </div>
                 )}
+
+                {bills[currentBillIndex]?.billType === "delivery" &&
+                  deliveryType && (
+                    <div className="mb-2">
+                      <div className="flex items-center justify-between bg-gradient-to-r from-amber-50 to-white py-2 px-2 rounded-lg border border-amber-200 shadow-sm">
+                        <div className="flex items-center">
+                          <span className="text-amber-700 text-xs ml-1">
+                            {deliveryType === DeliveryType.Store ? "🏪" : "🚚"}
+                          </span>
+                          <span className="text-amber-800 font-medium text-[13px]">
+                            {deliveryType === DeliveryType.Store
+                              ? "دليفري المحل"
+                              : selectedDeliveryCompany?.name}
+                          </span>
+                          <span className="mr-1 px-1 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-medium">
+                            {deliveryFee} ج.م
+                          </span>
+                        </div>
+                        {!bills[currentBillIndex]?.completed && (
+                          <button
+                            onClick={() => setShowDeliveryTypeModal(true)}
+                            className="text-[9px] bg-amber-100 hover:bg-amber-200 text-amber-700 px-1 py-1 rounded transition-colors flex items-center"
+                          >
+                            <svg
+                              className="w-3 h-3 ml-0.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                              />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                      {deliveryType === DeliveryType.Company &&
+                        selectedDeliveryCompany?.contactNumber && (
+                          <div className="text-[8px] text-amber-600 mt-0.5 mr-5 flex items-center">
+                            <svg
+                              className="w-2 h-2 ml-0.5"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                            </svg>
+                            {selectedDeliveryCompany.contactNumber}
+                          </div>
+                        )}
+                    </div>
+                  )}
 
                 <div className="mb-3">
                   <div className="flex items-center gap-2">
@@ -4112,17 +4537,27 @@ export default function Home() {
                   <div className="flex justify-between items-center text-xs">
                     <span>رسوم التوصيل:</span>
                     <div className="flex items-center">
-                      <input
-                        type="number"
-                        value={deliveryFee}
-                        onChange={handleDeliveryFeeChange}
-                        disabled={bills[currentBillIndex]?.completed}
-                        className="w-16 text-right px-1 py-1 border rounded mr-1.5 text-xs"
-                        min="0"
-                      />
-                      <span className="font-bold">
-                        {deliveryFee.toFixed(2)} ج.م
-                      </span>
+                      {deliveryType === DeliveryType.Store ? (
+                        <>
+                          <input
+                            type="number"
+                            value={deliveryFee}
+                            onChange={(e) =>
+                              setDeliveryFee(Number(e.target.value))
+                            }
+                            className="w-12 text-right px-1 py-1 border rounded mr-1.5 text-xs"
+                            min="0"
+                            disabled={bills[currentBillIndex]?.completed}
+                          />
+                          <span className="font-bold">
+                            {deliveryFee.toFixed(2)} ج.م
+                          </span>
+                        </>
+                      ) : (
+                        <span className="font-bold ml-1">
+                          {deliveryFee.toFixed(2)} ج.م
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
