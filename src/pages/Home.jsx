@@ -752,7 +752,7 @@ export default function Home() {
       const response = await axiosInstance.post("/api/Invoices/GetAll/all", {
         pageNumber: lastPage,
         pageSize: pageSize,
-        skip: lastPage - 1,
+        skip: (lastPage - 1) * pageSize,
       });
 
       if (response.status === 200 && response.data) {
@@ -775,7 +775,7 @@ export default function Home() {
       const response = await axiosInstance.post("/api/Invoices/GetAll/all", {
         pageNumber: pageNumber,
         pageSize: pageSize,
-        skip: pageNumber - 1,
+        skip: (pageNumber - 1) * pageSize,
       });
 
       if (response.status === 200 && response.data) {
@@ -799,6 +799,20 @@ export default function Home() {
     }
   };
 
+  const calculateTaxFromInvoice = (invoice) => {
+    const subtotal = invoice.subTotal || 0;
+    const discount = invoice.invoiceDiscount || 0;
+    const deliveryFee = invoice.deliveryFee || 0;
+    const totalAmount = invoice.totalAmount || 0;
+    const taxAmount = totalAmount - subtotal + discount - deliveryFee;
+    const taxableAmount = subtotal - discount;
+    if (taxableAmount > 0) {
+      return (taxAmount / taxableAmount) * 100;
+    }
+
+    return 14;
+  };
+
   const convertInvoiceToBill = (invoice, index) => {
     const cartItems =
       invoice.items?.map((item) => ({
@@ -806,7 +820,7 @@ export default function Home() {
         name: item.itemName,
         price: item.itemPriceSnapShoot || 0,
         quantity: item.quantity,
-        image: "",
+        image: item.imageUrl || "",
         uniqueId: `${item.itemId}_${Date.now()}_${Math.random()}`,
         selectedOptions:
           item.invoiceItemOptions?.map((opt) => ({
@@ -819,7 +833,7 @@ export default function Home() {
             (sum, opt) => sum + (opt.optionPriceSnapShoot || 0),
             0,
           ) * item.quantity || 0,
-        note: "",
+        note: item.notesItem || "",
       })) || [];
 
     const invoiceStatus = invoice.invoiceStatus;
@@ -830,15 +844,19 @@ export default function Home() {
     const isReturned = invoiceStatus === InvoiceStatus.Returned;
     const isPartialPaid = invoiceStatus === InvoiceStatus.PartialPaid;
 
-    const billType = "takeaway";
+    let billType = "takeaway";
+    if (invoice.tableId && invoice.tableId > 0) {
+      billType = "dinein";
+    } else if (invoice.deliveryFee && invoice.deliveryFee > 0) {
+      billType = "delivery";
+    }
+
+    const taxPercentage = calculateTaxFromInvoice(invoice);
 
     const bill = {
       id: index + 1,
       cart: cartItems,
-      tax:
-        invoice.taxTotal > 0
-          ? (invoice.taxTotal / (invoice.subTotal || 1)) * 100
-          : 14,
+      tax: taxPercentage,
       discount: invoice.invoiceDiscount || 0,
       discountType: invoice.invoiceDiscountType || 0,
       deliveryFee: invoice.deliveryFee || 0,
@@ -849,7 +867,7 @@ export default function Home() {
       customerNationalId: "",
       customerId: invoice.customerId || null,
       tableStatus: invoice.tableId ? "occupied" : null,
-      generalNote: "",
+      generalNote: invoice.notosinvoice || "",
       paymentMethod: null,
       completed: isCompleted,
       isReturned: isReturned,
@@ -888,7 +906,7 @@ export default function Home() {
     setCustomerId(bill.customerId || null);
     setGeneralNote(bill.generalNote || "");
 
-    if (invoice.tableId && invoice.tableName) {
+    if (invoice.tableId && invoice.tableId > 0) {
       const table = tables.find((t) => t.id === invoice.tableId);
       const hall = table ? halls.find((h) => h.id === table.hallId) : null;
 
@@ -980,13 +998,18 @@ export default function Home() {
       tableId: selectedTable?.id || null,
       customerId: customerId || null,
       isPending: isPending,
+      notes: generalNote || null,
+      invoiceDiscount: discount > 0 ? discount : null,
+      invoiceDiscountType: discountType,
       type: getInvoiceTypeFromBillType(currentBill.billType),
+      deliveryCompanyId: selectedDeliveryCompany?.id || null,
+      deliveryFee: currentBill.billType === "delivery" ? deliveryFee : null,
       paidAmount: isPending ? 0 : total,
       paymentMethodId: paymentMethodId,
       items: cart.map((item) => ({
         itemId: item.id,
         quantity: item.quantity,
-        discount: item.discount || 0,
+        discount: item.discount || null,
         discountType: DiscountType.Percentage,
         notes: item.note || "",
         options:
@@ -997,10 +1020,19 @@ export default function Home() {
       })),
     };
 
+    const cleanInvoiceData = JSON.parse(
+      JSON.stringify(invoiceData, (key, value) => {
+        if (value === null || value === undefined) {
+          return undefined;
+        }
+        return value;
+      }),
+    );
+
     try {
       const response = await axiosInstance.post(
         "/api/Invoices/CreateInvoice",
-        invoiceData,
+        cleanInvoiceData,
       );
 
       if (response.status === 200 && response.data) {
