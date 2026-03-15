@@ -863,8 +863,8 @@ export default function Home() {
       billType: billType,
       customerName: invoice.customerName || "",
       customerPhone: invoice.customerPhone || "",
-      customerAddress: "",
-      customerNationalId: "",
+      customerAddress: invoice.customerAddress || "",
+      customerNationalId: invoice.customerNationalId || "",
       customerId: invoice.customerId || null,
       tableStatus: invoice.tableId ? "occupied" : null,
       generalNote: invoice.notosinvoice || "",
@@ -903,6 +903,8 @@ export default function Home() {
     setDeliveryFee(bill.deliveryFee);
     setCustomerPhone(bill.customerPhone || "");
     setCustomerName(bill.customerName || "");
+    setCustomerAddress(bill.customerAddress || "");
+    setCustomerNationalId(bill.customerNationalId || "");
     setCustomerId(bill.customerId || null);
     setGeneralNote(bill.generalNote || "");
 
@@ -2091,7 +2093,7 @@ export default function Home() {
       }
 
       try {
-        const invoiceResponse = await createInvoice(false, null);
+        const invoiceResponse = await createInvoice(true, null);
 
         if (invoiceResponse) {
           const updatedBills = [...bills];
@@ -2101,8 +2103,8 @@ export default function Home() {
             completedDate: new Date().toLocaleString(),
             invoiceId: invoiceResponse.id,
             invoiceNumber: invoiceResponse.invoiceNumber,
-            invoiceStatus: InvoiceStatus.Done,
-            isPending: false,
+            invoiceStatus: InvoiceStatus.Open,
+            isPending: true,
           };
           setBills(updatedBills);
 
@@ -2110,7 +2112,7 @@ export default function Home() {
             updateTableStatus(
               selectedHall.id,
               selectedTable.id,
-              "available",
+              "occupied",
               null,
             );
           }
@@ -2120,7 +2122,7 @@ export default function Home() {
           toast.success(
             <div>
               <p className="font-bold">
-                تم إنشاء الفاتورة رقم {invoiceResponse.invoiceNumber}
+                تم إنشاء الفاتورة المعلقة رقم {invoiceResponse.invoiceNumber}
               </p>
               <p className="text-sm mt-1">
                 نوع الفاتورة: {getBillTypeLabel(currentBillType)}
@@ -2133,7 +2135,15 @@ export default function Home() {
               {customerName && (
                 <p className="text-sm mt-1">العميل: {customerName}</p>
               )}
+              {customerAddress && (
+                <p className="text-xs text-gray-600 mt-1">
+                  العنوان: {customerAddress}
+                </p>
+              )}
               <p className="text-sm mt-1">الإجمالي: {total.toFixed(2)} ج.م</p>
+              <p className="text-xs text-amber-600 mt-1">
+                الفاتورة معلقة (لم يتم الدفع)
+              </p>
             </div>,
             { autoClose: 4000 },
           );
@@ -2143,8 +2153,8 @@ export default function Home() {
           addNewBill();
         }
       } catch (error) {
-        console.error("خطأ في إنشاء الفاتورة:", error);
-        toast.error("حدث خطأ في إنشاء الفاتورة");
+        console.error("خطأ في إنشاء الفاتورة المعلقة:", error);
+        toast.error("حدث خطأ في إنشاء الفاتورة المعلقة");
       }
     } else {
       if (currentInvoicePage < totalPages) {

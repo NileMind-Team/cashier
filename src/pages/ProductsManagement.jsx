@@ -1328,7 +1328,7 @@ export default function ProductsManagement() {
                   <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl">
                     <span className="text-sm font-medium text-gray-700">
                       {taxForm.isIncludeTax
-                        ? "الئعر شامل الضريبة"
+                        ? "السعر شامل الضريبة"
                         : "السعر غير شامل الضريبة"}
                     </span>
                     <button
