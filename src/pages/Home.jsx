@@ -351,7 +351,6 @@ export default function Home() {
           id: method.id,
           name: method.name || "",
           isActive: method.isActive || false,
-          icon: getPaymentMethodIcon(method.name),
           color: getPaymentMethodColor(method.id),
         }));
         setPaymentMethods(formattedMethods);
@@ -543,39 +542,6 @@ export default function Home() {
 
   const handleBlur = () => {
     setFocusedField(null);
-  };
-
-  const getPaymentMethodIcon = (name) => {
-    const nameLower = name?.toLowerCase() || "";
-    if (
-      nameLower.includes("كاش") ||
-      nameLower.includes("cash") ||
-      nameLower.includes("نقد")
-    ) {
-      return "💰";
-    } else if (
-      nameLower.includes("فيزا") ||
-      nameLower.includes("visa") ||
-      nameLower.includes("كارد") ||
-      nameLower.includes("card")
-    ) {
-      return "💳";
-    } else if (
-      nameLower.includes("محفظة") ||
-      nameLower.includes("wallet") ||
-      nameLower.includes("فودافون") ||
-      nameLower.includes("vodafone")
-    ) {
-      return "📱";
-    } else if (
-      nameLower.includes("تحويل") ||
-      nameLower.includes("transfer") ||
-      nameLower.includes("بنك")
-    ) {
-      return "🏦";
-    } else {
-      return "💵";
-    }
   };
 
   const getPaymentMethodColor = (id) => {
