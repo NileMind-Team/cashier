@@ -834,6 +834,8 @@ export default function Home() {
             0,
           ) * item.quantity || 0,
         note: item.notesItem || "",
+        isTaxInclusive: item.isTaxInclusive || false,
+        valueAddedTax: item.valueAddedTax || 14,
       })) || [];
 
     const invoiceStatus = invoice.invoiceStatus;
@@ -2194,14 +2196,41 @@ export default function Home() {
     (sum, item) => sum + item.price * item.quantity + (item.optionsTotal || 0),
     0,
   );
-  const totalTax = (subtotal * tax) / 100;
+
+  const totalTax = cart.reduce((sum, item) => {
+    const itemSubtotal = item.price * item.quantity;
+    const optionsValue = item.optionsTotal || 0;
+    const taxableAmount = itemSubtotal + optionsValue;
+
+    if (item.isTaxInclusive) {
+      const itemTax = (taxableAmount * tax) / (100 + tax);
+      return sum + itemTax;
+    } else {
+      const itemTax = (taxableAmount * tax) / 100;
+      return sum + itemTax;
+    }
+  }, 0);
+
+  const totalWithTax = cart.reduce((sum, item) => {
+    const itemSubtotal = item.price * item.quantity;
+    const optionsValue = item.optionsTotal || 0;
+    const itemTotal = itemSubtotal + optionsValue;
+
+    if (item.isTaxInclusive) {
+      return sum + itemTotal;
+    } else {
+      const itemTax = (itemTotal * tax) / 100;
+      return sum + itemTotal + itemTax;
+    }
+  }, 0);
+
   const discountAmount =
     discountType === DiscountType.Fixed
       ? discount
       : (subtotal * discount) / 100;
+
   const total =
-    subtotal +
-    totalTax -
+    totalWithTax -
     discountAmount +
     (bills[currentBillIndex]?.billType === "delivery" ? deliveryFee : 0);
 
@@ -2471,31 +2500,50 @@ export default function Home() {
           </p>
         )}
         <div className="text-xs mt-2 max-h-32 overflow-y-auto">
-          {cart.map((item, index) => (
-            <div
-              key={index}
-              className="flex justify-between py-1 border-b border-gray-100"
-            >
-              <div className="flex-1">
-                <span className="truncate max-w-[120px] block">
-                  {item.name} × {item.quantity}
+          {cart.map((item, index) => {
+            const itemSubtotal = item.price * item.quantity;
+            const optionsValue = item.optionsTotal || 0;
+            const taxableAmount = itemSubtotal + optionsValue;
+            const itemTax = item.isTaxInclusive
+              ? (taxableAmount * tax) / (100 + tax)
+              : (taxableAmount * tax) / 100;
+
+            return (
+              <div
+                key={index}
+                className="flex justify-between py-1 border-b border-gray-100"
+              >
+                <div className="flex-1">
+                  <span className="truncate max-w-[120px] block">
+                    {item.name} × {item.quantity}
+                  </span>
+                  {item.selectedOptions && item.selectedOptions.length > 0 && (
+                    <span className="text-[10px] text-amber-600 block truncate max-w-[120px]">
+                      إضافات:{" "}
+                      {item.selectedOptions.map((o) => o.name).join(", ")}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-gray-500 block">
+                    {item.price} ج.م للوحدة ({tax}%{" "}
+                    {item.isTaxInclusive ? "شامل الضريبة" : "غير شامل الضريبة"})
+                  </span>
+                  <span className="text-[10px] text-blue-600 block">
+                    قيمة الضريبة: {itemTax.toFixed(2)} ج.م
+                  </span>
+                  {item.note && item.note.trim() && (
+                    <span className="text-[10px] text-gray-500 block truncate max-w-[120px]">
+                      ملاحظة: {item.note}
+                    </span>
+                  )}
+                </div>
+                <span className="whitespace-nowrap">
+                  {item.price * item.quantity + (item.optionsTotal || 0)} ج.م
+                  {!item.isTaxInclusive &&
+                    ` (شامل ${itemTax.toFixed(2)} ضريبة)`}
                 </span>
-                {item.selectedOptions && item.selectedOptions.length > 0 && (
-                  <span className="text-[10px] text-amber-600 block truncate max-w-[120px]">
-                    إضافات: {item.selectedOptions.map((o) => o.name).join(", ")}
-                  </span>
-                )}
-                {item.note && item.note.trim() && (
-                  <span className="text-[10px] text-gray-500 block truncate max-w-[120px]">
-                    ملاحظة: {item.note}
-                  </span>
-                )}
               </div>
-              <span className="whitespace-nowrap">
-                {item.price * item.quantity + (item.optionsTotal || 0)} ج.م
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div className="mt-2 pt-2 border-t border-gray-200">
           <div className="flex justify-between text-xs">
@@ -2503,7 +2551,7 @@ export default function Home() {
             <span>{subtotal.toFixed(2)} ج.م</span>
           </div>
           <div className="flex justify-between text-xs">
-            <span>الضريبة ({tax}%):</span>
+            <span>إجمالي الضريبة:</span>
             <span>{totalTax.toFixed(2)} ج.م</span>
           </div>
           <div className="flex justify-between text-xs">
@@ -2608,6 +2656,11 @@ export default function Home() {
                     </h4>
                     <p className="text-sm text-gray-600">
                       السعر الأساسي: {selectedProduct.price} ج.م
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {selectedProduct.isTaxInclusive
+                        ? "السعر شامل الضريبة"
+                        : `السعر غير شامل الضريبة (الضريبة ${selectedProduct.valueAddedTax}%)`}
                     </p>
                   </div>
                 </div>
@@ -3832,6 +3885,11 @@ export default function Home() {
                               >
                                 {product.price} ج.م
                               </p>
+                              <p className="text-[8px] text-gray-500">
+                                {product.isTaxInclusive
+                                  ? "شامل الضريبة"
+                                  : `غير شامل الضريبة (${product.valueAddedTax}%)`}
+                              </p>
                             </div>
                           </button>
                         ))}
@@ -4303,273 +4361,300 @@ export default function Home() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {cart.map((item) => (
-                      <div
-                        key={item.uniqueId || item.id}
-                        className="bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-xs"
-                      >
-                        <div className="p-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-gray-300">
-                              <img
-                                src={item.image}
-                                alt={item.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.target.src =
-                                    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop&crop=center";
-                                }}
-                              />
-                            </div>
+                    {cart.map((item) => {
+                      const itemSubtotal = item.price * item.quantity;
+                      const optionsValue = item.optionsTotal || 0;
+                      const taxableAmount = itemSubtotal + optionsValue;
+                      const itemTax = item.isTaxInclusive
+                        ? (taxableAmount * tax) / (100 + tax)
+                        : (taxableAmount * tax) / 100;
 
-                            <div className="flex-1 min-w-0">
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <h4 className="font-bold text-sm text-gray-800 truncate max-w-[120px]">
-                                    {item.name}
-                                  </h4>
-                                  <p className="text-xs text-gray-500 mt-0.5">
-                                    {item.price} ج.م للوحدة
-                                  </p>
-                                </div>
-                                <div className="text-left">
-                                  <p
-                                    className="font-bold text-sm"
-                                    style={{ color: "#193F94" }}
-                                  >
-                                    {item.price * item.quantity +
-                                      (item.optionsTotal || 0)}{" "}
-                                    ج.م
-                                  </p>
-                                  <p className="text-[10px] text-gray-500">
-                                    {item.quantity} × {item.price}
-                                    {item.optionsTotal > 0 && ` + إضافات`}
-                                  </p>
-                                </div>
+                      return (
+                        <div
+                          key={item.uniqueId || item.id}
+                          className="bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-xs"
+                        >
+                          <div className="p-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-gray-300">
+                                <img
+                                  src={item.image}
+                                  alt={item.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.target.src =
+                                      "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop&crop=center";
+                                  }}
+                                />
                               </div>
 
-                              {item.selectedOptions &&
-                                item.selectedOptions.length > 0 && (
-                                  <div className="mt-1">
-                                    <p className="text-[10px] text-amber-600">
-                                      إضافات:{" "}
-                                      {item.selectedOptions
-                                        .map(
-                                          (o) => `${o.name} (+${o.price} ج.م)`,
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <h4 className="font-bold text-sm text-gray-800 truncate max-w-[120px]">
+                                      {item.name}
+                                    </h4>
+                                    <div className="text-xs text-gray-500 mt-0.5">
+                                      <span>{item.price} ج.م للوحدة</span>
+                                      <span className="mr-1 text-[10px] text-gray-600">
+                                        ({tax}%{" "}
+                                        {item.isTaxInclusive
+                                          ? "شامل الضريبة"
+                                          : "غير شامل الضريبة"}
                                         )
-                                        .join(", ")}
-                                    </p>
-                                  </div>
-                                )}
-
-                              <div className="flex justify-between items-center mt-2">
-                                <div className="flex items-center">
-                                  <button
-                                    onClick={() =>
-                                      removeFromCart(item.uniqueId || item.id)
-                                    }
-                                    disabled={
-                                      bills[currentBillIndex]?.completed
-                                    }
-                                    className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${
-                                      bills[currentBillIndex]?.completed
-                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                        : "bg-gray-200 hover:bg-gray-300 text-gray-700"
-                                    }`}
-                                  >
-                                    -
-                                  </button>
-                                  <span className="mx-1.5 font-bold text-sm min-w-[20px] text-center">
-                                    {item.quantity}
-                                  </span>
-                                  <button
-                                    onClick={() => {
-                                      const existingItem = cart.find(
-                                        (i) =>
-                                          (i.uniqueId || i.id) ===
-                                          (item.uniqueId || item.id),
-                                      );
-                                      if (existingItem) {
-                                        setCart(
-                                          cart.map((i) =>
-                                            (i.uniqueId || i.id) ===
-                                            (item.uniqueId || item.id)
-                                              ? {
-                                                  ...i,
-                                                  quantity: i.quantity + 1,
-                                                  optionsTotal:
-                                                    (i.optionsTotal || 0) +
-                                                    (item.selectedOptions
-                                                      ? item.selectedOptions.reduce(
-                                                          (sum, o) =>
-                                                            sum + o.price,
-                                                          0,
-                                                        )
-                                                      : 0),
-                                                }
-                                              : i,
-                                          ),
-                                        );
-                                      }
-                                    }}
-                                    disabled={
-                                      bills[currentBillIndex]?.completed
-                                    }
-                                    className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${
-                                      bills[currentBillIndex]?.completed
-                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                        : "bg-gray-200 hover:bg-gray-300 text-gray-700"
-                                    }`}
-                                  >
-                                    +
-                                  </button>
-                                </div>
-
-                                <div className="flex items-center space-x-1 rtl:space-x-reverse">
-                                  {!bills[currentBillIndex]?.completed && (
-                                    <>
-                                      {item.note && item.note.trim() ? (
-                                        <button
-                                          onClick={() =>
-                                            startEditingNote(
-                                              item.uniqueId || item.id,
-                                              item.note,
-                                            )
-                                          }
-                                          className="text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded-md transition-colors flex items-center border border-blue-200"
-                                        >
-                                          <svg
-                                            className="w-2.5 h-2.5 ml-1"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                            />
-                                          </svg>
-                                          ملاحظة
-                                        </button>
-                                      ) : (
-                                        <button
-                                          onClick={() =>
-                                            startEditingNote(
-                                              item.uniqueId || item.id,
-                                              item.note,
-                                            )
-                                          }
-                                          className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md transition-colors flex items-center border border-gray-300"
-                                        >
-                                          <svg
-                                            className="w-2.5 h-2.5 ml-1"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                            />
-                                          </svg>
-                                          ملاحظة
-                                        </button>
-                                      )}
-                                    </>
-                                  )}
-                                  {!bills[currentBillIndex]?.completed && (
-                                    <button
-                                      onClick={() =>
-                                        deleteFromCart(item.uniqueId || item.id)
-                                      }
-                                      className="text-[10px] bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-md transition-colors flex items-center border border-red-200"
-                                    >
-                                      <svg
-                                        className="w-2.5 h-2.5 ml-1"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                        {...{
-                                          strokeLinecap: "round",
-                                          strokeLinejoin: "round",
-                                          strokeWidth: 2,
-                                          d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
-                                        }}
-                                      />
-                                      حذف
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-
-                              {editingNoteProductId ===
-                              (item.uniqueId || item.id) ? (
-                                <div className="mt-2 pt-2 border-t border-gray-200">
-                                  <textarea
-                                    value={tempNote}
-                                    onChange={(e) =>
-                                      setTempNote(e.target.value)
-                                    }
-                                    placeholder="اكتب ملاحظة لهذا المنتج..."
-                                    className="w-full px-2 py-1.5 text-xs border border-blue-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
-                                    rows="2"
-                                    autoFocus
-                                  />
-                                  <div className="flex justify-end space-x-1 rtl:space-x-reverse mt-1">
-                                    <button
-                                      onClick={() => {
-                                        setEditingNoteProductId(null);
-                                        setTempNote("");
-                                      }}
-                                      className="px-2 py-1 text-[10px] bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
-                                    >
-                                      إلغاء
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleAddNote(
-                                          item.uniqueId || item.id,
-                                          tempNote,
-                                        )
-                                      }
-                                      className="px-2 py-1 text-[10px] bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                                    >
-                                      حفظ
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                item.note &&
-                                item.note.trim() && (
-                                  <div className="mt-1.5 pt-1.5 border-t border-gray-200">
-                                    <div className="flex items-start">
-                                      <svg
-                                        className="w-2.5 h-2.5 text-blue-500 mt-0.5 ml-1 flex-shrink-0"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                      >
-                                        <path
-                                          fillRule="evenodd"
-                                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                          clipRule="evenodd"
-                                        />
-                                      </svg>
-                                      <p className="text-xs text-blue-800 flex-1 line-clamp-2">
-                                        {item.note}
-                                      </p>
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-blue-600 mt-0.5">
+                                      قيمة الضريبة: {itemTax.toFixed(2)} ج.م
                                     </div>
                                   </div>
-                                )
-                              )}
+                                  <div className="text-left">
+                                    <p
+                                      className="font-bold text-sm"
+                                      style={{ color: "#193F94" }}
+                                    >
+                                      {item.price * item.quantity +
+                                        (item.optionsTotal || 0)}{" "}
+                                      ج.م
+                                      {!item.isTaxInclusive && (
+                                        <span className="text-[8px] text-gray-500 block">
+                                          +{itemTax.toFixed(2)} ضريبة
+                                        </span>
+                                      )}
+                                    </p>
+                                    <p className="text-[10px] text-gray-500">
+                                      {item.quantity} × {item.price}
+                                      {item.optionsTotal > 0 && ` + إضافات`}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {item.selectedOptions &&
+                                  item.selectedOptions.length > 0 && (
+                                    <div className="mt-1">
+                                      <p className="text-[10px] text-amber-600">
+                                        إضافات:{" "}
+                                        {item.selectedOptions
+                                          .map(
+                                            (o) =>
+                                              `${o.name} (+${o.price} ج.م)`,
+                                          )
+                                          .join(", ")}
+                                      </p>
+                                    </div>
+                                  )}
+
+                                <div className="flex justify-between items-center mt-2">
+                                  <div className="flex items-center">
+                                    <button
+                                      onClick={() =>
+                                        removeFromCart(item.uniqueId || item.id)
+                                      }
+                                      disabled={
+                                        bills[currentBillIndex]?.completed
+                                      }
+                                      className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${
+                                        bills[currentBillIndex]?.completed
+                                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                          : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                                      }`}
+                                    >
+                                      -
+                                    </button>
+                                    <span className="mx-1.5 font-bold text-sm min-w-[20px] text-center">
+                                      {item.quantity}
+                                    </span>
+                                    <button
+                                      onClick={() => {
+                                        const existingItem = cart.find(
+                                          (i) =>
+                                            (i.uniqueId || i.id) ===
+                                            (item.uniqueId || item.id),
+                                        );
+                                        if (existingItem) {
+                                          setCart(
+                                            cart.map((i) =>
+                                              (i.uniqueId || i.id) ===
+                                              (item.uniqueId || item.id)
+                                                ? {
+                                                    ...i,
+                                                    quantity: i.quantity + 1,
+                                                    optionsTotal:
+                                                      (i.optionsTotal || 0) +
+                                                      (item.selectedOptions
+                                                        ? item.selectedOptions.reduce(
+                                                            (sum, o) =>
+                                                              sum + o.price,
+                                                            0,
+                                                          )
+                                                        : 0),
+                                                  }
+                                                : i,
+                                            ),
+                                          );
+                                        }
+                                      }}
+                                      disabled={
+                                        bills[currentBillIndex]?.completed
+                                      }
+                                      className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${
+                                        bills[currentBillIndex]?.completed
+                                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                          : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                                      }`}
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+
+                                  <div className="flex items-center space-x-1 rtl:space-x-reverse">
+                                    {!bills[currentBillIndex]?.completed && (
+                                      <>
+                                        {item.note && item.note.trim() ? (
+                                          <button
+                                            onClick={() =>
+                                              startEditingNote(
+                                                item.uniqueId || item.id,
+                                                item.note,
+                                              )
+                                            }
+                                            className="text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded-md transition-colors flex items-center border border-blue-200"
+                                          >
+                                            <svg
+                                              className="w-2.5 h-2.5 ml-1"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                              />
+                                            </svg>
+                                            ملاحظة
+                                          </button>
+                                        ) : (
+                                          <button
+                                            onClick={() =>
+                                              startEditingNote(
+                                                item.uniqueId || item.id,
+                                                item.note,
+                                              )
+                                            }
+                                            className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md transition-colors flex items-center border border-gray-300"
+                                          >
+                                            <svg
+                                              className="w-2.5 h-2.5 ml-1"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                              />
+                                            </svg>
+                                            ملاحظة
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
+                                    {!bills[currentBillIndex]?.completed && (
+                                      <button
+                                        onClick={() =>
+                                          deleteFromCart(
+                                            item.uniqueId || item.id,
+                                          )
+                                        }
+                                        className="text-[10px] bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-md transition-colors flex items-center border border-red-200"
+                                      >
+                                        <svg
+                                          className="w-2.5 h-2.5 ml-1"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                          {...{
+                                            strokeLinecap: "round",
+                                            strokeLinejoin: "round",
+                                            strokeWidth: 2,
+                                            d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
+                                          }}
+                                        />
+                                        حذف
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {editingNoteProductId ===
+                                (item.uniqueId || item.id) ? (
+                                  <div className="mt-2 pt-2 border-t border-gray-200">
+                                    <textarea
+                                      value={tempNote}
+                                      onChange={(e) =>
+                                        setTempNote(e.target.value)
+                                      }
+                                      placeholder="اكتب ملاحظة لهذا المنتج..."
+                                      className="w-full px-2 py-1.5 text-xs border border-blue-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                                      rows="2"
+                                      autoFocus
+                                    />
+                                    <div className="flex justify-end space-x-1 rtl:space-x-reverse mt-1">
+                                      <button
+                                        onClick={() => {
+                                          setEditingNoteProductId(null);
+                                          setTempNote("");
+                                        }}
+                                        className="px-2 py-1 text-[10px] bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                                      >
+                                        إلغاء
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleAddNote(
+                                            item.uniqueId || item.id,
+                                            tempNote,
+                                          )
+                                        }
+                                        className="px-2 py-1 text-[10px] bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                      >
+                                        حفظ
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  item.note &&
+                                  item.note.trim() && (
+                                    <div className="mt-1.5 pt-1.5 border-t border-gray-200">
+                                      <div className="flex items-start">
+                                        <svg
+                                          className="w-2.5 h-2.5 text-blue-500 mt-0.5 ml-1 flex-shrink-0"
+                                          fill="currentColor"
+                                          viewBox="0 0 20 20"
+                                        >
+                                          <path
+                                            fillRule="evenodd"
+                                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                            clipRule="evenodd"
+                                          />
+                                        </svg>
+                                        <p className="text-xs text-blue-800 flex-1 line-clamp-2">
+                                          {item.note}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -4581,19 +4666,8 @@ export default function Home() {
                 </div>
 
                 <div className="flex justify-between items-center text-xs">
-                  <span>الضريبة:</span>
-                  <div className="flex items-center">
-                    <input
-                      type="number"
-                      value={tax}
-                      onChange={(e) => setTax(Number(e.target.value))}
-                      className="w-12 text-right px-1 py-1 border rounded mr-1.5 text-xs"
-                      min="0"
-                      max="100"
-                      disabled={bills[currentBillIndex]?.completed}
-                    />
-                    <span className="font-bold">{totalTax.toFixed(2)} ج.م</span>
-                  </div>
+                  <span>إجمالي الضريبة:</span>
+                  <span className="font-bold">{totalTax.toFixed(2)} ج.م</span>
                 </div>
 
                 <div className="flex justify-between items-center text-xs">

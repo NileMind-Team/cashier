@@ -33,6 +33,37 @@ export default function DiscountsManagement() {
   const isFirstRender = useRef(true);
   const isFetching = useRef(false);
 
+  const extractSubCategoriesAndProducts = (mainCatsData) => {
+    const allSubCategories = [];
+    const allProducts = [];
+
+    mainCatsData.forEach((mainCat) => {
+      if (mainCat.subCategories && Array.isArray(mainCat.subCategories)) {
+        mainCat.subCategories.forEach((subCat) => {
+          allSubCategories.push({
+            ...subCat,
+            mainCategoryName: mainCat.name,
+            mainCategoryId: mainCat.id,
+          });
+
+          if (subCat.items && Array.isArray(subCat.items)) {
+            subCat.items.forEach((item) => {
+              allProducts.push({
+                ...item,
+                subCategoryName: subCat.name,
+                subCategoryId: subCat.id,
+                mainCategoryName: mainCat.name,
+                mainCategoryId: mainCat.id,
+              });
+            });
+          }
+        });
+      }
+    });
+
+    return { allSubCategories, allProducts };
+  };
+
   const fetchAllData = async (showLoading = true) => {
     if (isFetching.current) {
       console.log("هناك طلب قيد التنفيذ بالفعل، تجاهل الطلب الجديد");
@@ -43,22 +74,19 @@ export default function DiscountsManagement() {
       isFetching.current = true;
       if (showLoading) setLoading(true);
 
-      const [mainCatsRes, subCatsRes, productsRes] = await Promise.all([
-        axiosInstance.get("/api/MainCategories/GetAllMainCategories"),
-        axiosInstance.get("/api/SubCategories/GetAllSubCategories"),
-        axiosInstance.get("/api/Items/GetAllItems"),
-      ]);
+      const mainCatsRes = await axiosInstance.get(
+        "/api/MainCategories/GetAllMainCategories",
+      );
 
       if (mainCatsRes.status === 200 && Array.isArray(mainCatsRes.data)) {
         setMainCategories(mainCatsRes.data);
-      }
 
-      if (subCatsRes.status === 200 && Array.isArray(subCatsRes.data)) {
-        setSubCategories(subCatsRes.data);
-      }
-
-      if (productsRes.status === 200 && Array.isArray(productsRes.data)) {
-        setProducts(productsRes.data);
+        const { allSubCategories, allProducts } =
+          extractSubCategoriesAndProducts(mainCatsRes.data);
+        setSubCategories(allSubCategories);
+        setProducts(allProducts);
+      } else {
+        toast.error("فشل في جلب البيانات");
       }
     } catch (error) {
       console.error("خطأ في جلب البيانات:", error);
@@ -78,6 +106,7 @@ export default function DiscountsManagement() {
     return () => {
       isFetching.current = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getMainCategoriesWithDiscount = () => {
@@ -390,7 +419,6 @@ export default function DiscountsManagement() {
     </div>
   );
 
-  // عرض عنصر المنتج - معدل لاستخدام finalPrice و discount
   const renderProductItem = (product, showActions = true) => (
     <div className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-200 transition-all">
       <div className="flex items-center justify-between">
