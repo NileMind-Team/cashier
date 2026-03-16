@@ -126,6 +126,7 @@ export default function Home() {
     useState(false);
   const [deliveryType, setDeliveryType] = useState(null);
   const [selectedDeliveryCompany, setSelectedDeliveryCompany] = useState(null);
+  const [orderPrepared, setOrderPrepared] = useState(false);
 
   const DeliveryType = {
     Store: "store",
@@ -755,6 +756,7 @@ export default function Home() {
           const invoice = invoicesData[0];
           convertInvoiceToBill(invoice, 0);
           setIsNewBillActive(false);
+          setOrderPrepared(false);
         }
 
         invoicesFetchedRef.current = true;
@@ -802,6 +804,8 @@ export default function Home() {
         note: item.notesItem || "",
         isTaxInclusive: item.isTaxInclusive || false,
         valueAddedTax: item.valueAddedTax || 14,
+        isPercentage: item.isPercentage || false,
+        discount: item.discount || 0,
       })) || [];
 
     const invoiceStatus = invoice.invoiceStatus;
@@ -953,6 +957,7 @@ export default function Home() {
     setIsNewBillActive(true);
     setDeliveryType(null);
     setSelectedDeliveryCompany(null);
+    setOrderPrepared(false);
   };
 
   const createInvoice = async (isPending = true, paymentMethodId = null) => {
@@ -980,7 +985,9 @@ export default function Home() {
         itemId: item.id,
         quantity: item.quantity,
         discount: item.discount || null,
-        discountType: DiscountType.Percentage,
+        discountType: item.isPercentage
+          ? DiscountType.Percentage
+          : DiscountType.Fixed,
         notes: item.note || "",
         options:
           item.selectedOptions?.map((opt) => ({
@@ -1230,6 +1237,7 @@ export default function Home() {
       setDeliveryFee(0);
       setDeliveryType(null);
       setSelectedDeliveryCompany(null);
+      setOrderPrepared(false);
 
       toast.info(`تم تغيير نوع الفاتورة إلى ${getBillTypeLabel(type)}`);
     }
@@ -1263,6 +1271,7 @@ export default function Home() {
         setSelectedTable(table);
         setShowTableInfo(true);
         setTableStatus(tableBill.tableStatus || "occupied");
+        setOrderPrepared(false);
 
         setShowTableSelection(false);
         toast.success(`تم تحميل فاتورة الطاولة ${table.number}`);
@@ -1443,6 +1452,7 @@ export default function Home() {
                 setSelectedTable(null);
                 setSelectedHall(null);
                 setShowTableInfo(false);
+                setOrderPrepared(false);
 
                 toast.success(
                   <div>
@@ -1489,6 +1499,7 @@ export default function Home() {
       setSelectedTable(null);
       setSelectedHall(null);
       setShowTableInfo(false);
+      setOrderPrepared(false);
 
       toast.success("تم إزالة الطاولة وجعلها متاحة");
     }
@@ -1601,6 +1612,12 @@ export default function Home() {
         setShowTableInfo(false);
         setTableStatus("available");
       }
+
+      if (!currentBill.completed && currentBill.invoiceId) {
+        setOrderPrepared(true);
+      } else {
+        setOrderPrepared(false);
+      }
     }
   }, [currentBillIndex, bills, halls, tables, deliveryCompanies]);
 
@@ -1655,6 +1672,8 @@ export default function Home() {
           selectedOptions: selectedOptions,
           optionsTotal: optionsTotal * productQuantity,
           note: "",
+          discount: 0,
+          isPercentage: false,
         };
         setCart([...cart, newItem]);
       }
@@ -1666,6 +1685,8 @@ export default function Home() {
         selectedOptions: selectedOptions,
         optionsTotal: optionsTotal * productQuantity,
         note: "",
+        discount: 0,
+        isPercentage: false,
       };
       setCart([...cart, newItem]);
     }
@@ -2118,6 +2139,7 @@ export default function Home() {
 
           setIsNewBillActive(false);
           setCurrentInvoicePage(totalPages + 1);
+          setOrderPrepared(true);
           addNewBill();
         }
       } catch (error) {
@@ -2142,6 +2164,7 @@ export default function Home() {
       if (totalPages > 0) {
         await fetchInvoiceByPage(totalPages);
         setIsNewBillActive(false);
+        setOrderPrepared(true);
       } else {
         toast.warning("لا توجد فواتير سابقة");
       }
@@ -2167,12 +2190,13 @@ export default function Home() {
     const itemSubtotal = item.price * item.quantity;
     const optionsValue = item.optionsTotal || 0;
     const taxableAmount = itemSubtotal + optionsValue;
+    const itemTaxRate = item.valueAddedTax || tax;
 
     if (item.isTaxInclusive) {
-      const itemTax = (taxableAmount * tax) / (100 + tax);
+      const itemTax = (taxableAmount * itemTaxRate) / (100 + itemTaxRate);
       return sum + itemTax;
     } else {
-      const itemTax = (taxableAmount * tax) / 100;
+      const itemTax = (taxableAmount * itemTaxRate) / 100;
       return sum + itemTax;
     }
   }, 0);
@@ -2181,11 +2205,12 @@ export default function Home() {
     const itemSubtotal = item.price * item.quantity;
     const optionsValue = item.optionsTotal || 0;
     const itemTotal = itemSubtotal + optionsValue;
+    const itemTaxRate = item.valueAddedTax || tax;
 
     if (item.isTaxInclusive) {
       return sum + itemTotal;
     } else {
-      const itemTax = (itemTotal * tax) / 100;
+      const itemTax = (itemTotal * itemTaxRate) / 100;
       return sum + itemTotal + itemTax;
     }
   }, 0);
@@ -2262,6 +2287,7 @@ export default function Home() {
         currentBillIndex + 1,
       );
       setTableStatus("occupied");
+      setOrderPrepared(true);
 
       addNewBill();
 
@@ -2470,9 +2496,10 @@ export default function Home() {
             const itemSubtotal = item.price * item.quantity;
             const optionsValue = item.optionsTotal || 0;
             const taxableAmount = itemSubtotal + optionsValue;
+            const itemTaxRate = item.valueAddedTax || tax;
             const itemTax = item.isTaxInclusive
-              ? (taxableAmount * tax) / (100 + tax)
-              : (taxableAmount * tax) / 100;
+              ? (taxableAmount * itemTaxRate) / (100 + itemTaxRate)
+              : (taxableAmount * itemTaxRate) / 100;
 
             return (
               <div
@@ -2490,12 +2517,17 @@ export default function Home() {
                     </span>
                   )}
                   <span className="text-[10px] text-gray-500 block">
-                    {item.price} ج.م للوحدة ({tax}%{" "}
+                    {item.price} ج.م للوحدة ({itemTaxRate}%{" "}
                     {item.isTaxInclusive ? "شامل الضريبة" : "غير شامل الضريبة"})
                   </span>
                   <span className="text-[10px] text-blue-600 block">
                     قيمة الضريبة: {itemTax.toFixed(2)} ج.م
                   </span>
+                  {item.discount > 0 && (
+                    <span className="text-[10px] text-green-600 block">
+                      خصم: {item.discount}% على المنتج
+                    </span>
+                  )}
                   {item.note && item.note.trim() && (
                     <span className="text-[10px] text-gray-500 block truncate max-w-[120px]">
                       ملاحظة: {item.note}
@@ -2568,12 +2600,24 @@ export default function Home() {
     setGeneralNote("");
     setDeliveryType(null);
     setSelectedDeliveryCompany(null);
+    setOrderPrepared(false);
     toast.info("تم إعادة تعيين الفاتورة");
   };
 
   const handleShiftClose = () => {
     setIsShiftOpen(false);
     toast.success("تم إغلاق الوردية بنجاح!");
+  };
+
+  // تحديد حالة ظهور زر تحضير الطلب
+  const shouldShowPrepareOrderButton = () => {
+    return (
+      isNewBillActive &&
+      bills[currentBillIndex]?.billType === "dinein" &&
+      selectedTable &&
+      cart.length > 0 &&
+      !orderPrepared
+    );
   };
 
   return (
@@ -4331,9 +4375,10 @@ export default function Home() {
                       const itemSubtotal = item.price * item.quantity;
                       const optionsValue = item.optionsTotal || 0;
                       const taxableAmount = itemSubtotal + optionsValue;
+                      const itemTaxRate = item.valueAddedTax || tax;
                       const itemTax = item.isTaxInclusive
-                        ? (taxableAmount * tax) / (100 + tax)
-                        : (taxableAmount * tax) / 100;
+                        ? (taxableAmount * itemTaxRate) / (100 + itemTaxRate)
+                        : (taxableAmount * itemTaxRate) / 100;
 
                       return (
                         <div
@@ -4363,7 +4408,7 @@ export default function Home() {
                                     <div className="text-xs text-gray-500 mt-0.5">
                                       <span>{item.price} ج.م للوحدة</span>
                                       <span className="mr-1 text-[10px] text-gray-600">
-                                        ({tax}%{" "}
+                                        ({itemTaxRate}%{" "}
                                         {item.isTaxInclusive
                                           ? "شامل الضريبة"
                                           : "غير شامل الضريبة"}
@@ -4753,57 +4798,20 @@ export default function Home() {
                 >
                   عرض الفاتورة
                 </button>
-              ) : !isNewBillActive &&
-                bills[currentBillIndex]?.billType === "dinein" &&
-                selectedTable &&
-                cart.length > 0 ? (
-                tableStatus === "occupied" ? (
-                  <button
-                    onClick={handleCompleteBill}
-                    disabled={cart.length === 0}
-                    className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 ${
-                      cart.length === 0
-                        ? "opacity-50 cursor-not-allowed"
-                        : "hover:scale-[1.02] active:scale-[0.98]"
-                    }`}
-                    style={{ backgroundColor: "#20A4D4" }}
-                    onMouseEnter={(e) => {
-                      if (cart.length > 0) {
-                        e.target.style.backgroundColor = "#1DC7E0";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (cart.length > 0) {
-                        e.target.style.backgroundColor = "#20A4D4";
-                      }
-                    }}
-                  >
-                    إتمام البيع
-                  </button>
-                ) : (
-                  <button
-                    onClick={handlePrepareOrder}
-                    disabled={cart.length === 0}
-                    className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 ${
-                      cart.length === 0
-                        ? "opacity-50 cursor-not-allowed"
-                        : "hover:scale-[1.02] active:scale-[0.98]"
-                    }`}
-                    style={{ backgroundColor: "#F59E0B" }}
-                    onMouseEnter={(e) => {
-                      if (cart.length > 0) {
-                        e.target.style.backgroundColor = "#D97706";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (cart.length > 0) {
-                        e.target.style.backgroundColor = "#F59E0B";
-                      }
-                    }}
-                  >
-                    تحضير الطلب
-                  </button>
-                )
+              ) : shouldShowPrepareOrderButton() ? (
+                <button
+                  onClick={handlePrepareOrder}
+                  className="py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 hover:scale-[1.02] active:scale-[0.98]"
+                  style={{ backgroundColor: "#F59E0B" }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "#D97706";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "#F59E0B";
+                  }}
+                >
+                  تحضير الطلب
+                </button>
               ) : (
                 <button
                   onClick={handleCompleteBill}
