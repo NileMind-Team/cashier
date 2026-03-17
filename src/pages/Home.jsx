@@ -3,8 +3,10 @@ import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import Navbar from "../components/layout/Navbar.jsx";
 import axiosInstance from "../api/axiosInstance";
+import { useNavigate } from "react-router-dom";
 
 export default function Home() {
+  const navigate = useNavigate();
   const initializedRef = useRef(false);
   const shiftFetchedRef = useRef(false);
   const hallsFetchedRef = useRef(false);
@@ -383,6 +385,12 @@ export default function Home() {
         );
         setDeliveryCompanies(activeCompanies);
         deliveryCompaniesFetchedRef.current = true;
+
+        if (activeCompanies.length === 0) {
+          console.log(
+            "لا توجد شركات توصيل، سيتم استخدام دليفري المحل تلقائياً",
+          );
+        }
       } else {
         setDeliveryCompanies([]);
       }
@@ -1078,7 +1086,13 @@ export default function Home() {
     initializedRef.current = true;
 
     const initializeData = async () => {
-      fetchShiftDetails();
+      const shiftData = await fetchShiftDetails();
+
+      if (!shiftData) {
+        navigate("/login");
+        return;
+      }
+
       fetchHalls();
       fetchTables();
       fetchMainCategories();
@@ -1205,10 +1219,29 @@ export default function Home() {
       }
       return;
     } else if (type === "delivery") {
-      setShowDeliveryTypeModal(true);
-      setDeliveryType(null);
-      setSelectedDeliveryCompany(null);
-      setDeliveryFee(0);
+      if (deliveryCompanies.length === 0) {
+        setDeliveryType(DeliveryType.Store);
+        setDeliveryFee(25);
+        setSelectedDeliveryCompany(null);
+
+        updatedBills[currentBillIndex] = {
+          ...updatedBills[currentBillIndex],
+          billType: "delivery",
+          deliveryFee: 25,
+          deliveryType: DeliveryType.Store,
+          deliveryCompanyId: null,
+          deliveryCompanyName: null,
+          deliveryCompanyContact: null,
+        };
+        setBills(updatedBills);
+
+        toast.success("تم اختيار دليفري المحل تلقائياً (لا توجد شركات توصيل)");
+      } else {
+        setShowDeliveryTypeModal(true);
+        setDeliveryType(null);
+        setSelectedDeliveryCompany(null);
+        setDeliveryFee(0);
+      }
     } else {
       if (selectedTable && selectedHall) {
         updateTableStatus(selectedHall.id, selectedTable.id, "available", null);
@@ -2689,9 +2722,29 @@ export default function Home() {
                   >
                     -
                   </button>
-                  <span className="mx-4 font-bold text-lg min-w-[40px] text-center">
-                    {productQuantity}
-                  </span>
+                  <input
+                    type="text"
+                    value={productQuantity}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (!isNaN(value) && value >= 1) {
+                        setProductQuantity(value);
+                      } else if (e.target.value === "") {
+                        setProductQuantity(1);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (
+                        e.target.value === "" ||
+                        parseInt(e.target.value) < 1
+                      ) {
+                        setProductQuantity(1);
+                      }
+                    }}
+                    min="1"
+                    className="mx-4 w-16 h-10 text-center font-bold text-lg border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                    dir="ltr"
+                  />
                   <button
                     onClick={() => setProductQuantity(productQuantity + 1)}
                     className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold"
