@@ -131,6 +131,7 @@ export default function Home() {
   const [deliveryType, setDeliveryType] = useState(null);
   const [selectedDeliveryCompany, setSelectedDeliveryCompany] = useState(null);
   const [orderPrepared, setOrderPrepared] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   const DeliveryType = {
     Store: "store",
@@ -2062,99 +2063,10 @@ export default function Home() {
           );
         }
 
-        const currentBillType = bills[currentBillIndex]?.billType || "takeaway";
-        const currentDeliveryFee =
-          currentBillType === "delivery" ? deliveryFee : 0;
-
-        const paymentMethod = paymentMethods.find(
-          (p) => p.id === selectedPaymentMethod,
-        );
-
-        const discountAmount =
-          discountType === DiscountType.Fixed
-            ? discount
-            : (subtotal * discount) / 100;
-
         toast.success(
-          <div>
-            <p className="font-bold">
-              تم إتمام الفاتورة رقم{" "}
-              {invoiceResponse.invoiceNumber || currentBillIndex + 1}
-            </p>
-            {selectedTable && (
-              <p className="text-sm mt-1">
-                الطاولة: {selectedTable.number} ({selectedHall.name})
-              </p>
-            )}
-            <p className="text-sm mt-1">
-              نوع الفاتورة: {getBillTypeLabel(currentBillType)}
-            </p>
-            {currentBillType === "delivery" && deliveryType && (
-              <p className="text-sm mt-1">
-                نوع التوصيل:{" "}
-                {deliveryType === DeliveryType.Store
-                  ? "دليفري المحل"
-                  : selectedDeliveryCompany?.name}
-                {deliveryType === DeliveryType.Company &&
-                  selectedDeliveryCompany?.contactNumber && (
-                    <span className="text-xs text-gray-600 mr-1">
-                      (رقم: {selectedDeliveryCompany.contactNumber})
-                    </span>
-                  )}
-              </p>
-            )}
-            <p className="text-sm mt-1">
-              طريقة الدفع: {paymentMethod?.name || "غير معروفة"}{" "}
-              {paymentMethod?.icon}
-            </p>
-            {customerName && (
-              <p className="text-sm mt-1">العميل: {customerName}</p>
-            )}
-            {customerPhone && (
-              <p className="text-xs text-gray-600 mt-1">
-                هاتف: {customerPhone}
-              </p>
-            )}
-            {customerAddress && (
-              <p className="text-xs text-gray-600 mt-1">
-                العنوان: {customerAddress}
-              </p>
-            )}
-            {customerNationalId && (
-              <p className="text-xs text-gray-600 mt-1">
-                الرقم القومي: {customerNationalId}
-              </p>
-            )}
-            {generalNote && (
-              <p className="text-sm mt-1 text-blue-600">
-                ملاحظة: {generalNote}
-              </p>
-            )}
-            {currentDeliveryFee > 0 && (
-              <p className="text-sm mt-1">
-                رسوم التوصيل: {currentDeliveryFee.toFixed(2)} ج.م
-              </p>
-            )}
-            {discount > 0 && (
-              <p className="text-sm mt-1 text-green-600">
-                الخصم: {discountAmount.toFixed(2)} ج.م
-                {discountType === DiscountType.Percentage
-                  ? ` (${discount}%)`
-                  : ""}
-              </p>
-            )}
-            <p className="text-sm mt-1">الإجمالي: {total.toFixed(2)} ج.م</p>
-            <p className="text-sm mt-1">
-              المبلغ المدفوع: {paidAmount.toFixed(2)} ج.م
-            </p>
-            <p className="text-sm mt-1">
-              المتبقي: {remainingAmount.toFixed(2)} ج.م
-            </p>
-            <p className="text-xs text-gray-600 mt-1">
-              تم حفظ الفاتورة في النظام
-            </p>
-          </div>,
-          { autoClose: 5000 },
+          `تم إتمام البيع للفاتورة رقم ${
+            invoiceResponse.invoiceNumber || currentBillIndex + 1
+          }`,
         );
 
         addNewBill();
@@ -2219,35 +2131,8 @@ export default function Home() {
             );
           }
 
-          const currentBillType =
-            bills[currentBillIndex]?.billType || "takeaway";
           toast.success(
-            <div>
-              <p className="font-bold">
-                تم إنشاء الفاتورة المعلقة رقم {invoiceResponse.invoiceNumber}
-              </p>
-              <p className="text-sm mt-1">
-                نوع الفاتورة: {getBillTypeLabel(currentBillType)}
-              </p>
-              {selectedTable && (
-                <p className="text-sm mt-1">
-                  الطاولة: {selectedTable.number} ({selectedHall?.name})
-                </p>
-              )}
-              {customerName && (
-                <p className="text-sm mt-1">العميل: {customerName}</p>
-              )}
-              {customerAddress && (
-                <p className="text-xs text-gray-600 mt-1">
-                  العنوان: {customerAddress}
-                </p>
-              )}
-              <p className="text-sm mt-1">الإجمالي: {total.toFixed(2)} ج.م</p>
-              <p className="text-xs text-amber-600 mt-1">
-                الفاتورة معلقة (لم يتم الدفع)
-              </p>
-            </div>,
-            { autoClose: 4000 },
+            `تم تعليق الفاتورة رقم ${invoiceResponse.invoiceNumber}`,
           );
 
           setIsNewBillActive(false);
@@ -2531,172 +2416,7 @@ export default function Home() {
       toast.error("الفاتورة فارغة");
       return;
     }
-
-    const billNumber =
-      bills[currentBillIndex]?.invoiceNumber || currentBillIndex + 1;
-    const currentBill = bills[currentBillIndex];
-    const invoiceStatus = currentBill?.invoiceStatus;
-    const currentBillType = currentBill?.billType || "takeaway";
-    const currentDeliveryFee = currentBillType === "delivery" ? deliveryFee : 0;
-    const currentPaymentMethod = currentBill?.paymentMethod;
-    const paymentMethod = paymentMethods.find(
-      (p) => p.id === currentPaymentMethod,
-    );
-    const paymentMethodName = paymentMethod?.name || "غير محدد";
-    const paymentMethodIcon = paymentMethod?.icon || "";
-
-    toast.info(
-      <div>
-        <p className="font-bold">فاتورة رقم {billNumber}</p>
-        {invoiceStatus !== undefined && (
-          <p className="text-xs text-gray-500 mb-1">
-            الحالة: {getInvoiceStatusText(invoiceStatus)}
-          </p>
-        )}
-        {currentBill.returnReason && (
-          <p className="text-xs text-red-600 mb-1">
-            سبب الارتجاع: {currentBill.returnReason}
-          </p>
-        )}
-        {selectedTable && (
-          <p className="text-xs text-gray-600 mb-1">
-            الطاولة: {selectedTable.number} ({selectedHall?.name})
-          </p>
-        )}
-        <p className="text-sm text-gray-600 mb-1">
-          نوع الفاتورة: {getBillTypeLabel(currentBillType)}
-        </p>
-        {currentBillType === "delivery" && currentBill.deliveryType && (
-          <p className="text-xs text-gray-600 mb-1">
-            نوع التوصيل:{" "}
-            {currentBill.deliveryType === DeliveryType.Store
-              ? "دليفري المحل"
-              : currentBill.deliveryCompanyName}
-            {currentBill.deliveryType === DeliveryType.Company &&
-              currentBill.deliveryCompanyContact && (
-                <span className="text-[10px] text-gray-500 mr-1">
-                  (رقم: {currentBill.deliveryCompanyContact})
-                </span>
-              )}
-          </p>
-        )}
-        {customerName && (
-          <p className="text-xs text-gray-600 mb-1">العميل: {customerName}</p>
-        )}
-        {customerPhone && (
-          <p className="text-xs text-gray-600 mb-1">هاتف: {customerPhone}</p>
-        )}
-        {customerAddress && (
-          <p className="text-xs text-gray-600 mb-1">
-            العنوان: {customerAddress}
-          </p>
-        )}
-        {customerNationalId && (
-          <p className="text-xs text-gray-600 mb-1">
-            الرقم القومي: {customerNationalId}
-          </p>
-        )}
-        {generalNote && (
-          <p className="text-xs text-blue-600 mb-1">ملاحظة: {generalNote}</p>
-        )}
-        {currentPaymentMethod && (
-          <p className="text-xs text-green-600 mb-1">
-            طريقة الدفع: {paymentMethodName} {paymentMethodIcon}
-          </p>
-        )}
-        <div className="text-xs mt-2 max-h-32 overflow-y-auto">
-          {cart.map((item, index) => {
-            const itemSubtotal = item.price * item.quantity;
-            const optionsValue = item.optionsTotal || 0;
-            const taxableAmount = itemSubtotal + optionsValue;
-            const itemTaxRate = item.valueAddedTax || tax;
-            const itemTax = item.isTaxInclusive
-              ? (taxableAmount * itemTaxRate) / (100 + itemTaxRate)
-              : (taxableAmount * itemTaxRate) / 100;
-
-            const hasDiscount =
-              item.originalPrice && item.originalPrice > item.price;
-
-            return (
-              <div
-                key={index}
-                className="flex justify-between py-1 border-b border-gray-100"
-              >
-                <div className="flex-1">
-                  <span className="truncate max-w-[120px] block">
-                    {item.name} × {item.quantity}
-                  </span>
-                  {hasDiscount && (
-                    <span className="text-[10px] text-green-600 block">
-                      السعر بعد الخصم: {item.price} ج.م (الأصلي:{" "}
-                      {item.originalPrice} ج.م)
-                    </span>
-                  )}
-                  {item.selectedOptions && item.selectedOptions.length > 0 && (
-                    <span className="text-[10px] text-amber-600 block truncate max-w-[120px]">
-                      إضافات:{" "}
-                      {item.selectedOptions.map((o) => o.name).join(", ")}
-                    </span>
-                  )}
-                  <span className="text-[10px] text-gray-500 block">
-                    {item.price} ج.م للوحدة ({itemTaxRate}%{" "}
-                    {item.isTaxInclusive ? "شامل الضريبة" : "غير شامل الضريبة"})
-                  </span>
-                  <span className="text-[10px] text-blue-600 block">
-                    قيمة الضريبة: {itemTax.toFixed(2)} ج.م
-                  </span>
-                  {item.discount > 0 && (
-                    <span className="text-[10px] text-green-600 block">
-                      خصم: {item.discount}% على المنتج
-                    </span>
-                  )}
-                  {item.note && item.note.trim() && (
-                    <span className="text-[10px] text-gray-500 block truncate max-w-[120px]">
-                      ملاحظة: {item.note}
-                    </span>
-                  )}
-                </div>
-                <span className="whitespace-nowrap">
-                  {item.price * item.quantity + (item.optionsTotal || 0)} ج.م
-                  {!item.isTaxInclusive &&
-                    ` (شامل ${itemTax.toFixed(2)} ضريبة)`}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-2 pt-2 border-t border-gray-200">
-          <div className="flex justify-between text-xs">
-            <span>المجموع الفرعي:</span>
-            <span>{subtotal.toFixed(2)} ج.م</span>
-          </div>
-          <div className="flex justify-between text-xs">
-            <span>إجمالي الضريبة:</span>
-            <span>{totalTax.toFixed(2)} ج.م</span>
-          </div>
-          <div className="flex justify-between text-xs">
-            <span>الخصم:</span>
-            <span>
-              {discountAmount.toFixed(2)} ج.م
-              {discountType === DiscountType.Percentage
-                ? ` (${discount}%)`
-                : ""}
-            </span>
-          </div>
-          {currentDeliveryFee > 0 && (
-            <div className="flex justify-between text-xs">
-              <span>رسوم التوصيل:</span>
-              <span>{currentDeliveryFee.toFixed(2)} ج.م</span>
-            </div>
-          )}
-          <div className="flex justify-between font-bold mt-1 text-sm">
-            <span>الإجمالي:</span>
-            <span>{total.toFixed(2)} ج.م</span>
-          </div>
-        </div>
-      </div>,
-      { autoClose: 6000 },
-    );
+    setShowInvoiceModal(true);
   };
 
   const resetCart = () => {
@@ -2731,7 +2451,6 @@ export default function Home() {
     toast.success("تم إغلاق الوردية بنجاح!");
   };
 
-  // تحديد حالة ظهور زر تحضير الطلب
   const shouldShowPrepareOrderButton = () => {
     return (
       isNewBillActive &&
@@ -3991,6 +3710,221 @@ export default function Home() {
                   }}
                 >
                   تأكيد الدفع
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showInvoiceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3
+                    className="text-xl font-bold"
+                    style={{ color: "#193F94" }}
+                  >
+                    تفاصيل الفاتورة
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    فاتورة رقم #
+                    {bills[currentBillIndex]?.invoiceNumber ||
+                      currentBillIndex + 1}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowInvoiceModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">رقم الفاتورة</p>
+                      <p className="font-bold">
+                        #
+                        {bills[currentBillIndex]?.invoiceNumber ||
+                          currentBillIndex + 1}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">التاريخ</p>
+                      <p className="font-bold">
+                        {bills[currentBillIndex]?.completedDate ||
+                          new Date().toLocaleString()}
+                      </p>
+                    </div>
+                    {selectedTable && (
+                      <>
+                        <div>
+                          <p className="text-sm text-gray-600">الصالة</p>
+                          <p className="font-bold">{selectedHall?.name}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">الطاولة</p>
+                          <p className="font-bold">{selectedTable.number}</p>
+                        </div>
+                      </>
+                    )}
+                    {bills[currentBillIndex]?.billType === "delivery" &&
+                      deliveryType && (
+                        <>
+                          <div>
+                            <p className="text-sm text-gray-600">نوع التوصيل</p>
+                            <p className="font-bold">
+                              {deliveryType === DeliveryType.Store
+                                ? "دليفري المحل"
+                                : selectedDeliveryCompany?.name}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">
+                              رسوم التوصيل
+                            </p>
+                            <p className="font-bold">{deliveryFee} ج.م</p>
+                          </div>
+                        </>
+                      )}
+                    <div>
+                      <p className="text-sm text-gray-600">حالة الفاتورة</p>
+                      <span
+                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getInvoiceStatusStyle(bills[currentBillIndex]?.invoiceStatus)}`}
+                      >
+                        {getInvoiceStatusText(
+                          bills[currentBillIndex]?.invoiceStatus,
+                        )}
+                      </span>
+                    </div>
+                    {customerName && (
+                      <div>
+                        <p className="text-sm text-gray-600">العميل</p>
+                        <p className="font-bold">{customerName}</p>
+                        {customerPhone && (
+                          <p className="text-xs text-gray-500">
+                            {customerPhone}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">
+                          المنتج
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">
+                          الكمية
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
+                          السعر
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
+                          الإجمالي
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {cart.map((item, index) => {
+                        const itemTotal =
+                          item.price * item.quantity + (item.optionsTotal || 0);
+                        return (
+                          <tr key={index}>
+                            <td className="px-4 py-3 text-sm">
+                              <div>
+                                <p className="font-medium">{item.name}</p>
+                                {item.selectedOptions &&
+                                  item.selectedOptions.length > 0 && (
+                                    <p className="text-xs text-gray-500">
+                                      إضافات:{" "}
+                                      {item.selectedOptions
+                                        .map((o) => o.name)
+                                        .join(", ")}
+                                    </p>
+                                  )}
+                                {item.note && (
+                                  <p className="text-xs text-blue-600">
+                                    ملاحظة: {item.note}
+                                  </p>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {item.quantity}
+                            </td>
+                            <td className="px-4 py-3 text-left">
+                              {item.price} ج.م
+                            </td>
+                            <td className="px-4 py-3 text-left font-medium">
+                              {itemTotal} ج.م
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>المجموع الفرعي:</span>
+                      <span>{subtotal.toFixed(2)} ج.م</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>إجمالي الضريبة:</span>
+                      <span>{totalTax.toFixed(2)} ج.م</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>الخصم:</span>
+                      <span className="text-green-600">
+                        {discountAmount.toFixed(2)} ج.م{" "}
+                        {discountType === DiscountType.Percentage &&
+                          discount > 0 &&
+                          `(${discount}%)`}
+                      </span>
+                    </div>
+                    {bills[currentBillIndex]?.billType === "delivery" &&
+                      deliveryFee > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>رسوم التوصيل:</span>
+                          <span>{deliveryFee.toFixed(2)} ج.م</span>
+                        </div>
+                      )}
+                    <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                      <span>الإجمالي:</span>
+                      <span style={{ color: "#193F94" }}>
+                        {total.toFixed(2)} ج.م
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {generalNote && (
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      ملاحظة عامة: {generalNote}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowInvoiceModal(false)}
+                  className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                >
+                  إغلاق
                 </button>
               </div>
             </div>
