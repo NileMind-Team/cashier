@@ -96,6 +96,8 @@ export default function Home() {
   const [tempGeneralNote, setTempGeneralNote] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
+  const [paidAmount, setPaidAmount] = useState(0);
+  const [remainingAmount, setRemainingAmount] = useState(0);
   const [selectedMainCategory, setSelectedMainCategory] = useState(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState(null);
   const [mainCategories, setMainCategories] = useState([]);
@@ -968,7 +970,11 @@ export default function Home() {
     setOrderPrepared(false);
   };
 
-  const createInvoice = async (isPending = true, paymentMethodId = null) => {
+  const createInvoice = async (
+    isPending = true,
+    paymentMethodId = null,
+    paidAmountValue = 0,
+  ) => {
     const currentBill = bills[currentBillIndex];
 
     if (!currentShift?.shiftId) {
@@ -987,7 +993,7 @@ export default function Home() {
       type: getInvoiceTypeFromBillType(currentBill.billType),
       deliveryCompanyId: selectedDeliveryCompany?.id || null,
       deliveryFee: currentBill.billType === "delivery" ? deliveryFee : null,
-      paidAmount: isPending ? 0 : total,
+      paidAmount: isPending ? 0 : paidAmountValue,
       paymentMethodId: paymentMethodId,
       items: cart.map((item) => ({
         itemId: item.id,
@@ -1867,12 +1873,16 @@ export default function Home() {
       }
     }
 
+    setPaidAmount(total);
+    setRemainingAmount(0);
     setShowPaymentModal(true);
   };
 
   const closePaymentModal = () => {
     setShowPaymentModal(false);
     setSelectedPaymentMethod(null);
+    setPaidAmount(0);
+    setRemainingAmount(0);
   };
 
   const openDiscountModal = () => {
@@ -1955,6 +1965,12 @@ export default function Home() {
     }
   };
 
+  const handlePaidAmountChange = (e) => {
+    const value = parseFloat(e.target.value) || 0;
+    setPaidAmount(value);
+    setRemainingAmount(total - value);
+  };
+
   const handleCompletePayment = async () => {
     if (!selectedPaymentMethod) {
       toast.error("يرجى اختيار طريقة الدفع");
@@ -1962,7 +1978,11 @@ export default function Home() {
     }
 
     try {
-      const invoiceResponse = await createInvoice(false, selectedPaymentMethod);
+      const invoiceResponse = await createInvoice(
+        false,
+        selectedPaymentMethod,
+        paidAmount,
+      );
 
       if (invoiceResponse) {
         const updatedBills = [...bills];
@@ -2072,6 +2092,12 @@ export default function Home() {
               </p>
             )}
             <p className="text-sm mt-1">الإجمالي: {total.toFixed(2)} ج.م</p>
+            <p className="text-sm mt-1">
+              المبلغ المدفوع: {paidAmount.toFixed(2)} ج.م
+            </p>
+            <p className="text-sm mt-1">
+              المتبقي: {remainingAmount.toFixed(2)} ج.م
+            </p>
             <p className="text-xs text-gray-600 mt-1">
               تم حفظ الفاتورة في النظام
             </p>
@@ -2082,6 +2108,8 @@ export default function Home() {
         addNewBill();
         setShowPaymentModal(false);
         setSelectedPaymentMethod(null);
+        setPaidAmount(0);
+        setRemainingAmount(0);
       }
     } catch (error) {
       console.error("خطأ في إتمام الدفع:", error);
@@ -2115,7 +2143,7 @@ export default function Home() {
       }
 
       try {
-        const invoiceResponse = await createInvoice(true, null);
+        const invoiceResponse = await createInvoice(true, null, 0);
 
         if (invoiceResponse) {
           const updatedBills = [...bills];
@@ -2270,7 +2298,7 @@ export default function Home() {
     }
 
     try {
-      const invoiceResponse = await createInvoice(true, null);
+      const invoiceResponse = await createInvoice(true, null, 0);
 
       const updatedBills = [...bills];
       updatedBills[currentBillIndex] = {
@@ -3698,7 +3726,7 @@ export default function Home() {
 
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold" style={{ color: "#193F94" }}>
@@ -3742,6 +3770,65 @@ export default function Home() {
                         ? ` (${discount}%)`
                         : ""}
                     </div>
+                  )}
+                </div>
+
+                <div className="mb-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={paidAmount}
+                      onChange={handlePaidAmountChange}
+                      onFocus={() => handleFocus("paidAmount")}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      min="0"
+                      step="0.01"
+                      dir="ltr"
+                    />
+                    <label
+                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                        focusedField === "paidAmount" || paidAmount > 0
+                          ? "-top-2.5 text-xs text-blue-500 font-medium"
+                          : "top-3 text-gray-400 text-sm"
+                      }`}
+                    >
+                      <span className="flex items-center">
+                        <svg
+                          className="w-4 h-4 ml-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        المبلغ المدفوع
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-3 rounded-lg mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">
+                      المبلغ المتبقي:
+                    </span>
+                    <span
+                      className={`font-bold ${remainingAmount < 0 ? "text-red-600" : "text-green-600"}`}
+                    >
+                      {remainingAmount.toFixed(2)} ج.م
+                    </span>
+                  </div>
+                  {remainingAmount < 0 && (
+                    <p className="text-xs text-red-600 mt-1">
+                      المبلغ المدفوع أكبر من إجمالي الفاتورة ب{" "}
+                      {Math.abs(remainingAmount).toFixed(2)} ج.م
+                    </p>
                   )}
                 </div>
 
