@@ -658,14 +658,25 @@ export default function Home() {
                 if (subCategory.items && subCategory.items.length > 0) {
                   subCategory.items.forEach((item) => {
                     if (item.isAvailable) {
+                      const finalPrice =
+                        item.finalPrice ||
+                        (item.percentageDiscount
+                          ? item.price -
+                            (item.price * item.percentageDiscount) / 100
+                          : item.discount
+                            ? item.price - item.discount
+                            : item.price);
+
                       allProductsList.push({
                         id: item.id,
                         name: item.name,
                         price: item.price,
+                        finalPrice: finalPrice,
+                        discount: item.discount || 0,
+                        percentageDiscount: item.percentageDiscount || 0,
                         image: item.imgUrl,
                         mainCategoryId: item.mainCategoryId,
                         subCategoryId: item.subCategoryId,
-                        finalPrice: item.finalPrice,
                         isAvailable: item.isAvailable,
                         valueAddedTax: item.valueAddedTax,
                         isTaxInclusive: item.isTaxInclusive,
@@ -793,30 +804,41 @@ export default function Home() {
 
   const convertInvoiceToBill = (invoice, index) => {
     const cartItems =
-      invoice.items?.map((item) => ({
-        id: item.itemId,
-        name: item.itemName,
-        price: item.itemPriceSnapShoot || 0,
-        quantity: item.quantity,
-        image: item.imageUrl || "",
-        uniqueId: `${item.itemId}_${Date.now()}_${Math.random()}`,
-        selectedOptions:
-          item.invoiceItemOptions?.map((opt) => ({
-            id: opt.optionId,
-            name: opt.optionNameSnapShoot,
-            price: opt.optionPriceSnapShoot || 0,
-          })) || [],
-        optionsTotal:
-          item.invoiceItemOptions?.reduce(
-            (sum, opt) => sum + (opt.optionPriceSnapShoot || 0),
-            0,
-          ) * item.quantity || 0,
-        note: item.notesItem || "",
-        isTaxInclusive: item.isTaxInclusive || false,
-        valueAddedTax: item.valueAddedTax || 14,
-        isPercentage: item.isPercentage || false,
-        discount: item.discount || 0,
-      })) || [];
+      invoice.items?.map((item) => {
+        let itemPrice = item.itemPriceSnapShoot || 0;
+
+        if (item.isPercentage && item.discount) {
+          itemPrice = item.discount;
+        } else if (!item.isPercentage && item.discount) {
+          itemPrice = (item.itemPriceSnapShoot || 0) - item.discount;
+        }
+
+        return {
+          id: item.itemId,
+          name: item.itemName,
+          price: itemPrice,
+          originalPrice: item.itemPriceSnapShoot || 0,
+          quantity: item.quantity,
+          image: item.imageUrl || "",
+          uniqueId: `${item.itemId}_${Date.now()}_${Math.random()}`,
+          selectedOptions:
+            item.invoiceItemOptions?.map((opt) => ({
+              id: opt.optionId,
+              name: opt.optionNameSnapShoot,
+              price: opt.optionPriceSnapShoot || 0,
+            })) || [],
+          optionsTotal:
+            item.invoiceItemOptions?.reduce(
+              (sum, opt) => sum + (opt.optionPriceSnapShoot || 0),
+              0,
+            ) * item.quantity || 0,
+          note: item.notesItem || "",
+          isTaxInclusive: item.isTaxInclusive || false,
+          valueAddedTax: item.valueAddedTax || 14,
+          isPercentage: item.isPercentage || false,
+          discount: item.discount || 0,
+        };
+      }) || [];
 
     const invoiceStatus = invoice.invoiceStatus;
     const isCompleted = invoiceStatus === InvoiceStatus.Done;
@@ -995,20 +1017,35 @@ export default function Home() {
       deliveryFee: currentBill.billType === "delivery" ? deliveryFee : null,
       paidAmount: isPending ? 0 : paidAmountValue,
       paymentMethodId: paymentMethodId,
-      items: cart.map((item) => ({
-        itemId: item.id,
-        quantity: item.quantity,
-        discount: item.discount || null,
-        discountType: item.isPercentage
-          ? DiscountType.Percentage
-          : DiscountType.Fixed,
-        notes: item.note || "",
-        options:
-          item.selectedOptions?.map((opt) => ({
-            optionId: opt.id,
-            quantity: item.quantity,
-          })) || [],
-      })),
+      items: cart.map((item) => {
+        let itemDiscount = null;
+        let itemDiscountType = null;
+
+        if (item.originalPrice && item.originalPrice > item.price) {
+          const discountAmount = item.originalPrice - item.price;
+
+          if (item.isPercentage && item.discount) {
+            itemDiscount = item.discount;
+            itemDiscountType = DiscountType.Percentage;
+          } else {
+            itemDiscount = discountAmount;
+            itemDiscountType = DiscountType.Fixed;
+          }
+        }
+
+        return {
+          itemId: item.id,
+          quantity: item.quantity,
+          discount: itemDiscount,
+          discountType: itemDiscountType,
+          notes: item.note || "",
+          options:
+            item.selectedOptions?.map((opt) => ({
+              optionId: opt.id,
+              quantity: item.quantity,
+            })) || [],
+        };
+      }),
     };
 
     const cleanInvoiceData = JSON.parse(
@@ -1682,6 +1719,8 @@ export default function Home() {
       0,
     );
 
+    const productPrice = selectedProduct.finalPrice || selectedProduct.price;
+
     const existingItem = cart.find((item) => item.id === selectedProduct.id);
 
     if (existingItem) {
@@ -1706,6 +1745,8 @@ export default function Home() {
       } else {
         const newItem = {
           ...selectedProduct,
+          price: productPrice,
+          originalPrice: selectedProduct.price,
           uniqueId: `${selectedProduct.id}_${Date.now()}`,
           quantity: productQuantity,
           selectedOptions: selectedOptions,
@@ -1719,6 +1760,8 @@ export default function Home() {
     } else {
       const newItem = {
         ...selectedProduct,
+        price: productPrice,
+        originalPrice: selectedProduct.price,
         uniqueId: `${selectedProduct.id}_${Date.now()}`,
         quantity: productQuantity,
         selectedOptions: selectedOptions,
@@ -1731,12 +1774,21 @@ export default function Home() {
     }
 
     const productName = selectedProduct.name;
+    const hasDiscount =
+      selectedProduct.finalPrice &&
+      selectedProduct.finalPrice < selectedProduct.price;
 
     toast.success(
       <div>
         <p className="font-bold">
           تم إضافة {productQuantity} × {productName}
         </p>
+        {hasDiscount && (
+          <p className="text-xs mt-1 text-green-600">
+            السعر بعد الخصم: {productPrice} ج.م (الأصلي: {selectedProduct.price}{" "}
+            ج.م)
+          </p>
+        )}
         {selectedOptions.length > 0 && (
           <p className="text-xs mt-1 text-gray-600">
             الإضافات: {selectedOptions.map((o) => o.name).join(", ")}
@@ -2562,6 +2614,9 @@ export default function Home() {
               ? (taxableAmount * itemTaxRate) / (100 + itemTaxRate)
               : (taxableAmount * itemTaxRate) / 100;
 
+            const hasDiscount =
+              item.originalPrice && item.originalPrice > item.price;
+
             return (
               <div
                 key={index}
@@ -2571,6 +2626,12 @@ export default function Home() {
                   <span className="truncate max-w-[120px] block">
                     {item.name} × {item.quantity}
                   </span>
+                  {hasDiscount && (
+                    <span className="text-[10px] text-green-600 block">
+                      السعر بعد الخصم: {item.price} ج.م (الأصلي:{" "}
+                      {item.originalPrice} ج.م)
+                    </span>
+                  )}
                   {item.selectedOptions && item.selectedOptions.length > 0 && (
                     <span className="text-[10px] text-amber-600 block truncate max-w-[120px]">
                       إضافات:{" "}
@@ -2725,9 +2786,26 @@ export default function Home() {
                     <h4 className="font-bold text-lg">
                       {selectedProduct.name}
                     </h4>
-                    <p className="text-sm text-gray-600">
-                      السعر الأساسي: {selectedProduct.price} ج.م
-                    </p>
+                    {selectedProduct.finalPrice &&
+                    selectedProduct.finalPrice < selectedProduct.price ? (
+                      <>
+                        <p className="text-sm text-gray-600 line-through">
+                          السعر الأصلي: {selectedProduct.price} ج.م
+                        </p>
+                        <p className="text-sm text-green-600 font-bold">
+                          السعر بعد الخصم: {selectedProduct.finalPrice} ج.م
+                          {selectedProduct.percentageDiscount && (
+                            <span className="text-xs mr-1">
+                              (خصم {selectedProduct.percentageDiscount}%)
+                            </span>
+                          )}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-gray-600">
+                        السعر: {selectedProduct.price} ج.م
+                      </p>
+                    )}
                     <p className="text-xs text-gray-500 mt-1">
                       {selectedProduct.isTaxInclusive
                         ? "السعر شامل الضريبة"
@@ -2905,7 +2983,8 @@ export default function Home() {
                     style={{ color: "#193F94" }}
                   >
                     {(
-                      selectedProduct.price * productQuantity +
+                      (selectedProduct.finalPrice || selectedProduct.price) *
+                        productQuantity +
                       selectedOptions.reduce((sum, o) => sum + o.price, 0) *
                         productQuantity
                     ).toFixed(2)}{" "}
@@ -2914,9 +2993,18 @@ export default function Home() {
                 </div>
                 <div className="text-xs text-gray-600 mt-1">
                   <div>
-                    السعر الأساسي: {selectedProduct.price} ج.م ×{" "}
-                    {productQuantity}
+                    السعر: {selectedProduct.finalPrice || selectedProduct.price}{" "}
+                    ج.م × {productQuantity}
                   </div>
+                  {selectedProduct.finalPrice &&
+                    selectedProduct.finalPrice < selectedProduct.price && (
+                      <div className="text-green-600">
+                        توفير:{" "}
+                        {(selectedProduct.price - selectedProduct.finalPrice) *
+                          productQuantity}{" "}
+                        ج.م
+                      </div>
+                    )}
                   {selectedOptions.length > 0 && (
                     <div>
                       الإضافات: +
@@ -4001,48 +4089,69 @@ export default function Home() {
                       </div>
                     ) : (
                       <div className="grid grid-cols-5 gap-2">
-                        {filteredProducts.map((product) => (
-                          <button
-                            key={product.id}
-                            onClick={() => handleProductClick(product)}
-                            disabled={bills[currentBillIndex]?.completed}
-                            className={`bg-gray-50 hover:bg-blue-50 rounded-lg p-2 flex items-center transition-all duration-300 transform active:scale-[0.98] border border-gray-200 h-20 ${
-                              bills[currentBillIndex]?.completed
-                                ? "opacity-50 cursor-not-allowed"
-                                : ""
-                            }`}
-                          >
-                            <div className="w-16 h-16 rounded-lg overflow-hidden ml-2 flex-shrink-0">
-                              <img
-                                src={product.image}
-                                alt={product.name}
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                                onError={(e) => {
-                                  e.target.src =
-                                    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop&crop=center";
-                                }}
-                              />
-                            </div>
+                        {filteredProducts.map((product) => {
+                          const hasDiscount =
+                            product.finalPrice &&
+                            product.finalPrice < product.price;
+                          return (
+                            <button
+                              key={product.id}
+                              onClick={() => handleProductClick(product)}
+                              disabled={bills[currentBillIndex]?.completed}
+                              className={`bg-gray-50 hover:bg-blue-50 rounded-lg p-2 flex items-center transition-all duration-300 transform active:scale-[0.98] border border-gray-200 h-20 ${
+                                bills[currentBillIndex]?.completed
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : ""
+                              }`}
+                            >
+                              <div className="w-16 h-16 rounded-lg overflow-hidden ml-2 flex-shrink-0">
+                                <img
+                                  src={product.image}
+                                  alt={product.name}
+                                  className="w-full h-full object-cover"
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    e.target.src =
+                                      "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop&crop=center";
+                                  }}
+                                />
+                              </div>
 
-                            <div className="flex-1 text-right">
-                              <h3 className="font-medium text-gray-800 text-xs mb-1 leading-tight">
-                                {product.name}
-                              </h3>
-                              <p
-                                className="text-sm font-bold"
-                                style={{ color: "#193F94" }}
-                              >
-                                {product.price} ج.م
-                              </p>
-                              <p className="text-[8px] text-gray-500">
-                                {product.isTaxInclusive
-                                  ? "شامل الضريبة"
-                                  : `غير شامل الضريبة (${product.valueAddedTax}%)`}
-                              </p>
-                            </div>
-                          </button>
-                        ))}
+                              <div className="flex-1 text-right">
+                                <h3 className="font-medium text-gray-800 text-xs mb-1 leading-tight">
+                                  {product.name}
+                                </h3>
+                                {hasDiscount ? (
+                                  <>
+                                    <p className="text-sm font-bold text-green-600">
+                                      {product.finalPrice} ج.م
+                                    </p>
+                                    <p className="text-[8px] text-gray-400 line-through">
+                                      {product.price} ج.م
+                                    </p>
+                                    {product.percentageDiscount && (
+                                      <p className="text-[8px] text-green-500">
+                                        خصم {product.percentageDiscount}%
+                                      </p>
+                                    )}
+                                  </>
+                                ) : (
+                                  <p
+                                    className="text-sm font-bold"
+                                    style={{ color: "#193F94" }}
+                                  >
+                                    {product.price} ج.م
+                                  </p>
+                                )}
+                                <p className="text-[8px] text-gray-500">
+                                  {product.isTaxInclusive
+                                    ? "شامل الضريبة"
+                                    : `غير شامل الضريبة (${product.valueAddedTax}%)`}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -4519,6 +4628,8 @@ export default function Home() {
                       const itemTax = item.isTaxInclusive
                         ? (taxableAmount * itemTaxRate) / (100 + itemTaxRate)
                         : (taxableAmount * itemTaxRate) / 100;
+                      const hasDiscount =
+                        item.originalPrice && item.originalPrice > item.price;
 
                       return (
                         <div
@@ -4546,7 +4657,18 @@ export default function Home() {
                                       {item.name}
                                     </h4>
                                     <div className="text-xs text-gray-500 mt-0.5">
-                                      <span>{item.price} ج.م للوحدة</span>
+                                      {hasDiscount ? (
+                                        <>
+                                          <span className="text-green-600 font-medium">
+                                            {item.price} ج.م
+                                          </span>
+                                          <span className="mr-1 text-[10px] text-gray-400 line-through">
+                                            {item.originalPrice} ج.م
+                                          </span>
+                                        </>
+                                      ) : (
+                                        <span>{item.price} ج.م</span>
+                                      )}
                                       <span className="mr-1 text-[10px] text-gray-600">
                                         ({itemTaxRate}%{" "}
                                         {item.isTaxInclusive
