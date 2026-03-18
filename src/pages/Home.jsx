@@ -1075,6 +1075,18 @@ export default function Home() {
       }
     } catch (error) {
       console.error("خطأ في إنشاء الفاتورة:", error);
+
+      if (error.response?.data?.errors) {
+        const paymentError = error.response.data.errors.find(
+          (err) => err.code === "Invoice.InvalidPayment",
+        );
+
+        if (paymentError) {
+          toast.error("المبلغ المدفوع أكثر من إجمالي الفاتورة");
+          return null;
+        }
+      }
+
       throw error;
     }
   };
@@ -2077,6 +2089,18 @@ export default function Home() {
       }
     } catch (error) {
       console.error("خطأ في إتمام الدفع:", error);
+
+      if (error.response?.data?.errors) {
+        const paymentError = error.response.data.errors.find(
+          (err) => err.code === "Invoice.InvalidPayment",
+        );
+
+        if (paymentError) {
+          toast.error("المبلغ المدفوع أكثر من إجمالي الفاتورة");
+          return;
+        }
+      }
+
       toast.error("حدث خطأ في إتمام عملية الدفع");
     }
   };
@@ -4980,7 +5004,9 @@ export default function Home() {
                 >
                   ارتجاع
                 </button>
-              ) : !isNewBillActive && bills[currentBillIndex]?.completed ? (
+              ) : !isNewBillActive &&
+                bills[currentBillIndex]?.invoiceStatus ===
+                  InvoiceStatus.Returned ? (
                 <button
                   onClick={handleReprintBill}
                   className="py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 hover:scale-[1.02] active:scale-[0.98]"
