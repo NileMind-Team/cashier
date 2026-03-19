@@ -95,8 +95,7 @@ export default function Home() {
   const [isEditingGeneralNote, setIsEditingGeneralNote] = useState(false);
   const [tempGeneralNote, setTempGeneralNote] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
-  const [paidAmount, setPaidAmount] = useState(0);
+  const [payments, setPayments] = useState([]);
   const [remainingAmount, setRemainingAmount] = useState(0);
   const [selectedMainCategory, setSelectedMainCategory] = useState(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState(null);
@@ -132,6 +131,8 @@ export default function Home() {
   const [selectedDeliveryCompany, setSelectedDeliveryCompany] = useState(null);
   const [orderPrepared, setOrderPrepared] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [excessAmount, setExcessAmount] = useState(0);
 
   const DeliveryType = {
     Store: "store",
@@ -993,11 +994,7 @@ export default function Home() {
     setOrderPrepared(false);
   };
 
-  const createInvoice = async (
-    isPending = true,
-    paymentMethodId = null,
-    paidAmountValue = 0,
-  ) => {
+  const createInvoice = async (isPending = true, paymentsData = null) => {
     const currentBill = bills[currentBillIndex];
 
     if (!currentShift?.shiftId) {
@@ -1016,8 +1013,7 @@ export default function Home() {
       type: getInvoiceTypeFromBillType(currentBill.billType),
       deliveryCompanyId: selectedDeliveryCompany?.id || null,
       deliveryFee: currentBill.billType === "delivery" ? deliveryFee : null,
-      paidAmount: isPending ? 0 : paidAmountValue,
-      paymentMethodId: paymentMethodId,
+      payments: isPending ? [] : paymentsData,
       items: cart.map((item) => {
         let itemDiscount = null;
         let itemDiscountType = null;
@@ -1938,16 +1934,66 @@ export default function Home() {
       }
     }
 
-    setPaidAmount(total);
-    setRemainingAmount(0);
+    setPayments([]);
+    setRemainingAmount(total);
+    setExcessAmount(0);
     setShowPaymentModal(true);
   };
 
   const closePaymentModal = () => {
     setShowPaymentModal(false);
-    setSelectedPaymentMethod(null);
-    setPaidAmount(0);
+    setPayments([]);
     setRemainingAmount(0);
+    setExcessAmount(0);
+  };
+
+  const handleAddPayment = (paymentMethodId) => {
+    const existingPaymentIndex = payments.findIndex(
+      (p) => p.paymentMethodId === paymentMethodId,
+    );
+
+    if (existingPaymentIndex !== -1) {
+      const newPayments = payments.filter(
+        (_, index) => index !== existingPaymentIndex,
+      );
+      setPayments(newPayments);
+
+      const totalPaid = newPayments.reduce((sum, p) => sum + p.amount, 0);
+      setRemainingAmount(total - totalPaid);
+      setExcessAmount(totalPaid > total ? totalPaid - total : 0);
+    } else {
+      const currentTotalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+      const remaining = total - currentTotalPaid;
+
+      const newPayments = [...payments, { paymentMethodId, amount: remaining }];
+      setPayments(newPayments);
+      setRemainingAmount(0);
+      setExcessAmount(0);
+    }
+  };
+
+  const handlePaymentAmountChange = (paymentMethodId, amount) => {
+    const updatedPayments = payments.map((payment) =>
+      payment.paymentMethodId === paymentMethodId
+        ? { ...payment, amount: parseFloat(amount) || 0 }
+        : payment,
+    );
+    setPayments(updatedPayments);
+
+    const totalPaid = updatedPayments.reduce((sum, p) => sum + p.amount, 0);
+    setRemainingAmount(total - totalPaid);
+    setExcessAmount(totalPaid > total ? totalPaid - total : 0);
+  };
+
+  const handleRemovePayment = (paymentMethodId) => {
+    const newPayments = payments.filter(
+      (p) => p.paymentMethodId !== paymentMethodId,
+    );
+    setPayments(newPayments);
+
+    const totalPaid = newPayments.reduce((sum, p) => sum + p.amount, 0);
+    setRemainingAmount(total - totalPaid);
+    setExcessAmount(totalPaid > total ? totalPaid - total : 0);
   };
 
   const openDiscountModal = () => {
@@ -2030,62 +2076,88 @@ export default function Home() {
     }
   };
 
-  const handlePaidAmountChange = (e) => {
-    const value = parseFloat(e.target.value) || 0;
-    setPaidAmount(value);
-    setRemainingAmount(total - value);
-  };
-
   const handleCompletePayment = async () => {
-    if (!selectedPaymentMethod) {
-      toast.error("يرجى اختيار طريقة الدفع");
+    if (payments.length === 0) {
+      toast.error("يرجى اختيار طريقة دفع واحدة على الأقل");
       return;
     }
 
+    const invalidPayments = payments.filter((p) => !p.amount || p.amount <= 0);
+    if (invalidPayments.length > 0) {
+      toast.error("يرجى إدخال مبلغ صحيح لجميع طرق الدفع");
+      return;
+    }
+
+    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+
     try {
-      const invoiceResponse = await createInvoice(
-        false,
-        selectedPaymentMethod,
-        paidAmount,
-      );
+      const invoiceResponse = await createInvoice(false, payments);
 
       if (invoiceResponse) {
+        const isPartialPaid =
+          Math.abs(totalPaid - total) > 0.01 && totalPaid < total;
+        const isOverPaid = totalPaid > total;
+
         const updatedBills = [...bills];
         updatedBills[currentBillIndex] = {
           ...updatedBills[currentBillIndex],
-          completed: true,
-          completedDate: new Date().toLocaleString(),
-          paymentMethod: selectedPaymentMethod,
+          completed: !isPartialPaid && !isOverPaid,
+          completedDate:
+            !isPartialPaid && !isOverPaid ? new Date().toLocaleString() : null,
+          paymentMethod: payments.map((p) => p.paymentMethodId).join(","),
           isReturned: false,
-          isPartialPaid: false,
+          isPartialPaid: isPartialPaid,
           returnReason: "",
           invoiceId: invoiceResponse.id,
           invoiceNumber: invoiceResponse.invoiceNumber,
-          invoiceStatus: InvoiceStatus.Done,
+          invoiceStatus: isPartialPaid
+            ? InvoiceStatus.PartialPaid
+            : isOverPaid
+              ? InvoiceStatus.Done
+              : InvoiceStatus.Done,
           isPending: false,
         };
         setBills(updatedBills);
 
         if (selectedTable && selectedHall) {
-          updateTableStatus(
-            selectedHall.id,
-            selectedTable.id,
-            "available",
-            null,
+          if (!isPartialPaid) {
+            updateTableStatus(
+              selectedHall.id,
+              selectedTable.id,
+              "available",
+              null,
+            );
+          }
+        }
+
+        if (isPartialPaid) {
+          toast.success(
+            `تم دفع ${totalPaid.toFixed(2)} ج.م من إجمالي ${total.toFixed(2)} ج.م للفاتورة رقم ${
+              invoiceResponse.invoiceNumber || currentBillIndex + 1
+            } (باقي ${remainingAmount.toFixed(2)} ج.م)`,
+          );
+        } else if (isOverPaid) {
+          toast.success(
+            `تم دفع ${totalPaid.toFixed(2)} ج.م (زيادة ${(totalPaid - total).toFixed(2)} ج.م) للفاتورة رقم ${
+              invoiceResponse.invoiceNumber || currentBillIndex + 1
+            }`,
+          );
+        } else {
+          toast.success(
+            `تم إتمام البيع للفاتورة رقم ${
+              invoiceResponse.invoiceNumber || currentBillIndex + 1
+            } باستخدام ${payments.length} طريقة دفع`,
           );
         }
 
-        toast.success(
-          `تم إتمام البيع للفاتورة رقم ${
-            invoiceResponse.invoiceNumber || currentBillIndex + 1
-          }`,
-        );
+        if (!isPartialPaid) {
+          addNewBill();
+        }
 
-        addNewBill();
         setShowPaymentModal(false);
-        setSelectedPaymentMethod(null);
-        setPaidAmount(0);
+        setPayments([]);
         setRemainingAmount(0);
+        setExcessAmount(0);
       }
     } catch (error) {
       console.error("خطأ في إتمام الدفع:", error);
@@ -2131,7 +2203,7 @@ export default function Home() {
       }
 
       try {
-        const invoiceResponse = await createInvoice(true, null, 0);
+        const invoiceResponse = await createInvoice(true, []);
 
         if (invoiceResponse) {
           const updatedBills = [...bills];
@@ -2259,7 +2331,7 @@ export default function Home() {
     }
 
     try {
-      const invoiceResponse = await createInvoice(true, null, 0);
+      const invoiceResponse = await createInvoice(true, []);
 
       const updatedBills = [...bills];
       updatedBills[currentBillIndex] = {
@@ -3557,11 +3629,11 @@ export default function Home() {
 
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold" style={{ color: "#193F94" }}>
-                  اختيار طريقة الدفع
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full">
+            <div className="p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold" style={{ color: "#193F94" }}>
+                  طرق الدفع
                 </h3>
                 <button
                   onClick={closePaymentModal}
@@ -3571,31 +3643,31 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="mb-6">
-                <div className="bg-blue-50 p-4 rounded-lg mb-4">
+              <div className="mb-4">
+                <div className="bg-blue-50 p-3 rounded-lg mb-3">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-sm text-gray-600">إجمالي الفاتورة</p>
+                      <p className="text-xs text-gray-600">إجمالي الفاتورة</p>
                       <p
-                        className="text-2xl font-bold"
+                        className="text-xl font-bold"
                         style={{ color: "#193F94" }}
                       >
                         {total.toFixed(2)} ج.م
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">
-                        فاتورة #
+                    <div className="text-left">
+                      <p className="text-xs text-gray-600">
+                        #
                         {bills[currentBillIndex]?.invoiceNumber ||
                           (isNewBillActive ? "جديدة" : currentBillIndex + 1)}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-[10px] text-gray-500">
                         {cart.length} منتج
                       </p>
                     </div>
                   </div>
                   {discount > 0 && (
-                    <div className="mt-2 text-xs text-green-600">
+                    <div className="mt-1 text-[10px] text-green-600">
                       الخصم: {discountAmount.toFixed(2)} ج.م
                       {discountType === DiscountType.Percentage
                         ? ` (${discount}%)`
@@ -3604,133 +3676,186 @@ export default function Home() {
                   )}
                 </div>
 
-                <div className="mb-4">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={paidAmount}
-                      onChange={handlePaidAmountChange}
-                      onFocus={() => handleFocus("paidAmount")}
-                      onBlur={handleBlur}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
-                      min="0"
-                      step="0.01"
-                      dir="ltr"
-                    />
-                    <label
-                      className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                        focusedField === "paidAmount" || paidAmount > 0
-                          ? "-top-2.5 text-xs text-blue-500 font-medium"
-                          : "top-3 text-gray-400 text-sm"
-                      }`}
-                    >
-                      <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                {payments.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    <p className="text-xs font-medium text-gray-700">
+                      طرق الدفع المختارة:
+                    </p>
+                    {payments.map((payment) => {
+                      const method = paymentMethods.find(
+                        (m) => m.id === payment.paymentMethodId,
+                      );
+                      return (
+                        <div
+                          key={payment.paymentMethodId}
+                          className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-lg border border-gray-200"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        المبلغ المدفوع
-                      </span>
-                    </label>
+                          <div
+                            className="w-1 h-8 rounded-full"
+                            style={{ backgroundColor: method?.color }}
+                          ></div>
+                          <div className="flex-1 flex items-center gap-2">
+                            <p className="text-xs font-medium min-w-[60px]">
+                              {method?.name}
+                            </p>
+                            <input
+                              type="text"
+                              value={payment.amount}
+                              onChange={(e) =>
+                                handlePaymentAmountChange(
+                                  payment.paymentMethodId,
+                                  e.target.value,
+                                )
+                              }
+                              className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              placeholder="المبلغ"
+                              min="0"
+                              step="0.01"
+                              dir="ltr"
+                            />
+                          </div>
+                          <button
+                            onClick={() =>
+                              handleRemovePayment(payment.paymentMethodId)
+                            }
+                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
+                )}
 
-                <div className="bg-gray-50 p-3 rounded-lg mb-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">
+                <div className="bg-gray-50 p-2 rounded-lg mb-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-xs text-gray-600">
                       المبلغ المتبقي:
                     </span>
                     <span
-                      className={`font-bold ${remainingAmount < 0 ? "text-red-600" : "text-green-600"}`}
+                      className={`font-bold text-sm ${remainingAmount < 0 ? "text-green-600" : remainingAmount > 0 ? "text-red-600" : "text-green-600"}`}
                     >
-                      {remainingAmount.toFixed(2)} ج.م
+                      {Math.abs(remainingAmount).toFixed(2)} ج.م
+                      {remainingAmount < 0 && (
+                        <span className="text-[10px] mr-1 text-green-600">
+                          (زيادة)
+                        </span>
+                      )}
+                      {remainingAmount > 0 && (
+                        <span className="text-[10px] mr-1 text-red-600">
+                          (باقي)
+                        </span>
+                      )}
                     </span>
                   </div>
-                  {remainingAmount < 0 && (
-                    <p className="text-xs text-red-600 mt-1">
-                      المبلغ المدفوع أكبر من إجمالي الفاتورة ب{" "}
+                  {remainingAmount < 0 && payments.length > 0 && (
+                    <p className="text-[10px] text-green-600 mt-0.5">
+                      ✓ تم دفع مبلغ إضافي قدره{" "}
                       {Math.abs(remainingAmount).toFixed(2)} ج.م
+                    </p>
+                  )}
+                  {remainingAmount > 0 && payments.length > 0 && (
+                    <p className="text-[10px] text-yellow-600 mt-0.5">
+                      ✓ سيتم حفظ الفاتورة كـ "آجل" (باقي{" "}
+                      {remainingAmount.toFixed(2)} ج.م)
+                    </p>
+                  )}
+                  {Math.abs(remainingAmount) < 0.01 && payments.length > 0 && (
+                    <p className="text-[10px] text-green-600 mt-0.5">
+                      ✓ تم تغطية كامل المبلغ
                     </p>
                   )}
                 </div>
 
                 {paymentMethodsLoading ? (
-                  <div className="text-center py-8">
-                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                    <p className="text-xs text-gray-500">
+                  <div className="text-center py-4">
+                    <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <p className="text-[10px] text-gray-500 mt-1">
                       جاري تحميل طرق الدفع...
                     </p>
                   </div>
                 ) : paymentMethods.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>لا توجد طرق دفع متاحة</p>
+                  <div className="text-center py-4 text-gray-500">
+                    <p className="text-xs">لا توجد طرق دفع متاحة</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                    <p className="text-xs font-medium text-gray-700">
+                      اختر طريقة الدفع:
+                    </p>
                     {paymentMethods
                       .filter((method) => method.isActive)
-                      .map((method) => (
-                        <button
-                          key={method.id}
-                          onClick={() => setSelectedPaymentMethod(method.id)}
-                          className={`w-full p-4 rounded-lg border-2 flex items-center justify-between transition-all ${
-                            selectedPaymentMethod === method.id
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                        >
-                          <div className="flex items-center">
-                            <span className="text-2xl mr-3">{method.icon}</span>
-                            <div className="text-right">
-                              <p className="font-medium">{method.name}</p>
-                            </div>
-                          </div>
-                          <div
-                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                              selectedPaymentMethod === method.id
-                                ? "border-blue-500 bg-blue-500"
-                                : "border-gray-300"
+                      .map((method) => {
+                        const isSelected = payments.some(
+                          (p) => p.paymentMethodId === method.id,
+                        );
+                        return (
+                          <button
+                            key={method.id}
+                            onClick={() => handleAddPayment(method.id)}
+                            className={`w-full p-2 rounded-lg border flex items-center justify-between transition-all ${
+                              isSelected
+                                ? "border-blue-500 bg-blue-50"
+                                : "border-gray-200 hover:border-gray-300"
                             }`}
                           >
-                            {selectedPaymentMethod === method.id && (
-                              <div className="w-3 h-3 rounded-full bg-white"></div>
-                            )}
-                          </div>
-                        </button>
-                      ))}
+                            <div className="flex items-center">
+                              <div
+                                className="w-1 h-6 rounded-full ml-2"
+                                style={{ backgroundColor: method.color }}
+                              ></div>
+                              <p className="text-xs font-medium">
+                                {method.name}
+                              </p>
+                            </div>
+                            <div
+                              className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                isSelected
+                                  ? "border-blue-500 bg-blue-500"
+                                  : "border-gray-300"
+                              }`}
+                            >
+                              {isSelected && (
+                                <div className="w-2 h-2 rounded-full bg-white"></div>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
                   </div>
                 )}
               </div>
 
-              <div className="flex space-x-3 rtl:space-x-reverse">
+              <div className="flex space-x-2 rtl:space-x-reverse">
                 <button
                   onClick={closePaymentModal}
-                  className="flex-1 py-3 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors"
+                  className="flex-1 py-2 px-3 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors text-xs"
                 >
                   إلغاء
                 </button>
                 <button
                   onClick={handleCompletePayment}
-                  disabled={!selectedPaymentMethod || paymentMethodsLoading}
-                  className={`flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors ${
-                    !selectedPaymentMethod || paymentMethodsLoading
+                  disabled={payments.length === 0}
+                  className={`flex-1 py-2 px-3 rounded-lg font-bold text-white transition-colors text-xs ${
+                    payments.length === 0
                       ? "opacity-50 cursor-not-allowed bg-gray-400"
                       : "bg-blue-600 hover:bg-blue-700"
                   }`}
                   style={{
-                    backgroundColor:
-                      !selectedPaymentMethod || paymentMethodsLoading
-                        ? ""
-                        : "#193F94",
+                    backgroundColor: payments.length === 0 ? "" : "#193F94",
                   }}
                 >
                   تأكيد الدفع
