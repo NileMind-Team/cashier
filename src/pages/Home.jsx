@@ -133,6 +133,8 @@ export default function Home() {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   // eslint-disable-next-line no-unused-vars
   const [excessAmount, setExcessAmount] = useState(0);
+  const [isEditingExistingInvoice, setIsEditingExistingInvoice] =
+    useState(false);
 
   const DeliveryType = {
     Store: "store",
@@ -779,6 +781,7 @@ export default function Home() {
           const invoice = invoicesData[0];
           convertInvoiceToBill(invoice, 0);
           setIsNewBillActive(false);
+          setIsEditingExistingInvoice(true);
           setOrderPrepared(false);
         }
 
@@ -989,6 +992,7 @@ export default function Home() {
     setShowTableInfo(false);
     setTableStatus("available");
     setIsNewBillActive(true);
+    setIsEditingExistingInvoice(false);
     setDeliveryType(null);
     setSelectedDeliveryCompany(null);
     setOrderPrepared(false);
@@ -1071,6 +1075,101 @@ export default function Home() {
       }
     } catch (error) {
       console.error("خطأ في إنشاء الفاتورة:", error);
+
+      if (error.response?.data?.errors) {
+        const paymentError = error.response.data.errors.find(
+          (err) => err.code === "Invoice.InvalidPayment",
+        );
+
+        if (paymentError) {
+          toast.error("المبلغ المدفوع أكثر من إجمالي الفاتورة");
+          return null;
+        }
+      }
+
+      throw error;
+    }
+  };
+
+  const updateExistingInvoice = async (
+    isPending = true,
+    paymentsData = null,
+  ) => {
+    const currentBill = bills[currentBillIndex];
+
+    if (!currentBill.invoiceId) {
+      toast.error("لا يوجد رقم فاتورة للتحديث");
+      return null;
+    }
+
+    const invoiceData = {
+      tableId: selectedTable?.id || null,
+      customerId: customerId || null,
+      notes: generalNote || null,
+      isPending: isPending,
+      invoiceDiscount: discount > 0 ? discount : null,
+      type: getInvoiceTypeFromBillType(currentBill.billType),
+      deliveryCompanyId: selectedDeliveryCompany?.id || null,
+      deliveryFee: currentBill.billType === "delivery" ? deliveryFee : null,
+      invoiceDiscountType: discountType,
+      items: cart.map((item) => {
+        let itemDiscount = null;
+        let itemDiscountType = null;
+
+        if (item.originalPrice && item.originalPrice > item.price) {
+          const discountAmount = item.originalPrice - item.price;
+
+          if (item.isPercentage && item.discount) {
+            itemDiscount = item.discount;
+            itemDiscountType = DiscountType.Percentage;
+          } else {
+            itemDiscount = discountAmount;
+            itemDiscountType = DiscountType.Fixed;
+          }
+        }
+
+        return {
+          itemId: item.id,
+          quantity: item.quantity,
+          discount: itemDiscount,
+          discountType: itemDiscountType,
+          notes: item.note || "",
+          options:
+            item.selectedOptions?.map((opt) => ({
+              optionId: opt.id,
+              quantity: item.quantity,
+            })) || [],
+        };
+      }),
+      payments: isPending ? [] : paymentsData,
+    };
+
+    const cleanInvoiceData = JSON.parse(
+      JSON.stringify(invoiceData, (key, value) => {
+        if (value === null || value === undefined) {
+          return undefined;
+        }
+        return value;
+      }),
+    );
+
+    try {
+      const response = await axiosInstance.put(
+        `/api/Invoices/UpdateInvoice/${currentBill.invoiceId}/update`,
+        cleanInvoiceData,
+      );
+
+      if (response.status === 200 && response.data) {
+        shiftFetchedRef.current = false;
+        await fetchShiftDetails();
+
+        invoicesFetchedRef.current = false;
+        await fetchLastInvoice();
+
+        return response.data;
+      }
+    } catch (error) {
+      console.error("خطأ في تحديث الفاتورة:", error);
 
       if (error.response?.data?.errors) {
         const paymentError = error.response.data.errors.find(
@@ -2034,7 +2133,7 @@ export default function Home() {
       return;
     }
 
-    if (currentBill.invoiceId) {
+    if (currentBill.invoiceId && !isEditingExistingInvoice) {
       try {
         const success = await applyDiscount(
           currentBill.invoiceId,
@@ -2091,12 +2190,24 @@ export default function Home() {
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
     try {
-      const invoiceResponse = await createInvoice(false, payments);
+      let invoiceResponse;
+
+      if (isEditingExistingInvoice && bills[currentBillIndex]?.invoiceId) {
+        invoiceResponse = await updateExistingInvoice(false, payments);
+      } else {
+        invoiceResponse = await createInvoice(false, payments);
+      }
 
       if (invoiceResponse) {
         const isPartialPaid =
           Math.abs(totalPaid - total) > 0.01 && totalPaid < total;
         const isOverPaid = totalPaid > total;
+
+        const updatedInvoiceStatus = isPartialPaid
+          ? InvoiceStatus.PartialPaid
+          : isOverPaid
+            ? InvoiceStatus.Done
+            : InvoiceStatus.Done;
 
         const updatedBills = [...bills];
         updatedBills[currentBillIndex] = {
@@ -2110,24 +2221,18 @@ export default function Home() {
           returnReason: "",
           invoiceId: invoiceResponse.id,
           invoiceNumber: invoiceResponse.invoiceNumber,
-          invoiceStatus: isPartialPaid
-            ? InvoiceStatus.PartialPaid
-            : isOverPaid
-              ? InvoiceStatus.Done
-              : InvoiceStatus.Done,
+          invoiceStatus: updatedInvoiceStatus,
           isPending: false,
         };
         setBills(updatedBills);
 
-        if (selectedTable && selectedHall) {
-          if (!isPartialPaid) {
-            updateTableStatus(
-              selectedHall.id,
-              selectedTable.id,
-              "available",
-              null,
-            );
-          }
+        if (selectedTable && selectedHall && !isPartialPaid) {
+          updateTableStatus(
+            selectedHall.id,
+            selectedTable.id,
+            "available",
+            null,
+          );
         }
 
         if (isPartialPaid) {
@@ -2136,21 +2241,20 @@ export default function Home() {
               invoiceResponse.invoiceNumber || currentBillIndex + 1
             } (باقي ${remainingAmount.toFixed(2)} ج.م)`,
           );
+          addNewBill();
         } else if (isOverPaid) {
           toast.success(
             `تم دفع ${totalPaid.toFixed(2)} ج.م (زيادة ${(totalPaid - total).toFixed(2)} ج.م) للفاتورة رقم ${
               invoiceResponse.invoiceNumber || currentBillIndex + 1
             }`,
           );
+          addNewBill();
         } else {
           toast.success(
             `تم إتمام البيع للفاتورة رقم ${
               invoiceResponse.invoiceNumber || currentBillIndex + 1
             } باستخدام ${payments.length} طريقة دفع`,
           );
-        }
-
-        if (!isPartialPaid) {
           addNewBill();
         }
 
@@ -2158,6 +2262,9 @@ export default function Home() {
         setPayments([]);
         setRemainingAmount(0);
         setExcessAmount(0);
+
+        await fetchLastInvoice();
+        await fetchShiftDetails();
       }
     } catch (error) {
       console.error("خطأ في إتمام الدفع:", error);
@@ -2203,7 +2310,13 @@ export default function Home() {
       }
 
       try {
-        const invoiceResponse = await createInvoice(true, []);
+        let invoiceResponse;
+
+        if (isEditingExistingInvoice && bills[currentBillIndex]?.invoiceId) {
+          invoiceResponse = await updateExistingInvoice(true, []);
+        } else {
+          invoiceResponse = await createInvoice(true, []);
+        }
 
         if (invoiceResponse) {
           const updatedBills = [...bills];
@@ -2232,13 +2345,14 @@ export default function Home() {
           );
 
           setIsNewBillActive(false);
+          setIsEditingExistingInvoice(false);
           setCurrentInvoicePage(totalPages + 1);
           setOrderPrepared(true);
           addNewBill();
         }
       } catch (error) {
-        console.error("خطأ في إنشاء الفاتورة المعلقة:", error);
-        toast.error("حدث خطأ في إنشاء الفاتورة المعلقة");
+        console.error("خطأ في إنشاء/تحديث الفاتورة المعلقة:", error);
+        toast.error("حدث خطأ في إنشاء/تحديث الفاتورة المعلقة");
       }
     } else {
       if (currentInvoicePage < totalPages) {
@@ -2246,6 +2360,7 @@ export default function Home() {
         await fetchInvoiceByPage(nextPage);
       } else {
         setIsNewBillActive(true);
+        setIsEditingExistingInvoice(false);
         setCurrentInvoicePage(totalPages + 1);
         addNewBill();
         toast.info("فاتورة جديدة");
@@ -2258,6 +2373,7 @@ export default function Home() {
       if (totalPages > 0) {
         await fetchInvoiceByPage(totalPages);
         setIsNewBillActive(false);
+        setIsEditingExistingInvoice(true);
         setOrderPrepared(true);
       } else {
         toast.warning("لا توجد فواتير سابقة");
@@ -2268,6 +2384,7 @@ export default function Home() {
         await fetchInvoiceByPage(prevPage);
       } else {
         setIsNewBillActive(true);
+        setIsEditingExistingInvoice(false);
         setCurrentInvoicePage(0);
         addNewBill();
         toast.info("فاتورة جديدة");
@@ -2331,7 +2448,13 @@ export default function Home() {
     }
 
     try {
-      const invoiceResponse = await createInvoice(true, []);
+      let invoiceResponse;
+
+      if (isEditingExistingInvoice && bills[currentBillIndex]?.invoiceId) {
+        invoiceResponse = await updateExistingInvoice(true, []);
+      } else {
+        invoiceResponse = await createInvoice(true, []);
+      }
 
       const updatedBills = [...bills];
       updatedBills[currentBillIndex] = {
@@ -4933,13 +5056,14 @@ export default function Home() {
                                           fill="none"
                                           stroke="currentColor"
                                           viewBox="0 0 24 24"
-                                          {...{
-                                            strokeLinecap: "round",
-                                            strokeLinejoin: "round",
-                                            strokeWidth: 2,
-                                            d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
-                                          }}
-                                        />
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                          />
+                                        </svg>
                                         حذف
                                       </button>
                                     )}
