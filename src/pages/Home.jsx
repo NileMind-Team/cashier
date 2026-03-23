@@ -1363,6 +1363,17 @@ export default function Home() {
 
     const updatedBills = [...bills];
 
+    // Clear table selection when switching from dinein to other types
+    if (type !== "dinein") {
+      if (selectedTable && selectedHall) {
+        updateTableStatus(selectedHall.id, selectedTable.id, "available", null);
+      }
+      setSelectedTable(null);
+      setSelectedHall(null);
+      setShowTableInfo(false);
+      setTableStatus("available");
+    }
+
     if (type === "dinein") {
       setShowTableSelection(true);
       if (!selectedHall && halls.length > 0) {
@@ -1383,6 +1394,9 @@ export default function Home() {
           deliveryCompanyId: null,
           deliveryCompanyName: null,
           deliveryCompanyContact: null,
+          tableId: null,
+          tableName: null,
+          tableStatus: null,
         };
         setBills(updatedBills);
 
@@ -1394,15 +1408,6 @@ export default function Home() {
         setDeliveryFee(0);
       }
     } else {
-      if (selectedTable && selectedHall) {
-        updateTableStatus(selectedHall.id, selectedTable.id, "available", null);
-      }
-
-      setSelectedTable(null);
-      setSelectedHall(null);
-      setShowTableInfo(false);
-      setTableStatus("available");
-
       updatedBills[currentBillIndex] = {
         ...updatedBills[currentBillIndex],
         billType: type,
@@ -1481,6 +1486,11 @@ export default function Home() {
       tableId: table.id,
       tableName: table.number,
       tableStatus: "available",
+      deliveryType: null,
+      deliveryCompanyId: null,
+      deliveryCompanyName: null,
+      deliveryCompanyContact: null,
+      deliveryFee: 0,
     };
     setBills(updatedBills);
 
@@ -1539,6 +1549,9 @@ export default function Home() {
         deliveryCompanyId: null,
         deliveryCompanyName: null,
         deliveryCompanyContact: null,
+        tableId: null,
+        tableName: null,
+        tableStatus: null,
       };
       setBills(updatedBills);
 
@@ -1564,6 +1577,9 @@ export default function Home() {
       deliveryCompanyId: company.id,
       deliveryCompanyName: company.name,
       deliveryCompanyContact: company.contactNumber,
+      tableId: null,
+      tableName: null,
+      tableStatus: null,
     };
     setBills(updatedBills);
 
