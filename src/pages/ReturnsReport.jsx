@@ -14,7 +14,9 @@ export default function ReturnsReport() {
   const [pagination, setPagination] = useState({
     currentPage: 1,
     pageSize: 10,
-    totalCount: 0,
+    totalReturnedInvoices: 0,
+    totalReturnedAmount: 0,
+    averageReturn: 0,
     totalPages: 1,
     hasNextPage: false,
     hasPreviousPage: false,
@@ -64,7 +66,9 @@ export default function ReturnsReport() {
         setPagination({
           currentPage: data.pageNumber || pageNumber,
           pageSize: data.pageSize || 10,
-          totalCount: data.totalCount || 0,
+          totalReturnedInvoices: data.totalReturnedInvoices || 0,
+          totalReturnedAmount: data.totalReturnedAmount || 0,
+          averageReturn: data.averageReturn || 0,
           totalPages: data.totalPages || 1,
           hasNextPage: data.hasNext || false,
           hasPreviousPage: data.hasPrevious || false,
@@ -74,7 +78,7 @@ export default function ReturnsReport() {
           id: bill.invoiceId,
           originalBillNumber: bill.invoiceNumber,
           returnDate: bill.invoiceDate,
-          customerName: bill.customerName || "عميل",
+          customerName: bill.customerName || "-",
           employeeName: bill.employeeName,
           totalAmount: bill.totalAmount,
         }));
@@ -89,7 +93,9 @@ export default function ReturnsReport() {
         setReturnedBills([]);
         setPagination({
           ...pagination,
-          totalCount: 0,
+          totalReturnedInvoices: 0,
+          totalReturnedAmount: 0,
+          averageReturn: 0,
           totalPages: 1,
           hasNextPage: false,
           hasPreviousPage: false,
@@ -166,13 +172,9 @@ export default function ReturnsReport() {
   };
 
   const calculateStats = () => {
-    const totalReturns = pagination.totalCount;
-    const totalRefundAmount = returnedBills.reduce(
-      (sum, bill) => sum + bill.totalAmount,
-      0,
-    );
-    const avgRefundAmount =
-      totalReturns > 0 ? totalRefundAmount / totalReturns : 0;
+    const totalReturns = pagination.totalReturnedInvoices;
+    const totalRefundAmount = pagination.totalReturnedAmount;
+    const avgRefundAmount = pagination.averageReturn;
 
     const employeeCount = returnedBills.reduce((acc, bill) => {
       acc[bill.employeeName] = (acc[bill.employeeName] || 0) + 1;
@@ -410,16 +412,16 @@ export default function ReturnsReport() {
                       عرض الفواتير والمنتجات المرتجعة في النظام
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      {pagination.totalCount} فاتورة مرتجعة |{" "}
+                      {pagination.totalReturnedInvoices} فاتورة مرتجعة |{" "}
                       {stats.employeeCount} موظف
                     </p>
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse print:hidden">
                     <div className="px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">
-                      {pagination.totalCount} مرتجعة
+                      {pagination.totalReturnedInvoices} مرتجعة
                     </div>
                     <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
-                      {formatCurrency(stats.totalRefundAmount)} ج.م
+                      {formatCurrency(pagination.totalReturnedAmount)} ج.م
                     </div>
                   </div>
                 </div>
@@ -486,29 +488,29 @@ export default function ReturnsReport() {
                     style={{ color: "#193F94" }}
                   >
                     قائمة الفواتير المرتجعة ({returnedBills.length} من إجمالي{" "}
-                    {pagination.totalCount})
+                    {pagination.totalReturnedInvoices})
                   </h3>
 
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-gray-50">
-                          <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
+                          <th className="py-3 px-4 text-center border-b border-gray-200 text-sm font-medium text-gray-700">
                             رقم الفاتورة
                           </th>
-                          <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
+                          <th className="py-3 px-4 text-center border-b border-gray-200 text-sm font-medium text-gray-700">
                             تاريخ الإرجاع
                           </th>
-                          <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
+                          <th className="py-3 px-4 text-center border-b border-gray-200 text-sm font-medium text-gray-700">
                             العميل
                           </th>
-                          <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
+                          <th className="py-3 px-4 text-center border-b border-gray-200 text-sm font-medium text-gray-700">
                             الموظف المسؤول
                           </th>
-                          <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700">
+                          <th className="py-3 px-4 text-center border-b border-gray-200 text-sm font-medium text-gray-700">
                             المبلغ المرتجع
                           </th>
-                          <th className="py-3 px-4 text-right border-b border-gray-200 text-sm font-medium text-gray-700 print:hidden">
+                          <th className="py-3 px-4 text-center border-b border-gray-200 text-sm font-medium text-gray-700 print:hidden">
                             الإجراءات
                           </th>
                         </tr>
@@ -519,32 +521,32 @@ export default function ReturnsReport() {
                             key={bill.id}
                             className="hover:bg-gray-50 transition-colors border-b border-gray-100"
                           >
-                            <td className="py-3 px-4 text-right">
-                              <div className="font-medium text-blue-900">
+                            <td className="py-3 px-4 text-center">
+                              <div className="font-medium text-blue-900 text-center">
                                 {bill.originalBillNumber}
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-right">
-                              <div className="text-sm">
+                            <td className="py-3 px-4 text-center">
+                              <div className="text-sm text-center">
                                 {formatDate(bill.returnDate)}
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-right">
-                              <div className="font-medium">
+                            <td className="py-3 px-4 text-center">
+                              <div className="font-medium text-center">
                                 {bill.customerName}
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-right">
-                              <div className="font-medium">
+                            <td className="py-3 px-4 text-center">
+                              <div className="font-medium text-center">
                                 {bill.employeeName}
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-right">
-                              <div className="font-bold text-red-600">
+                            <td className="py-3 px-4 text-center">
+                              <div className="font-bold text-red-600 text-center">
                                 {formatCurrency(bill.totalAmount)} ج.م
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-right print:hidden">
+                            <td className="py-3 px-4 text-center print:hidden">
                               <button
                                 onClick={() => handleViewReturnDetails(bill)}
                                 className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg transition-colors"
@@ -557,11 +559,11 @@ export default function ReturnsReport() {
                       </tbody>
                       <tfoot>
                         <tr className="bg-gray-50 font-bold">
-                          <td colSpan="4" className="py-4 px-4 text-right">
+                          <td colSpan="4" className="py-4 px-4 text-center">
                             الإجمالي ({returnedBills.length} فاتورة):
                           </td>
-                          <td className="py-4 px-4 text-right text-red-600">
-                            {formatCurrency(stats.totalRefundAmount)} ج.م
+                          <td className="py-4 px-4 text-center text-red-600">
+                            {formatCurrency(pagination.totalReturnedAmount)} ج.م
                           </td>
                           <td className="print:hidden"></td>
                         </tr>
@@ -753,7 +755,7 @@ export default function ReturnsReport() {
                         className="text-2xl font-bold"
                         style={{ color: "#193F94" }}
                       >
-                        {pagination.totalCount}
+                        {pagination.totalReturnedInvoices}
                       </div>
                       <div className="text-sm text-gray-600">
                         عدد الفواتير المرتجعة
@@ -764,7 +766,7 @@ export default function ReturnsReport() {
                         className="text-2xl font-bold"
                         style={{ color: "#EF4444" }}
                       >
-                        {formatCurrency(stats.totalRefundAmount)}
+                        {formatCurrency(pagination.totalReturnedAmount)}
                       </div>
                       <div className="text-sm text-gray-600">
                         إجمالي المبالغ المرتجعة
@@ -775,7 +777,7 @@ export default function ReturnsReport() {
                         className="text-2xl font-bold"
                         style={{ color: "#8B5CF6" }}
                       >
-                        {formatCurrency(stats.avgRefundAmount)}
+                        {formatCurrency(pagination.averageReturn)}
                       </div>
                       <div className="text-sm text-gray-600">
                         متوسط المبلغ المرتجع
