@@ -1082,8 +1082,23 @@ export default function Home() {
         );
 
         if (paymentError) {
-          toast.error("المبلغ المدفوع أكثر من إجمالي الفاتورة");
-          return null;
+          if (
+            paymentError.description.includes(
+              "Paid amount is More than invoice total",
+            )
+          ) {
+            toast.error("المبلغ المدفوع أكثر من إجمالي الفاتورة");
+            return null;
+          }
+
+          if (
+            paymentError.description.includes(
+              "Paid amount is less than invoice total",
+            )
+          ) {
+            toast.error("المبلغ المدفوع أقل من إجمالي الفاتورة");
+            return null;
+          }
         }
       }
 
@@ -1177,8 +1192,23 @@ export default function Home() {
         );
 
         if (paymentError) {
-          toast.error("المبلغ المدفوع أكثر من إجمالي الفاتورة");
-          return null;
+          if (
+            paymentError.description.includes(
+              "Paid amount is More than invoice total",
+            )
+          ) {
+            toast.error("المبلغ المدفوع أكثر من إجمالي الفاتورة");
+            return null;
+          }
+
+          if (
+            paymentError.description.includes(
+              "Paid amount is less than invoice total",
+            )
+          ) {
+            toast.error("المبلغ المدفوع أقل من إجمالي الفاتورة");
+            return null;
+          }
         }
       }
 
@@ -2197,12 +2227,6 @@ export default function Home() {
       return;
     }
 
-    const invalidPayments = payments.filter((p) => !p.amount || p.amount <= 0);
-    if (invalidPayments.length > 0) {
-      toast.error("يرجى إدخال مبلغ صحيح لجميع طرق الدفع");
-      return;
-    }
-
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
     try {
@@ -2291,8 +2315,23 @@ export default function Home() {
         );
 
         if (paymentError) {
-          toast.error("المبلغ المدفوع أكثر من إجمالي الفاتورة");
-          return;
+          if (
+            paymentError.description.includes(
+              "Paid amount is More than invoice total",
+            )
+          ) {
+            toast.error("المبلغ المدفوع أكثر من إجمالي الفاتورة");
+            return null;
+          }
+
+          if (
+            paymentError.description.includes(
+              "Paid amount is less than invoice total",
+            )
+          ) {
+            toast.error("المبلغ المدفوع أقل من إجمالي الفاتورة");
+            return null;
+          }
         }
       }
 
