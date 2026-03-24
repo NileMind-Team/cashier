@@ -11,10 +11,11 @@ export default function CustomersReports() {
   const [customerData, setCustomerData] = useState(null);
   const [reportData, setReportData] = useState(null);
   const [customerInvoices, setCustomerInvoices] = useState([]);
+  const [customerTransactions, setCustomerTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [ledgerLoading, setLedgerLoading] = useState(false);
-  const [expandedInvoice, setExpandedInvoice] = useState(null);
+  const [expandedDay, setExpandedDay] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [payments, setPayments] = useState([]);
   const [remainingAmount, setRemainingAmount] = useState(0);
@@ -35,7 +36,7 @@ export default function CustomersReports() {
     setEndDate(today);
 
     fetchPaymentMethods();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchPaymentMethods = async () => {
@@ -107,6 +108,7 @@ export default function CustomersReports() {
         setCustomerData(response.data);
         toast.success(`تم العثور على ${response.data.name}`);
         setCustomerInvoices([]);
+        setCustomerTransactions([]);
       }
     } catch (error) {
       console.error("خطأ في البحث عن العميل:", error);
@@ -114,6 +116,7 @@ export default function CustomersReports() {
         toast.error(`لم يتم العثور على عميل برقم التليفون ${phoneSearch}`);
         setCustomerData(null);
         setCustomerInvoices([]);
+        setCustomerTransactions([]);
       } else if (error.response?.status === 400) {
         toast.error("بيانات غير صالحة: تأكد من رقم التليفون");
       } else {
@@ -135,10 +138,11 @@ export default function CustomersReports() {
     setCustomerData(null);
     setReportData(null);
     setCustomerInvoices([]);
-    setExpandedInvoice(null);
+    setCustomerTransactions([]);
+    setExpandedDay(null);
   };
 
-  const fetchCustomerInvoices = async (customerId) => {
+  const fetchCustomerLedger = async (customerId) => {
     setLedgerLoading(true);
     try {
       const response = await axiosInstance.get(
@@ -147,6 +151,7 @@ export default function CustomersReports() {
 
       if (response.status === 200 && response.data) {
         let invoices = response.data.invoices || [];
+        let transactions = response.data.transactions || [];
 
         if (startDate && endDate) {
           const start = new Date(startDate);
@@ -157,11 +162,15 @@ export default function CustomersReports() {
             const invoiceDate = new Date(invoice.date);
             return invoiceDate >= start && invoiceDate <= end;
           });
+
+          transactions = transactions.filter((transaction) => {
+            const transactionDate = new Date(transaction.date);
+            return transactionDate >= start && transactionDate <= end;
+          });
         }
 
         invoices.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        const transactions = response.data.transactions || [];
+        transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         const transactionsByInvoice = {};
         transactions.forEach((transaction) => {
@@ -179,14 +188,16 @@ export default function CustomersReports() {
         }));
 
         setCustomerInvoices(invoicesWithTransactions);
+        setCustomerTransactions(transactions);
       }
     } catch (error) {
-      console.error("خطأ في جلب فواتير العميل:", error);
+      console.error("خطأ في جلب بيانات العميل:", error);
       if (error.response?.status === 404) {
-        toast.info("لا توجد فواتير للعميل");
+        toast.info("لا توجد بيانات للعميل");
         setCustomerInvoices([]);
+        setCustomerTransactions([]);
       } else {
-        toast.error("حدث خطأ في جلب فواتير العميل");
+        toast.error("حدث خطأ في جلب بيانات العميل");
       }
     } finally {
       setLedgerLoading(false);
@@ -238,7 +249,7 @@ export default function CustomersReports() {
           },
         });
 
-        await fetchCustomerInvoices(customerData.id);
+        await fetchCustomerLedger(customerData.id);
 
         toast.success(`تم إنشاء تقرير ${data.customerName}`);
       }
@@ -278,20 +289,22 @@ export default function CustomersReports() {
     });
   };
 
+  const formatDateOnly = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("ar-EG", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
   const formatCurrency = (amount) => {
     if (amount === undefined || amount === null) return "0.00";
     return new Intl.NumberFormat("ar-EG", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
-  };
-
-  const toggleInvoiceDetails = (invoiceId) => {
-    if (expandedInvoice === invoiceId) {
-      setExpandedInvoice(null);
-    } else {
-      setExpandedInvoice(invoiceId);
-    }
   };
 
   const calculateTotals = () => {
@@ -310,6 +323,52 @@ export default function CustomersReports() {
       totalPaid,
       totalRemaining,
     };
+  };
+
+  const groupByDate = () => {
+    const grouped = {};
+
+    customerInvoices.forEach((invoice) => {
+      const date = invoice.date.split("T")[0];
+      if (!grouped[date]) {
+        grouped[date] = {
+          date: date,
+          invoices: [],
+          payments: [],
+        };
+      }
+      grouped[date].invoices.push(invoice);
+    });
+
+    customerTransactions.forEach((transaction) => {
+      const date = transaction.date.split("T")[0];
+      if (!grouped[date]) {
+        grouped[date] = {
+          date: date,
+          invoices: [],
+          payments: [],
+        };
+      }
+      grouped[date].payments.push(transaction);
+    });
+
+    const sortedDates = Object.keys(grouped).sort(
+      (a, b) => new Date(b) - new Date(a),
+    );
+    const sortedGrouped = {};
+    sortedDates.forEach((date) => {
+      sortedGrouped[date] = grouped[date];
+    });
+
+    return sortedGrouped;
+  };
+
+  const toggleDayDetails = (date) => {
+    if (expandedDay === date) {
+      setExpandedDay(null);
+    } else {
+      setExpandedDay(date);
+    }
   };
 
   const openPaymentModal = () => {
@@ -444,7 +503,7 @@ export default function CustomersReports() {
         setRemainingAmount(0);
         setExcessAmount(0);
 
-        await fetchCustomerInvoices(customerData.id);
+        await fetchCustomerLedger(customerData.id);
 
         if (reportData) {
           await generateReport();
@@ -487,6 +546,7 @@ export default function CustomersReports() {
   };
 
   const totals = calculateTotals();
+  const groupedData = groupByDate();
 
   return (
     <div
@@ -895,192 +955,364 @@ export default function CustomersReports() {
                   </div>
                 </div>
 
-                {/* قائمة الفواتير مع تفاصيل المدفوعات */}
+                {/* Timeline View - Grouped by Date with Expand/Collapse like old invoices */}
                 <div className="mb-6">
                   <h3
                     className="text-lg font-bold mb-4"
                     style={{ color: "#193F94" }}
                   >
-                    فواتير العميل
+                    سجل الحركات
                   </h3>
 
                   {ledgerLoading ? (
                     <div className="bg-gray-50 rounded-xl p-8 flex flex-col items-center justify-center">
                       <div className="w-12 h-12 border-t-2 border-blue-600 rounded-full animate-spin mb-3"></div>
-                      <p className="text-gray-500">جاري تحميل الفواتير...</p>
+                      <p className="text-gray-500">جاري تحميل البيانات...</p>
                     </div>
-                  ) : customerInvoices.length > 0 ? (
+                  ) : Object.keys(groupedData).length > 0 ? (
                     <div className="space-y-4">
-                      {customerInvoices.map((invoice) => (
-                        <div
-                          key={invoice.invoiceId}
-                          className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
-                        >
-                          {/* Invoice Header */}
+                      {Object.keys(groupedData).map((date) => {
+                        const dayData = groupedData[date];
+                        const dayTotalInvoices = dayData.invoices.reduce(
+                          (sum, inv) => sum + inv.totalAmount,
+                          0,
+                        );
+                        const dayTotalPayments = dayData.payments.reduce(
+                          (sum, pay) => sum + (pay.debit || pay.credit || 0),
+                          0,
+                        );
+                        const isExpanded = expandedDay === date;
+
+                        return (
                           <div
-                            className="bg-gradient-to-r from-gray-50 to-white p-4 cursor-pointer hover:bg-gray-100 transition-colors"
-                            onClick={() =>
-                              toggleInvoiceDetails(invoice.invoiceId)
-                            }
+                            key={date}
+                            className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
                           >
-                            <div className="flex justify-between items-center">
-                              <div className="flex items-center space-x-3 rtl:space-x-reverse">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className={`h-5 w-5 text-gray-500 transform transition-transform ${expandedInvoice === invoice.invoiceId ? "rotate-180" : ""}`}
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 9l-7 7-7-7"
-                                  />
-                                </svg>
-                                <span className="font-bold text-blue-900">
-                                  فاتورة #{invoice.invoiceNumber}
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                  {formatDateTime(invoice.date)}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-4">
-                                <div className="text-sm">
-                                  <span className="text-gray-600">
-                                    القيمة:{" "}
+                            {/* Day Header - Clickable like invoice header */}
+                            <div
+                              className="bg-gradient-to-r from-gray-50 to-white p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                              onClick={() => toggleDayDetails(date)}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className={`h-5 w-5 text-gray-500 transform transition-transform ${
+                                      isExpanded ? "rotate-180" : ""
+                                    }`}
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  </svg>
+                                  <span className="font-bold text-blue-900">
+                                    {formatDateOnly(date)}
                                   </span>
-                                  <span className="font-bold text-blue-700">
-                                    {formatCurrency(invoice.totalAmount)} ج.م
-                                  </span>
-                                </div>
-                                <div className="text-sm">
-                                  <span className="text-gray-600">مدفوع: </span>
-                                  <span className="font-bold text-green-600">
-                                    {formatCurrency(invoice.paidAmount)} ج.م
+                                  <span className="text-sm text-gray-500">
+                                    {new Date(date).toLocaleDateString(
+                                      "ar-EG",
+                                      {
+                                        weekday: "long",
+                                      },
+                                    )}
                                   </span>
                                 </div>
-                                {invoice.remainingAmount > 0 && (
+                                <div className="flex items-center gap-4">
                                   <div className="text-sm">
                                     <span className="text-gray-600">
-                                      متبقي:{" "}
+                                      الفواتير:{" "}
                                     </span>
-                                    <span className="font-bold text-red-600">
-                                      {formatCurrency(invoice.remainingAmount)}{" "}
-                                      ج.م
+                                    <span className="font-bold text-blue-700">
+                                      {formatCurrency(dayTotalInvoices)} ج.م
                                     </span>
                                   </div>
-                                )}
-                                {invoice.remainingAmount === 0 && (
-                                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
-                                    مدفوع بالكامل
-                                  </span>
-                                )}
-                                {invoice.remainingAmount > 0 && (
-                                  <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-medium">
-                                    باقي{" "}
-                                    {formatCurrency(invoice.remainingAmount)}{" "}
-                                    ج.م
-                                  </span>
-                                )}
+                                  <div className="text-sm">
+                                    <span className="text-gray-600">
+                                      المدفوعات:{" "}
+                                    </span>
+                                    <span className="font-bold text-green-600">
+                                      {formatCurrency(dayTotalPayments)} ج.م
+                                    </span>
+                                  </div>
+                                  {dayTotalInvoices === 0 &&
+                                    dayTotalPayments === 0 && (
+                                      <span className="text-xs text-gray-500">
+                                        لا توجد حركات
+                                      </span>
+                                    )}
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Invoice Details (Expandable) */}
-                          {expandedInvoice === invoice.invoiceId && (
-                            <div className="p-4 bg-gray-50 border-t border-gray-200">
-                              <h4 className="font-bold mb-3 text-gray-700">
-                                تفاصيل المدفوعات
-                              </h4>
-                              {invoice.transactions &&
-                              invoice.transactions.length > 0 ? (
-                                <div className="overflow-x-auto">
-                                  <table className="w-full">
-                                    <thead className="bg-gray-100">
-                                      <tr>
-                                        <th className="py-2 px-3 text-right text-sm font-medium text-gray-700">
-                                          التاريخ
-                                        </th>
-                                        <th className="py-2 px-3 text-right text-sm font-medium text-gray-700">
-                                          طريقة الدفع
-                                        </th>
-                                        <th className="py-2 px-3 text-right text-sm font-medium text-gray-700">
-                                          المبلغ
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {invoice.transactions.map(
-                                        (transaction, idx) => (
-                                          <tr
-                                            key={idx}
-                                            className="border-b border-gray-200"
-                                          >
-                                            <td className="py-2 px-3 text-sm">
-                                              {formatDateTime(transaction.date)}
-                                            </td>
-                                            <td className="py-2 px-3 text-sm">
-                                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
-                                                {transaction.paymentMethod ||
-                                                  "كاش"}
-                                              </span>
-                                            </td>
-                                            <td className="py-2 px-3 text-sm">
-                                              <span className="font-bold text-green-600">
-                                                {formatCurrency(
-                                                  transaction.debit ||
-                                                    transaction.credit,
-                                                )}{" "}
-                                                ج.م
-                                              </span>
-                                            </td>
-                                          </tr>
-                                        ),
-                                      )}
-                                    </tbody>
-                                    <tfoot className="bg-gray-100">
-                                      <tr>
-                                        <td
-                                          colSpan="2"
-                                          className="py-2 px-3 text-sm font-bold"
+                            {/* Day Details (Expandable) - Payments as rows like table */}
+                            {isExpanded && (
+                              <div className="p-4 bg-gray-50 border-t border-gray-200">
+                                {/* Invoices Section */}
+                                {dayData.invoices.length > 0 && (
+                                  <div className="mb-6">
+                                    <h4 className="font-bold mb-3 text-gray-700">
+                                      الفواتير
+                                    </h4>
+                                    <div className="space-y-3">
+                                      {dayData.invoices.map((invoice) => (
+                                        <div
+                                          key={invoice.invoiceId}
+                                          className="bg-white rounded-lg p-3 border border-gray-200"
                                         >
-                                          إجمالي المدفوعات:
-                                        </td>
-                                        <td className="py-2 px-3 text-sm font-bold text-green-600">
-                                          {formatCurrency(invoice.paidAmount)}{" "}
-                                          ج.م
-                                        </td>
-                                      </tr>
-                                      {invoice.remainingAmount > 0 && (
-                                        <tr>
-                                          <td
-                                            colSpan="2"
-                                            className="py-2 px-3 text-sm font-bold text-red-600"
-                                          >
-                                            المتبقي:
-                                          </td>
-                                          <td className="py-2 px-3 text-sm font-bold text-red-600">
-                                            {formatCurrency(
-                                              invoice.remainingAmount,
-                                            )}{" "}
-                                            ج.م
-                                          </td>
-                                        </tr>
-                                      )}
-                                    </tfoot>
-                                  </table>
-                                </div>
-                              ) : (
-                                <p className="text-gray-500 text-center py-4">
-                                  لا توجد مدفوعات مسجلة لهذه الفاتورة
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                                          <div className="flex justify-between items-start flex-wrap gap-3 mb-3">
+                                            <div>
+                                              <p className="font-bold text-gray-800">
+                                                فاتورة #{invoice.invoiceNumber}
+                                              </p>
+                                              <p className="text-xs text-gray-500 mt-1">
+                                                {formatDateTime(invoice.date)}
+                                              </p>
+                                            </div>
+                                            <div className="flex gap-4">
+                                              <div className="text-right">
+                                                <p className="text-xs text-gray-600">
+                                                  القيمة
+                                                </p>
+                                                <p className="font-bold text-blue-700">
+                                                  {formatCurrency(
+                                                    invoice.totalAmount,
+                                                  )}{" "}
+                                                  ج.م
+                                                </p>
+                                              </div>
+                                              <div className="text-right">
+                                                <p className="text-xs text-gray-600">
+                                                  مدفوع
+                                                </p>
+                                                <p className="font-bold text-green-600">
+                                                  {formatCurrency(
+                                                    invoice.paidAmount,
+                                                  )}{" "}
+                                                  ج.م
+                                                </p>
+                                              </div>
+                                              {invoice.remainingAmount > 0 && (
+                                                <div className="text-right">
+                                                  <p className="text-xs text-gray-600">
+                                                    متبقي
+                                                  </p>
+                                                  <p className="font-bold text-red-600">
+                                                    {formatCurrency(
+                                                      invoice.remainingAmount,
+                                                    )}{" "}
+                                                    ج.م
+                                                  </p>
+                                                </div>
+                                              )}
+                                              {invoice.remainingAmount ===
+                                                0 && (
+                                                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium self-center">
+                                                  مدفوع بالكامل
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          {/* Payment details for this invoice - as rows */}
+                                          {invoice.transactions &&
+                                            invoice.transactions.length > 0 && (
+                                              <div className="mt-3 pt-3 border-t border-gray-100">
+                                                <p className="text-xs font-medium text-gray-600 mb-2">
+                                                  تفاصيل المدفوعات:
+                                                </p>
+                                                <div className="overflow-x-auto">
+                                                  <table className="w-full text-sm">
+                                                    <thead className="bg-gray-100">
+                                                      <tr>
+                                                        <th className="py-2 px-3 text-right text-xs font-medium text-gray-700">
+                                                          التاريخ
+                                                        </th>
+                                                        <th className="py-2 px-3 text-right text-xs font-medium text-gray-700">
+                                                          طريقة الدفع
+                                                        </th>
+                                                        <th className="py-2 px-3 text-right text-xs font-medium text-gray-700">
+                                                          المبلغ
+                                                        </th>
+                                                      </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                      {invoice.transactions.map(
+                                                        (transaction, idx) => (
+                                                          <tr
+                                                            key={idx}
+                                                            className="border-b border-gray-200"
+                                                          >
+                                                            <td className="py-2 px-3 text-xs">
+                                                              {formatDateTime(
+                                                                transaction.date,
+                                                              )}
+                                                            </td>
+                                                            <td className="py-2 px-3 text-xs">
+                                                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                                                                {transaction.paymentMethod ||
+                                                                  "كاش"}
+                                                              </span>
+                                                            </td>
+                                                            <td className="py-2 px-3 text-xs">
+                                                              <span className="font-bold text-green-600">
+                                                                {formatCurrency(
+                                                                  transaction.debit ||
+                                                                    transaction.credit,
+                                                                )}{" "}
+                                                                ج.م
+                                                              </span>
+                                                            </td>
+                                                          </tr>
+                                                        ),
+                                                      )}
+                                                    </tbody>
+                                                    <tfoot className="bg-gray-100">
+                                                      <tr>
+                                                        <td
+                                                          colSpan="2"
+                                                          className="py-2 px-3 text-xs font-bold"
+                                                        >
+                                                          إجمالي المدفوعات:
+                                                        </td>
+                                                        <td className="py-2 px-3 text-xs font-bold text-green-600">
+                                                          {formatCurrency(
+                                                            invoice.paidAmount,
+                                                          )}{" "}
+                                                          ج.م
+                                                        </td>
+                                                      </tr>
+                                                      {invoice.remainingAmount >
+                                                        0 && (
+                                                        <tr>
+                                                          <td
+                                                            colSpan="2"
+                                                            className="py-2 px-3 text-xs font-bold text-red-600"
+                                                          >
+                                                            المتبقي:
+                                                          </td>
+                                                          <td className="py-2 px-3 text-xs font-bold text-red-600">
+                                                            {formatCurrency(
+                                                              invoice.remainingAmount,
+                                                            )}{" "}
+                                                            ج.م
+                                                          </td>
+                                                        </tr>
+                                                      )}
+                                                    </tfoot>
+                                                  </table>
+                                                </div>
+                                              </div>
+                                            )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Payments without invoice association - as rows */}
+                                {dayData.payments.filter((payment) => {
+                                  const isLinkedToInvoice =
+                                    customerInvoices.some((invoice) =>
+                                      invoice.transactions.some(
+                                        (t) => t.id === payment.id,
+                                      ),
+                                    );
+                                  return !isLinkedToInvoice;
+                                }).length > 0 && (
+                                  <div>
+                                    <h4 className="font-bold mb-3 text-gray-700">
+                                      مدفوعات منفصلة
+                                    </h4>
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-sm bg-white rounded-lg border border-gray-200">
+                                        <thead className="bg-gray-100">
+                                          <tr>
+                                            <th className="py-2 px-3 text-right text-xs font-medium text-gray-700">
+                                              التاريخ
+                                            </th>
+                                            <th className="py-2 px-3 text-right text-xs font-medium text-gray-700">
+                                              طريقة الدفع
+                                            </th>
+                                            <th className="py-2 px-3 text-right text-xs font-medium text-gray-700">
+                                              المبلغ
+                                            </th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {dayData.payments.map(
+                                            (payment, idx) => {
+                                              const isLinkedToInvoice =
+                                                customerInvoices.some(
+                                                  (invoice) =>
+                                                    invoice.transactions.some(
+                                                      (t) =>
+                                                        t.id === payment.id,
+                                                    ),
+                                                );
+
+                                              if (isLinkedToInvoice)
+                                                return null;
+
+                                              return (
+                                                <tr
+                                                  key={payment.id || idx}
+                                                  className="border-b border-gray-200"
+                                                >
+                                                  <td className="py-2 px-3 text-xs">
+                                                    {formatDateTime(
+                                                      payment.date,
+                                                    )}
+                                                  </td>
+                                                  <td className="py-2 px-3 text-xs">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                                                      {payment.paymentMethod ||
+                                                        "كاش"}
+                                                    </span>
+                                                  </td>
+                                                  <td className="py-2 px-3 text-xs">
+                                                    <span className="font-bold text-green-600">
+                                                      {formatCurrency(
+                                                        payment.debit ||
+                                                          payment.credit,
+                                                      )}{" "}
+                                                      ج.م
+                                                    </span>
+                                                  </td>
+                                                </tr>
+                                              );
+                                            },
+                                          )}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {dayData.invoices.length === 0 &&
+                                  dayData.payments.filter((payment) => {
+                                    const isLinkedToInvoice =
+                                      customerInvoices.some((invoice) =>
+                                        invoice.transactions.some(
+                                          (t) => t.id === payment.id,
+                                        ),
+                                      );
+                                    return !isLinkedToInvoice;
+                                  }).length === 0 && (
+                                    <div className="text-center text-gray-500 py-4">
+                                      لا توجد حركات في هذا اليوم
+                                    </div>
+                                  )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="bg-gray-50 rounded-xl p-8 text-center">
@@ -1099,7 +1331,7 @@ export default function CustomersReports() {
                         />
                       </svg>
                       <p className="text-gray-500">
-                        لا توجد فواتير للعميل في الفترة المحددة
+                        لا توجد بيانات للعميل في الفترة المحددة
                       </p>
                     </div>
                   )}
