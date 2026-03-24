@@ -817,18 +817,29 @@ export default function Home() {
   const convertInvoiceToBill = (invoice, index) => {
     const cartItems =
       invoice.items?.map((item) => {
-        let itemPrice = item.itemPriceSnapShoot || 0;
+        let finalPrice = item.itemPriceSnapShoot || 0;
+        let discountAmount = 0;
+        let discountPercentage = 0;
 
-        if (item.isPercentage && item.discount) {
-          itemPrice = item.discount;
-        } else if (!item.isPercentage && item.discount) {
-          itemPrice = (item.itemPriceSnapShoot || 0) - item.discount;
+        if (item.discount && item.discount > 0) {
+          if (item.isPercentage) {
+            discountPercentage = item.discount;
+            discountAmount = (finalPrice * discountPercentage) / 100;
+            finalPrice = finalPrice - discountAmount;
+          } else {
+            discountAmount = item.discount;
+            finalPrice = finalPrice - discountAmount;
+          }
         }
+
+        if (finalPrice < 0) finalPrice = 0;
+        if (finalPrice > (item.itemPriceSnapShoot || 0))
+          finalPrice = item.itemPriceSnapShoot || 0;
 
         return {
           id: item.itemId,
           name: item.itemName,
-          price: itemPrice,
+          price: finalPrice,
           originalPrice: item.itemPriceSnapShoot || 0,
           quantity: item.quantity,
           image: item.imageUrl || "",
@@ -847,8 +858,9 @@ export default function Home() {
           note: item.notesItem || "",
           isTaxInclusive: item.isTaxInclusive || false,
           valueAddedTax: item.valueAddedTax || 14,
+          discount: discountAmount,
           isPercentage: item.isPercentage || false,
-          discount: item.discount || 0,
+          discountPercentage: discountPercentage,
         };
       }) || [];
 
@@ -926,7 +938,6 @@ export default function Home() {
     setCustomerId(bill.customerId || null);
     setGeneralNote(bill.generalNote || "");
 
-    // Set the remaining amount for partial payment invoices
     if (isPartialPaid && invoice.remainingAmount) {
       setCurrentInvoiceRemainingAmount(invoice.remainingAmount);
     } else {
@@ -1044,10 +1055,10 @@ export default function Home() {
         if (item.originalPrice && item.originalPrice > item.price) {
           const discountAmount = item.originalPrice - item.price;
 
-          if (item.isPercentage && item.discount) {
-            itemDiscount = item.discount;
+          if (item.isPercentage && item.discountPercentage > 0) {
+            itemDiscount = item.discountPercentage;
             itemDiscountType = DiscountType.Percentage;
-          } else {
+          } else if (discountAmount > 0) {
             itemDiscount = discountAmount;
             itemDiscountType = DiscountType.Fixed;
           }
@@ -1990,6 +2001,10 @@ export default function Home() {
     );
 
     const productPrice = selectedProduct.finalPrice || selectedProduct.price;
+    const discountAmount = selectedProduct.originalPrice
+      ? selectedProduct.originalPrice - productPrice
+      : 0;
+    const discountPercentage = selectedProduct.percentageDiscount || 0;
 
     const existingItem = cart.find((item) => item.id === selectedProduct.id);
 
@@ -2022,8 +2037,9 @@ export default function Home() {
           selectedOptions: selectedOptions,
           optionsTotal: optionsTotal * productQuantity,
           note: "",
-          discount: 0,
-          isPercentage: false,
+          discount: discountAmount,
+          isPercentage: discountPercentage > 0,
+          discountPercentage: discountPercentage,
         };
         setCart([...cart, newItem]);
       }
@@ -2037,8 +2053,9 @@ export default function Home() {
         selectedOptions: selectedOptions,
         optionsTotal: optionsTotal * productQuantity,
         note: "",
-        discount: 0,
-        isPercentage: false,
+        discount: discountAmount,
+        isPercentage: discountPercentage > 0,
+        discountPercentage: discountPercentage,
       };
       setCart([...cart, newItem]);
     }
@@ -2057,6 +2074,11 @@ export default function Home() {
           <p className="text-xs mt-1 text-green-600">
             السعر بعد الخصم: {productPrice} ج.م (الأصلي: {selectedProduct.price}{" "}
             ج.م)
+            {selectedProduct.percentageDiscount && (
+              <span className="text-xs mr-1">
+                (خصم {selectedProduct.percentageDiscount}%)
+              </span>
+            )}
           </p>
         )}
         {selectedOptions.length > 0 && (
