@@ -70,6 +70,8 @@ export default function Home() {
       deliveryCompanyId: null,
       deliveryCompanyName: null,
       deliveryCompanyContact: null,
+      remainingAmount: null,
+      paidAmount: null,
     },
   ]);
   const [currentBillIndex, setCurrentBillIndex] = useState(0);
@@ -137,6 +139,9 @@ export default function Home() {
     useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isPartialPayment, setIsPartialPayment] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [currentInvoiceRemainingAmount, setCurrentInvoiceRemainingAmount] =
+    useState(0);
 
   const DeliveryType = {
     Store: "store",
@@ -895,6 +900,8 @@ export default function Home() {
       deliveryCompanyId: null,
       deliveryCompanyName: null,
       deliveryCompanyContact: null,
+      remainingAmount: invoice.remainingAmount || null,
+      paidAmount: invoice.paidAmount || null,
     };
 
     setBills((prev) => {
@@ -918,6 +925,13 @@ export default function Home() {
     setCustomerNationalId(bill.customerNationalId || "");
     setCustomerId(bill.customerId || null);
     setGeneralNote(bill.generalNote || "");
+
+    // Set the remaining amount for partial payment invoices
+    if (isPartialPaid && invoice.remainingAmount) {
+      setCurrentInvoiceRemainingAmount(invoice.remainingAmount);
+    } else {
+      setCurrentInvoiceRemainingAmount(0);
+    }
 
     if (invoice.tableId && invoice.tableId > 0) {
       const table = tables.find((t) => t.id === invoice.tableId);
@@ -975,6 +989,8 @@ export default function Home() {
       deliveryCompanyId: null,
       deliveryCompanyName: null,
       deliveryCompanyContact: null,
+      remainingAmount: null,
+      paidAmount: null,
     };
 
     setBills((prev) => [...prev, newBill]);
@@ -998,6 +1014,7 @@ export default function Home() {
     setDeliveryType(null);
     setSelectedDeliveryCompany(null);
     setOrderPrepared(false);
+    setCurrentInvoiceRemainingAmount(0);
   };
 
   const createInvoice = async (isPending = true, paymentsData = null) => {
@@ -1263,6 +1280,27 @@ export default function Home() {
     }
   };
 
+  const payCustomerInvoice = async (customerId, paymentsData) => {
+    try {
+      const response = await axiosInstance.post(
+        "/api/Invoices/PayCustomerInvoices",
+        {
+          customerId: customerId,
+          payments: paymentsData,
+        },
+      );
+
+      if (response.status === 200) {
+        // The endpoint returns empty data on success
+        return { success: true };
+      }
+      return null;
+    } catch (error) {
+      console.error("خطأ في استكمال الدفع:", error);
+      throw error;
+    }
+  };
+
   const applyDiscount = async (invoiceId, discountValue, discountType) => {
     try {
       const response = await axiosInstance.put(
@@ -1433,8 +1471,15 @@ export default function Home() {
   };
 
   const handleBillTypeChange = (type) => {
-    if (bills[currentBillIndex]?.completed) {
+    const currentBill = bills[currentBillIndex];
+
+    if (currentBill?.completed) {
       toast.error("لا يمكن تغيير نوع الفاتورة المكتملة");
+      return;
+    }
+
+    if (currentBill?.isPartialPaid) {
+      toast.error("لا يمكن تغيير نوع الفاتورة الآجلة");
       return;
     }
 
@@ -1514,11 +1559,19 @@ export default function Home() {
   };
 
   const handleSelectTable = (table) => {
+    const currentBill = bills[currentBillIndex];
+
+    if (currentBill?.isPartialPaid) {
+      toast.error("لا يمكن اختيار طاولة للفاتورة الآجلة");
+      return;
+    }
+
     if (table.status === "occupied") {
       toast.info("جاري تحميل الفاتورة الخاصة بهذه الطاولة");
 
       const tableBillIndex = bills.findIndex(
-        (bill) => bill.tableId === table.id && !bill.completed,
+        (bill) =>
+          bill.tableId === table.id && !bill.completed && !bill.isPartialPaid,
       );
 
       if (tableBillIndex !== -1) {
@@ -1823,6 +1876,8 @@ export default function Home() {
         deliveryCompanyContact:
           currentBill?.deliveryCompanyContact ||
           selectedDeliveryCompany?.contactNumber,
+        remainingAmount: currentBill?.remainingAmount || null,
+        paidAmount: currentBill?.paidAmount || null,
       };
       setBills(updatedBills);
     };
@@ -1895,12 +1950,26 @@ export default function Home() {
       } else {
         setOrderPrepared(false);
       }
+
+      // Set remaining amount for partial payment
+      if (currentBill.isPartialPaid && currentBill.remainingAmount) {
+        setCurrentInvoiceRemainingAmount(currentBill.remainingAmount);
+      } else {
+        setCurrentInvoiceRemainingAmount(0);
+      }
     }
   }, [currentBillIndex, bills, halls, tables, deliveryCompanies]);
 
   const handleProductClick = (product) => {
-    if (bills[currentBillIndex]?.completed) {
+    const currentBill = bills[currentBillIndex];
+
+    if (currentBill?.completed) {
       toast.error("لا يمكن إضافة منتجات إلى فاتورة مكتملة");
+      return;
+    }
+
+    if (currentBill?.isPartialPaid) {
+      toast.error("لا يمكن إضافة منتجات إلى فاتورة آجلة");
       return;
     }
 
@@ -2015,8 +2084,15 @@ export default function Home() {
   };
 
   const removeFromCart = (uniqueId) => {
-    if (bills[currentBillIndex]?.completed) {
+    const currentBill = bills[currentBillIndex];
+
+    if (currentBill?.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
+      return;
+    }
+
+    if (currentBill?.isPartialPaid) {
+      toast.error("لا يمكن تعديل فاتورة آجلة");
       return;
     }
 
@@ -2036,8 +2112,15 @@ export default function Home() {
   };
 
   const deleteFromCart = (uniqueId) => {
-    if (bills[currentBillIndex]?.completed) {
+    const currentBill = bills[currentBillIndex];
+
+    if (currentBill?.completed) {
       toast.error("لا يمكن حذف منتجات من فاتورة مكتملة");
+      return;
+    }
+
+    if (currentBill?.isPartialPaid) {
+      toast.error("لا يمكن حذف منتجات من فاتورة آجلة");
       return;
     }
 
@@ -2045,8 +2128,15 @@ export default function Home() {
   };
 
   const handleAddNote = (uniqueId, note) => {
-    if (bills[currentBillIndex]?.completed) {
+    const currentBill = bills[currentBillIndex];
+
+    if (currentBill?.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
+      return;
+    }
+
+    if (currentBill?.isPartialPaid) {
+      toast.error("لا يمكن تعديل فاتورة آجلة");
       return;
     }
 
@@ -2064,8 +2154,15 @@ export default function Home() {
   };
 
   const startEditingNote = (uniqueId, currentNote) => {
-    if (bills[currentBillIndex]?.completed) {
+    const currentBill = bills[currentBillIndex];
+
+    if (currentBill?.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
+      return;
+    }
+
+    if (currentBill?.isPartialPaid) {
+      toast.error("لا يمكن تعديل فاتورة آجلة");
       return;
     }
 
@@ -2074,8 +2171,15 @@ export default function Home() {
   };
 
   const startEditingGeneralNote = () => {
-    if (bills[currentBillIndex]?.completed) {
+    const currentBill = bills[currentBillIndex];
+
+    if (currentBill?.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
+      return;
+    }
+
+    if (currentBill?.isPartialPaid) {
+      toast.error("لا يمكن تعديل فاتورة آجلة");
       return;
     }
 
@@ -2084,8 +2188,15 @@ export default function Home() {
   };
 
   const handleSaveGeneralNote = () => {
-    if (bills[currentBillIndex]?.completed) {
+    const currentBill = bills[currentBillIndex];
+
+    if (currentBill?.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
+      return;
+    }
+
+    if (currentBill?.isPartialPaid) {
+      toast.error("لا يمكن تعديل فاتورة آجلة");
       return;
     }
 
@@ -2103,18 +2214,24 @@ export default function Home() {
   };
 
   const openPaymentModal = () => {
-    if (cart.length === 0) {
+    const currentBill = bills[currentBillIndex];
+
+    if (cart.length === 0 && !currentBill?.isPartialPaid) {
       toast.error("الفاتورة فارغة");
       return;
     }
 
-    if (bills[currentBillIndex]?.billType === "dinein" && !selectedTable) {
+    if (
+      currentBill?.billType === "dinein" &&
+      !selectedTable &&
+      !currentBill?.isPartialPaid
+    ) {
       toast.error("يرجى اختيار طاولة أولاً");
       setShowTableSelection(true);
       return;
     }
 
-    if (bills[currentBillIndex]?.billType === "delivery") {
+    if (currentBill?.billType === "delivery") {
       if (!customerPhone || customerPhone.length < 11) {
         toast.error("يرجى إدخال رقم هاتف صحيح للتوصيل");
         return;
@@ -2128,7 +2245,13 @@ export default function Home() {
 
     setIsPartialPayment(false);
     setPayments([]);
-    setRemainingAmount(total);
+
+    if (currentBill?.isPartialPaid && currentBill.remainingAmount) {
+      setRemainingAmount(currentBill.remainingAmount);
+    } else {
+      setRemainingAmount(total);
+    }
+
     setExcessAmount(0);
     setShowPaymentModal(true);
   };
@@ -2144,7 +2267,12 @@ export default function Home() {
   const handlePartialPayment = () => {
     setIsPartialPayment(true);
     setPayments([]);
-    setRemainingAmount(total);
+    const currentBill = bills[currentBillIndex];
+    if (currentBill?.isPartialPaid && currentBill.remainingAmount) {
+      setRemainingAmount(currentBill.remainingAmount);
+    } else {
+      setRemainingAmount(total);
+    }
     setExcessAmount(0);
   };
 
@@ -2164,11 +2292,13 @@ export default function Home() {
       setPayments(newPayments);
 
       const totalPaid = newPayments.reduce((sum, p) => sum + p.amount, 0);
-      setRemainingAmount(total - totalPaid);
-      setExcessAmount(totalPaid > total ? totalPaid - total : 0);
+      setRemainingAmount(remainingAmount - totalPaid);
+      setExcessAmount(
+        totalPaid > remainingAmount ? totalPaid - remainingAmount : 0,
+      );
     } else {
       const currentTotalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-      const remaining = total - currentTotalPaid;
+      const remaining = remainingAmount - currentTotalPaid;
 
       const newPayments = [...payments, { paymentMethodId, amount: remaining }];
       setPayments(newPayments);
@@ -2190,8 +2320,15 @@ export default function Home() {
     setPayments(updatedPayments);
 
     const totalPaid = updatedPayments.reduce((sum, p) => sum + p.amount, 0);
-    setRemainingAmount(total - totalPaid);
-    setExcessAmount(totalPaid > total ? totalPaid - total : 0);
+    const currentRemaining =
+      bills[currentBillIndex]?.isPartialPaid &&
+      bills[currentBillIndex]?.remainingAmount
+        ? bills[currentBillIndex].remainingAmount
+        : total;
+    setRemainingAmount(currentRemaining - totalPaid);
+    setExcessAmount(
+      totalPaid > currentRemaining ? totalPaid - currentRemaining : 0,
+    );
   };
 
   const handleRemovePayment = (paymentMethodId) => {
@@ -2205,18 +2342,32 @@ export default function Home() {
     setPayments(newPayments);
 
     const totalPaid = newPayments.reduce((sum, p) => sum + p.amount, 0);
-    setRemainingAmount(total - totalPaid);
-    setExcessAmount(totalPaid > total ? totalPaid - total : 0);
+    const currentRemaining =
+      bills[currentBillIndex]?.isPartialPaid &&
+      bills[currentBillIndex]?.remainingAmount
+        ? bills[currentBillIndex].remainingAmount
+        : total;
+    setRemainingAmount(currentRemaining - totalPaid);
+    setExcessAmount(
+      totalPaid > currentRemaining ? totalPaid - currentRemaining : 0,
+    );
   };
 
   const openDiscountModal = () => {
+    const currentBill = bills[currentBillIndex];
+
     if (cart.length === 0) {
       toast.error("الفاتورة فارغة");
       return;
     }
 
-    if (bills[currentBillIndex]?.completed) {
+    if (currentBill?.completed) {
       toast.error("لا يمكن تطبيق خصم على فاتورة مكتملة");
+      return;
+    }
+
+    if (currentBill?.isPartialPaid) {
+      toast.error("لا يمكن تطبيق خصم على فاتورة آجلة");
       return;
     }
 
@@ -2290,6 +2441,8 @@ export default function Home() {
   };
 
   const handleCompletePayment = async () => {
+    const currentBill = bills[currentBillIndex];
+
     if (isPartialPayment) {
       if (isProcessingPayment) {
         return;
@@ -2300,7 +2453,7 @@ export default function Home() {
       try {
         let invoiceResponse;
 
-        if (isEditingExistingInvoice && bills[currentBillIndex]?.invoiceId) {
+        if (isEditingExistingInvoice && currentBill?.invoiceId) {
           invoiceResponse = await updateExistingInvoice(false, []);
         } else {
           invoiceResponse = await createInvoice(false, []);
@@ -2317,6 +2470,8 @@ export default function Home() {
             invoiceNumber: invoiceResponse.invoiceNumber,
             invoiceStatus: InvoiceStatus.PartialPaid,
             isPending: false,
+            remainingAmount: total,
+            paidAmount: 0,
           };
           setBills(updatedBills);
 
@@ -2364,48 +2519,36 @@ export default function Home() {
     setIsProcessingPayment(true);
 
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+    const invoiceTotal =
+      currentBill?.isPartialPaid && currentBill?.remainingAmount
+        ? currentBill.remainingAmount
+        : total;
 
     try {
-      let invoiceResponse;
-      let isPartialPaid = false;
-      let isOverPaid = false;
+      if (currentBill?.isPartialPaid && currentBill?.customerId) {
+        const result = await payCustomerInvoice(
+          currentBill.customerId,
+          payments,
+        );
 
-      if (isEditingExistingInvoice && bills[currentBillIndex]?.invoiceId) {
-        invoiceResponse = await updateExistingInvoice(false, payments);
-
-        if (invoiceResponse) {
-          isPartialPaid =
-            Math.abs(totalPaid - total) > 0.01 && totalPaid < total;
-          isOverPaid = totalPaid > total;
-
-          const updatedInvoiceStatus = isPartialPaid
-            ? InvoiceStatus.PartialPaid
-            : isOverPaid
-              ? InvoiceStatus.Done
-              : InvoiceStatus.Done;
-
+        if (result && result.success) {
           const updatedBills = [...bills];
           updatedBills[currentBillIndex] = {
-            ...updatedBills[currentBillIndex],
-            completed: !isPartialPaid && !isOverPaid,
-            completedDate:
-              !isPartialPaid && !isOverPaid
-                ? new Date().toLocaleString()
-                : null,
+            ...currentBill,
+            completed: true,
+            completedDate: new Date().toLocaleString(),
             paymentMethod: payments.map((p) => p.paymentMethodId).join(","),
             isReturned: false,
-            isPartialPaid: isPartialPaid,
+            isPartialPaid: false,
             returnReason: "",
-            invoiceId: invoiceResponse.id || bills[currentBillIndex].invoiceId,
-            invoiceNumber:
-              invoiceResponse.invoiceNumber ||
-              bills[currentBillIndex].invoiceNumber,
-            invoiceStatus: updatedInvoiceStatus,
+            invoiceStatus: InvoiceStatus.Done,
             isPending: false,
+            remainingAmount: 0,
+            paidAmount: (currentBill.paidAmount || 0) + totalPaid,
           };
           setBills(updatedBills);
 
-          if (selectedTable && selectedHall && !isPartialPaid) {
+          if (selectedTable && selectedHall) {
             updateTableStatus(
               selectedHall.id,
               selectedTable.id,
@@ -2414,28 +2557,9 @@ export default function Home() {
             );
           }
 
-          if (isPartialPaid) {
-            toast.success(
-              `تم دفع ${totalPaid.toFixed(2)} ج.م من إجمالي ${total.toFixed(2)} ج.م للفاتورة رقم ${
-                invoiceResponse.invoiceNumber ||
-                bills[currentBillIndex].invoiceNumber
-              } (باقي ${remainingAmount.toFixed(2)} ج.م)`,
-            );
-          } else if (isOverPaid) {
-            toast.success(
-              `تم دفع ${totalPaid.toFixed(2)} ج.م (زيادة ${(totalPaid - total).toFixed(2)} ج.م) للفاتورة رقم ${
-                invoiceResponse.invoiceNumber ||
-                bills[currentBillIndex].invoiceNumber
-              }`,
-            );
-          } else {
-            toast.success(
-              `تم إتمام البيع للفاتورة رقم ${
-                invoiceResponse.invoiceNumber ||
-                bills[currentBillIndex].invoiceNumber
-              }`,
-            );
-          }
+          toast.success(
+            `تم استكمال دفع المبلغ المتبقي بنجاح للفاتورة رقم ${currentBill.invoiceNumber}`,
+          );
 
           setShowPaymentModal(false);
           setPayments([]);
@@ -2443,78 +2567,165 @@ export default function Home() {
           setExcessAmount(0);
           setIsPartialPayment(false);
           addNewBill();
+
+          await fetchShiftDetails();
+          await fetchLastInvoice();
+        } else {
+          toast.error("حدث خطأ في استكمال الدفع");
         }
       } else {
-        invoiceResponse = await createInvoice(false, payments);
+        let invoiceResponse;
+        let isPartialPaid = false;
+        let isOverPaid = false;
 
-        if (invoiceResponse) {
-          isPartialPaid =
-            Math.abs(totalPaid - total) > 0.01 && totalPaid < total;
-          isOverPaid = totalPaid > total;
+        if (isEditingExistingInvoice && currentBill?.invoiceId) {
+          invoiceResponse = await updateExistingInvoice(false, payments);
 
-          const updatedInvoiceStatus = isPartialPaid
-            ? InvoiceStatus.PartialPaid
-            : isOverPaid
-              ? InvoiceStatus.Done
-              : InvoiceStatus.Done;
+          if (invoiceResponse) {
+            isPartialPaid =
+              Math.abs(totalPaid - invoiceTotal) > 0.01 &&
+              totalPaid < invoiceTotal;
+            isOverPaid = totalPaid > invoiceTotal;
 
-          const updatedBills = [...bills];
-          updatedBills[currentBillIndex] = {
-            ...updatedBills[currentBillIndex],
-            completed: !isPartialPaid && !isOverPaid,
-            completedDate:
-              !isPartialPaid && !isOverPaid
-                ? new Date().toLocaleString()
-                : null,
-            paymentMethod: payments.map((p) => p.paymentMethodId).join(","),
-            isReturned: false,
-            isPartialPaid: isPartialPaid,
-            returnReason: "",
-            invoiceId: invoiceResponse.id,
-            invoiceNumber: invoiceResponse.invoiceNumber,
-            invoiceStatus: updatedInvoiceStatus,
-            isPending: false,
-          };
-          setBills(updatedBills);
+            const updatedInvoiceStatus = isPartialPaid
+              ? InvoiceStatus.PartialPaid
+              : isOverPaid
+                ? InvoiceStatus.Done
+                : InvoiceStatus.Done;
 
-          if (selectedTable && selectedHall && !isPartialPaid) {
-            updateTableStatus(
-              selectedHall.id,
-              selectedTable.id,
-              "available",
-              null,
-            );
+            const updatedBills = [...bills];
+            updatedBills[currentBillIndex] = {
+              ...updatedBills[currentBillIndex],
+              completed: !isPartialPaid && !isOverPaid,
+              completedDate:
+                !isPartialPaid && !isOverPaid
+                  ? new Date().toLocaleString()
+                  : null,
+              paymentMethod: payments.map((p) => p.paymentMethodId).join(","),
+              isReturned: false,
+              isPartialPaid: isPartialPaid,
+              returnReason: "",
+              invoiceId: invoiceResponse.id || currentBill.invoiceId,
+              invoiceNumber:
+                invoiceResponse.invoiceNumber || currentBill.invoiceNumber,
+              invoiceStatus: updatedInvoiceStatus,
+              isPending: false,
+              remainingAmount: isPartialPaid ? invoiceTotal - totalPaid : null,
+              paidAmount: totalPaid,
+            };
+            setBills(updatedBills);
+
+            if (selectedTable && selectedHall && !isPartialPaid) {
+              updateTableStatus(
+                selectedHall.id,
+                selectedTable.id,
+                "available",
+                null,
+              );
+            }
+
+            if (isPartialPaid) {
+              toast.success(
+                `تم دفع ${totalPaid.toFixed(2)} ج.م من إجمالي ${invoiceTotal.toFixed(2)} ج.م للفاتورة رقم ${
+                  invoiceResponse.invoiceNumber || currentBill.invoiceNumber
+                } (باقي ${(invoiceTotal - totalPaid).toFixed(2)} ج.م)`,
+              );
+            } else if (isOverPaid) {
+              toast.success(
+                `تم دفع ${totalPaid.toFixed(2)} ج.م (زيادة ${(totalPaid - invoiceTotal).toFixed(2)} ج.م) للفاتورة رقم ${
+                  invoiceResponse.invoiceNumber || currentBill.invoiceNumber
+                }`,
+              );
+            } else {
+              toast.success(
+                `تم إتمام البيع للفاتورة رقم ${
+                  invoiceResponse.invoiceNumber || currentBill.invoiceNumber
+                }`,
+              );
+            }
+
+            setShowPaymentModal(false);
+            setPayments([]);
+            setRemainingAmount(0);
+            setExcessAmount(0);
+            setIsPartialPayment(false);
+            addNewBill();
           }
+        } else {
+          invoiceResponse = await createInvoice(false, payments);
 
-          if (isPartialPaid) {
-            toast.success(
-              `تم دفع ${totalPaid.toFixed(2)} ج.م من إجمالي ${total.toFixed(2)} ج.م للفاتورة رقم ${
-                invoiceResponse.invoiceNumber
-              } (باقي ${remainingAmount.toFixed(2)} ج.م)`,
-            );
-          } else if (isOverPaid) {
-            toast.success(
-              `تم دفع ${totalPaid.toFixed(2)} ج.م (زيادة ${(totalPaid - total).toFixed(2)} ج.م) للفاتورة رقم ${
-                invoiceResponse.invoiceNumber
-              }`,
-            );
-          } else {
-            toast.success(
-              `تم إتمام البيع للفاتورة رقم ${invoiceResponse.invoiceNumber}`,
-            );
+          if (invoiceResponse) {
+            isPartialPaid =
+              Math.abs(totalPaid - invoiceTotal) > 0.01 &&
+              totalPaid < invoiceTotal;
+            isOverPaid = totalPaid > invoiceTotal;
+
+            const updatedInvoiceStatus = isPartialPaid
+              ? InvoiceStatus.PartialPaid
+              : isOverPaid
+                ? InvoiceStatus.Done
+                : InvoiceStatus.Done;
+
+            const updatedBills = [...bills];
+            updatedBills[currentBillIndex] = {
+              ...updatedBills[currentBillIndex],
+              completed: !isPartialPaid && !isOverPaid,
+              completedDate:
+                !isPartialPaid && !isOverPaid
+                  ? new Date().toLocaleString()
+                  : null,
+              paymentMethod: payments.map((p) => p.paymentMethodId).join(","),
+              isReturned: false,
+              isPartialPaid: isPartialPaid,
+              returnReason: "",
+              invoiceId: invoiceResponse.id,
+              invoiceNumber: invoiceResponse.invoiceNumber,
+              invoiceStatus: updatedInvoiceStatus,
+              isPending: false,
+              remainingAmount: isPartialPaid ? invoiceTotal - totalPaid : null,
+              paidAmount: totalPaid,
+            };
+            setBills(updatedBills);
+
+            if (selectedTable && selectedHall && !isPartialPaid) {
+              updateTableStatus(
+                selectedHall.id,
+                selectedTable.id,
+                "available",
+                null,
+              );
+            }
+
+            if (isPartialPaid) {
+              toast.success(
+                `تم دفع ${totalPaid.toFixed(2)} ج.م من إجمالي ${invoiceTotal.toFixed(2)} ج.م للفاتورة رقم ${
+                  invoiceResponse.invoiceNumber
+                } (باقي ${(invoiceTotal - totalPaid).toFixed(2)} ج.م)`,
+              );
+            } else if (isOverPaid) {
+              toast.success(
+                `تم دفع ${totalPaid.toFixed(2)} ج.م (زيادة ${(totalPaid - invoiceTotal).toFixed(2)} ج.م) للفاتورة رقم ${
+                  invoiceResponse.invoiceNumber
+                }`,
+              );
+            } else {
+              toast.success(
+                `تم إتمام البيع للفاتورة رقم ${invoiceResponse.invoiceNumber}`,
+              );
+            }
+
+            setShowPaymentModal(false);
+            setPayments([]);
+            setRemainingAmount(0);
+            setExcessAmount(0);
+            setIsPartialPayment(false);
+            addNewBill();
           }
-
-          setShowPaymentModal(false);
-          setPayments([]);
-          setRemainingAmount(0);
-          setExcessAmount(0);
-          setIsPartialPayment(false);
-          addNewBill();
         }
-      }
 
-      await fetchShiftDetails();
-      await fetchLastInvoice();
+        await fetchShiftDetails();
+        await fetchLastInvoice();
+      }
     } catch (error) {
       console.error("خطأ في إتمام الدفع:", error);
 
@@ -2916,8 +3127,15 @@ export default function Home() {
   };
 
   const resetCart = () => {
-    if (bills[currentBillIndex]?.completed) {
+    const currentBill = bills[currentBillIndex];
+
+    if (currentBill?.completed) {
       toast.error("لا يمكن إعادة تعيين فاتورة مكتملة");
+      return;
+    }
+
+    if (currentBill?.isPartialPaid) {
+      toast.error("لا يمكن إعادة تعيين فاتورة آجلة");
       return;
     }
 
@@ -2953,8 +3171,36 @@ export default function Home() {
       bills[currentBillIndex]?.billType === "dinein" &&
       selectedTable &&
       cart.length > 0 &&
-      !orderPrepared
+      !orderPrepared &&
+      !bills[currentBillIndex]?.isPartialPaid
     );
+  };
+
+  const shouldShowCompleteBillButton = () => {
+    const currentBill = bills[currentBillIndex];
+    if (!currentBill) return false;
+
+    if (currentBill.isPartialPaid && currentBill.remainingAmount > 0) {
+      return true;
+    }
+
+    if (
+      cart.length > 0 &&
+      !currentBill.completed &&
+      !currentBill.isPartialPaid
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const getCompleteBillButtonText = () => {
+    const currentBill = bills[currentBillIndex];
+    if (currentBill?.isPartialPaid && currentBill.remainingAmount > 0) {
+      return "استكمال الدفع";
+    }
+    return "إتمام البيع";
   };
 
   return (
@@ -4048,12 +4294,16 @@ export default function Home() {
                 <div className="bg-blue-50 p-3 rounded-lg mb-3">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-xs text-gray-600">إجمالي الفاتورة</p>
+                      <p className="text-xs text-gray-600">المبلغ المطلوب</p>
                       <p
                         className="text-xl font-bold"
                         style={{ color: "#193F94" }}
                       >
-                        {total.toFixed(2)} ج.م
+                        {bills[currentBillIndex]?.isPartialPaid &&
+                        bills[currentBillIndex]?.remainingAmount
+                          ? bills[currentBillIndex].remainingAmount.toFixed(2)
+                          : total.toFixed(2)}{" "}
+                        ج.م
                       </p>
                     </div>
                     <div className="text-left">
@@ -4075,6 +4325,13 @@ export default function Home() {
                         : ""}
                     </div>
                   )}
+                  {bills[currentBillIndex]?.isPartialPaid &&
+                    bills[currentBillIndex]?.paidAmount && (
+                      <div className="mt-1 text-[10px] text-blue-600">
+                        تم دفعه سابقاً:{" "}
+                        {bills[currentBillIndex].paidAmount.toFixed(2)} ج.م
+                      </div>
+                    )}
                 </div>
 
                 {!isPartialPayment && payments.length > 0 && (
@@ -4155,7 +4412,13 @@ export default function Home() {
                             تأجيل المبلغ كاملاً
                           </p>
                           <p className="text-xs text-yellow-700">
-                            سيتم حفظ الفاتورة كآجل والمبلغ {total.toFixed(2)}{" "}
+                            سيتم حفظ الفاتورة كآجل والمبلغ{" "}
+                            {bills[currentBillIndex]?.isPartialPaid &&
+                            bills[currentBillIndex]?.remainingAmount
+                              ? bills[currentBillIndex].remainingAmount.toFixed(
+                                  2,
+                                )
+                              : total.toFixed(2)}{" "}
                             ج.م سيتم تحصيله لاحقاً
                           </p>
                         </div>
@@ -4345,7 +4608,7 @@ export default function Home() {
                   ) : isPartialPayment ? (
                     "تأكيد التأجيل"
                   ) : (
-                    "تأكيد الدفع"
+                    getCompleteBillButtonText()
                   )}
                 </button>
               </div>
@@ -4668,9 +4931,13 @@ export default function Home() {
                             <button
                               key={product.id}
                               onClick={() => handleProductClick(product)}
-                              disabled={bills[currentBillIndex]?.completed}
+                              disabled={
+                                bills[currentBillIndex]?.completed ||
+                                bills[currentBillIndex]?.isPartialPaid
+                              }
                               className={`bg-gray-50 hover:bg-blue-50 rounded-lg p-2 flex items-center transition-all duration-300 transform active:scale-[0.98] border border-gray-200 h-20 ${
-                                bills[currentBillIndex]?.completed
+                                bills[currentBillIndex]?.completed ||
+                                bills[currentBillIndex]?.isPartialPaid
                                   ? "opacity-50 cursor-not-allowed"
                                   : ""
                               }`}
@@ -4807,12 +5074,15 @@ export default function Home() {
                       <button
                         key={type.value}
                         onClick={() => handleBillTypeChange(type.value)}
-                        disabled={bills[currentBillIndex]?.completed}
+                        disabled={
+                          bills[currentBillIndex]?.completed ||
+                          bills[currentBillIndex]?.isPartialPaid
+                        }
                         className={`flex-1 flex items-center justify-center py-1.5 rounded border transition-all text-xs ${
                           bills[currentBillIndex]?.billType === type.value
                             ? "bg-blue-100 border-blue-500 text-blue-700 font-medium"
                             : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
-                        } ${bills[currentBillIndex]?.completed ? "opacity-70 cursor-not-allowed" : ""}`}
+                        } ${bills[currentBillIndex]?.completed || bills[currentBillIndex]?.isPartialPaid ? "opacity-70 cursor-not-allowed" : ""}`}
                       >
                         <span>{type.label}</span>
                       </button>
@@ -4860,31 +5130,12 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
-                      {!bills[currentBillIndex]?.completed && (
-                        <div className="flex space-x-1 rtl:space-x-reverse">
-                          <button
-                            onClick={handleOpenTableSelection}
-                            className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-gray-300"
-                          >
-                            <svg
-                              className="w-3 h-3 ml-1"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                            تغيير
-                          </button>
-                          {tableStatus === "occupied" && (
+                      {!bills[currentBillIndex]?.completed &&
+                        !bills[currentBillIndex]?.isPartialPaid && (
+                          <div className="flex space-x-1 rtl:space-x-reverse">
                             <button
-                              onClick={handleRemoveTable}
-                              className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200"
+                              onClick={handleOpenTableSelection}
+                              className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-gray-300"
                             >
                               <svg
                                 className="w-3 h-3 ml-1"
@@ -4896,14 +5147,34 @@ export default function Home() {
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
                                   strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                                 />
                               </svg>
-                              إزالة
+                              تغيير
                             </button>
-                          )}
-                        </div>
-                      )}
+                            {tableStatus === "occupied" && (
+                              <button
+                                onClick={handleRemoveTable}
+                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200"
+                              >
+                                <svg
+                                  className="w-3 h-3 ml-1"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                                إزالة
+                              </button>
+                            )}
+                          </div>
+                        )}
                     </div>
                   </div>
                 )}
@@ -4925,26 +5196,27 @@ export default function Home() {
                             {deliveryFee} ج.م
                           </span>
                         </div>
-                        {!bills[currentBillIndex]?.completed && (
-                          <button
-                            onClick={() => setShowDeliveryTypeModal(true)}
-                            className="text-[9px] bg-amber-100 hover:bg-amber-200 text-amber-700 px-1 py-1 rounded transition-colors flex items-center"
-                          >
-                            <svg
-                              className="w-3 h-3 ml-0.5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                        {!bills[currentBillIndex]?.completed &&
+                          !bills[currentBillIndex]?.isPartialPaid && (
+                            <button
+                              onClick={() => setShowDeliveryTypeModal(true)}
+                              className="text-[9px] bg-amber-100 hover:bg-amber-200 text-amber-700 px-1 py-1 rounded transition-colors flex items-center"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                              />
-                            </svg>
-                          </button>
-                        )}
+                              <svg
+                                className="w-3 h-3 ml-0.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                />
+                              </svg>
+                            </button>
+                          )}
                       </div>
                       {deliveryType === DeliveryType.Company &&
                         selectedDeliveryCompany?.contactNumber && (
@@ -4971,7 +5243,10 @@ export default function Home() {
                         onChange={handleCustomerPhoneChange}
                         onFocus={() => handleFocus("phone")}
                         onBlur={handleBlur}
-                        disabled={bills[currentBillIndex]?.completed}
+                        disabled={
+                          bills[currentBillIndex]?.completed ||
+                          bills[currentBillIndex]?.isPartialPaid
+                        }
                         className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white disabled:bg-gray-100"
                         dir="rtl"
                       />
@@ -5022,7 +5297,10 @@ export default function Home() {
                           </div>
                           <button
                             onClick={openEditCustomerModal}
-                            disabled={bills[currentBillIndex]?.completed}
+                            disabled={
+                              bills[currentBillIndex]?.completed ||
+                              bills[currentBillIndex]?.isPartialPaid
+                            }
                             className="p-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 transition-all border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="تعديل بيانات العميل"
                           >
@@ -5049,7 +5327,10 @@ export default function Home() {
                       customerPhone.length >= 11 && (
                         <button
                           onClick={openAddCustomerModal}
-                          disabled={bills[currentBillIndex]?.completed}
+                          disabled={
+                            bills[currentBillIndex]?.completed ||
+                            bills[currentBillIndex]?.isPartialPaid
+                          }
                           className="p-2 rounded-xl bg-green-50 hover:bg-green-100 text-green-700 transition-all border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="إضافة عميل جديد"
                         >
@@ -5107,35 +5388,40 @@ export default function Home() {
                                 {generalNote}
                               </p>
                             </div>
-                            {!bills[currentBillIndex]?.completed && (
-                              <button
-                                onClick={startEditingGeneralNote}
-                                className="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded-md transition-colors flex items-center border border-blue-300 mr-2"
-                              >
-                                <svg
-                                  className="w-2.5 h-2.5 ml-1"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
+                            {!bills[currentBillIndex]?.completed &&
+                              !bills[currentBillIndex]?.isPartialPaid && (
+                                <button
+                                  onClick={startEditingGeneralNote}
+                                  className="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded-md transition-colors flex items-center border border-blue-300 mr-2"
                                 >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                  />
-                                </svg>
-                                تعديل
-                              </button>
-                            )}
+                                  <svg
+                                    className="w-2.5 h-2.5 ml-1"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                    />
+                                  </svg>
+                                  تعديل
+                                </button>
+                              )}
                           </div>
                         </div>
                       ) : (
                         <button
                           onClick={startEditingGeneralNote}
-                          disabled={bills[currentBillIndex]?.completed}
+                          disabled={
+                            bills[currentBillIndex]?.completed ||
+                            bills[currentBillIndex]?.isPartialPaid
+                          }
                           className={`w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-right flex items-center justify-between ${
-                            bills[currentBillIndex]?.completed
+                            bills[currentBillIndex]?.completed ||
+                            bills[currentBillIndex]?.isPartialPaid
                               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                               : "bg-gray-50 text-gray-600 hover:bg-gray-100"
                           }`}
@@ -5295,10 +5581,12 @@ export default function Home() {
                                         removeFromCart(item.uniqueId || item.id)
                                       }
                                       disabled={
-                                        bills[currentBillIndex]?.completed
+                                        bills[currentBillIndex]?.completed ||
+                                        bills[currentBillIndex]?.isPartialPaid
                                       }
                                       className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${
-                                        bills[currentBillIndex]?.completed
+                                        bills[currentBillIndex]?.completed ||
+                                        bills[currentBillIndex]?.isPartialPaid
                                           ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                           : "bg-gray-200 hover:bg-gray-300 text-gray-700"
                                       }`}
@@ -5339,10 +5627,12 @@ export default function Home() {
                                         }
                                       }}
                                       disabled={
-                                        bills[currentBillIndex]?.completed
+                                        bills[currentBillIndex]?.completed ||
+                                        bills[currentBillIndex]?.isPartialPaid
                                       }
                                       className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${
-                                        bills[currentBillIndex]?.completed
+                                        bills[currentBillIndex]?.completed ||
+                                        bills[currentBillIndex]?.isPartialPaid
                                           ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                           : "bg-gray-200 hover:bg-gray-300 text-gray-700"
                                       }`}
@@ -5352,86 +5642,90 @@ export default function Home() {
                                   </div>
 
                                   <div className="flex items-center space-x-1 rtl:space-x-reverse">
-                                    {!bills[currentBillIndex]?.completed && (
-                                      <>
-                                        {item.note && item.note.trim() ? (
-                                          <button
-                                            onClick={() =>
-                                              startEditingNote(
-                                                item.uniqueId || item.id,
-                                                item.note,
-                                              )
-                                            }
-                                            className="text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded-md transition-colors flex items-center border border-blue-200"
-                                          >
-                                            <svg
-                                              className="w-2.5 h-2.5 ml-1"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              viewBox="0 0 24 24"
+                                    {!bills[currentBillIndex]?.completed &&
+                                      !bills[currentBillIndex]
+                                        ?.isPartialPaid && (
+                                        <>
+                                          {item.note && item.note.trim() ? (
+                                            <button
+                                              onClick={() =>
+                                                startEditingNote(
+                                                  item.uniqueId || item.id,
+                                                  item.note,
+                                                )
+                                              }
+                                              className="text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded-md transition-colors flex items-center border border-blue-200"
                                             >
-                                              <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                              />
-                                            </svg>
-                                            ملاحظة
-                                          </button>
-                                        ) : (
-                                          <button
-                                            onClick={() =>
-                                              startEditingNote(
-                                                item.uniqueId || item.id,
-                                                item.note,
-                                              )
-                                            }
-                                            className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md transition-colors flex items-center border border-gray-300"
-                                          >
-                                            <svg
-                                              className="w-2.5 h-2.5 ml-1"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              viewBox="0 0 24 24"
+                                              <svg
+                                                className="w-2.5 h-2.5 ml-1"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                />
+                                              </svg>
+                                              ملاحظة
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() =>
+                                                startEditingNote(
+                                                  item.uniqueId || item.id,
+                                                  item.note,
+                                                )
+                                              }
+                                              className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md transition-colors flex items-center border border-gray-300"
                                             >
-                                              <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                              />
-                                            </svg>
-                                            ملاحظة
-                                          </button>
-                                        )}
-                                      </>
-                                    )}
-                                    {!bills[currentBillIndex]?.completed && (
-                                      <button
-                                        onClick={() =>
-                                          deleteFromCart(
-                                            item.uniqueId || item.id,
-                                          )
-                                        }
-                                        className="text-[10px] bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-md transition-colors flex items-center border border-red-200"
-                                      >
-                                        <svg
-                                          className="w-2.5 h-2.5 ml-1"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
+                                              <svg
+                                                className="w-2.5 h-2.5 ml-1"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                                />
+                                              </svg>
+                                              ملاحظة
+                                            </button>
+                                          )}
+                                        </>
+                                      )}
+                                    {!bills[currentBillIndex]?.completed &&
+                                      !bills[currentBillIndex]
+                                        ?.isPartialPaid && (
+                                        <button
+                                          onClick={() =>
+                                            deleteFromCart(
+                                              item.uniqueId || item.id,
+                                            )
+                                          }
+                                          className="text-[10px] bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-md transition-colors flex items-center border border-red-200"
                                         >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                          />
-                                        </svg>
-                                        حذف
-                                      </button>
-                                    )}
+                                          <svg
+                                            className="w-2.5 h-2.5 ml-1"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                            />
+                                          </svg>
+                                          حذف
+                                        </button>
+                                      )}
                                   </div>
                                 </div>
 
@@ -5520,9 +5814,13 @@ export default function Home() {
                   <div className="flex items-center">
                     <button
                       onClick={openDiscountModal}
-                      disabled={bills[currentBillIndex]?.completed}
+                      disabled={
+                        bills[currentBillIndex]?.completed ||
+                        bills[currentBillIndex]?.isPartialPaid
+                      }
                       className={`w-12 text-center px-1 py-1 border rounded mr-1.5 text-xs ${
-                        bills[currentBillIndex]?.completed
+                        bills[currentBillIndex]?.completed ||
+                        bills[currentBillIndex]?.isPartialPaid
                           ? "bg-gray-100 cursor-not-allowed"
                           : "bg-blue-50 hover:bg-blue-100 cursor-pointer border-blue-200"
                       }`}
@@ -5552,7 +5850,10 @@ export default function Home() {
                             }
                             className="w-12 text-right px-1 py-1 border rounded mr-1.5 text-xs"
                             min="0"
-                            disabled={bills[currentBillIndex]?.completed}
+                            disabled={
+                              bills[currentBillIndex]?.completed ||
+                              bills[currentBillIndex]?.isPartialPaid
+                            }
                           />
                           <span className="font-bold">
                             {deliveryFee.toFixed(2)} ج.م
@@ -5579,21 +5880,31 @@ export default function Home() {
             <div className="flex gap-3">
               <button
                 onClick={resetCart}
-                disabled={bills[currentBillIndex]?.completed}
+                disabled={
+                  bills[currentBillIndex]?.completed ||
+                  bills[currentBillIndex]?.isPartialPaid
+                }
                 className={`py-2.5 px-3 rounded-lg font-medium border transition-all text-xs flex-1 ${
-                  bills[currentBillIndex]?.completed
+                  bills[currentBillIndex]?.completed ||
+                  bills[currentBillIndex]?.isPartialPaid
                     ? "opacity-50 cursor-not-allowed"
                     : ""
                 }`}
                 style={{ borderColor: "#193F94", color: "#193F94" }}
                 onMouseEnter={(e) => {
-                  if (!bills[currentBillIndex]?.completed) {
+                  if (
+                    !bills[currentBillIndex]?.completed &&
+                    !bills[currentBillIndex]?.isPartialPaid
+                  ) {
                     e.target.style.backgroundColor = "#193F94";
                     e.target.style.color = "white";
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (!bills[currentBillIndex]?.completed) {
+                  if (
+                    !bills[currentBillIndex]?.completed &&
+                    !bills[currentBillIndex]?.isPartialPaid
+                  ) {
                     e.target.style.backgroundColor = "transparent";
                     e.target.style.color = "#193F94";
                   }
@@ -5648,30 +5959,30 @@ export default function Home() {
                 >
                   تحضير الطلب
                 </button>
-              ) : (
+              ) : shouldShowCompleteBillButton() ? (
                 <button
                   onClick={handleCompleteBill}
-                  disabled={cart.length === 0 || isProcessingPayment}
+                  disabled={isProcessingPayment}
                   className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 ${
-                    cart.length === 0 || isProcessingPayment
+                    isProcessingPayment
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:scale-[1.02] active:scale-[0.98]"
                   }`}
                   style={{ backgroundColor: "#20A4D4" }}
                   onMouseEnter={(e) => {
-                    if (cart.length > 0 && !isProcessingPayment) {
+                    if (!isProcessingPayment) {
                       e.target.style.backgroundColor = "#1DC7E0";
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (cart.length > 0 && !isProcessingPayment) {
+                    if (!isProcessingPayment) {
                       e.target.style.backgroundColor = "#20A4D4";
                     }
                   }}
                 >
-                  إتمام البيع
+                  {getCompleteBillButtonText()}
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
