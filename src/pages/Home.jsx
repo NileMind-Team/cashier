@@ -136,6 +136,7 @@ export default function Home() {
   const [isEditingExistingInvoice, setIsEditingExistingInvoice] =
     useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isPartialPayment, setIsPartialPayment] = useState(false);
 
   const DeliveryType = {
     Store: "store",
@@ -1078,7 +1079,9 @@ export default function Home() {
       console.error("خطأ في إنشاء الفاتورة:", error);
 
       if (error.response?.data?.errors) {
-        const paymentError = error.response.data.errors.find(
+        const errors = error.response.data.errors;
+
+        const paymentError = errors.find(
           (err) => err.code === "Invoice.InvalidPayment",
         );
 
@@ -1100,6 +1103,15 @@ export default function Home() {
             toast.error("المبلغ المدفوع أقل من إجمالي الفاتورة");
             return null;
           }
+        }
+
+        const customerError = errors.find(
+          (err) => err.code === "Invoice.CustomerRequired",
+        );
+
+        if (customerError) {
+          toast.error("يجب اختيار عميل للفاتورة");
+          return null;
         }
       }
 
@@ -1211,7 +1223,9 @@ export default function Home() {
       console.error("خطأ في تحديث الفاتورة:", error);
 
       if (error.response?.data?.errors) {
-        const paymentError = error.response.data.errors.find(
+        const errors = error.response.data.errors;
+
+        const paymentError = errors.find(
           (err) => err.code === "Invoice.InvalidPayment",
         );
 
@@ -1233,6 +1247,15 @@ export default function Home() {
             toast.error("المبلغ المدفوع أقل من إجمالي الفاتورة");
             return null;
           }
+        }
+
+        const customerError = errors.find(
+          (err) => err.code === "Invoice.CustomerRequired",
+        );
+
+        if (customerError) {
+          toast.error("يجب اختيار عميل للفاتورة");
+          return null;
         }
       }
 
@@ -2103,6 +2126,7 @@ export default function Home() {
       }
     }
 
+    setIsPartialPayment(false);
     setPayments([]);
     setRemainingAmount(total);
     setExcessAmount(0);
@@ -2114,9 +2138,21 @@ export default function Home() {
     setPayments([]);
     setRemainingAmount(0);
     setExcessAmount(0);
+    setIsPartialPayment(false);
+  };
+
+  const handlePartialPayment = () => {
+    setIsPartialPayment(true);
+    setPayments([]);
+    setRemainingAmount(total);
+    setExcessAmount(0);
   };
 
   const handleAddPayment = (paymentMethodId) => {
+    if (isPartialPayment) {
+      setIsPartialPayment(false);
+    }
+
     const existingPaymentIndex = payments.findIndex(
       (p) => p.paymentMethodId === paymentMethodId,
     );
@@ -2142,6 +2178,10 @@ export default function Home() {
   };
 
   const handlePaymentAmountChange = (paymentMethodId, amount) => {
+    if (isPartialPayment) {
+      setIsPartialPayment(false);
+    }
+
     const updatedPayments = payments.map((payment) =>
       payment.paymentMethodId === paymentMethodId
         ? { ...payment, amount: parseFloat(amount) || 0 }
@@ -2155,6 +2195,10 @@ export default function Home() {
   };
 
   const handleRemovePayment = (paymentMethodId) => {
+    if (isPartialPayment) {
+      setIsPartialPayment(false);
+    }
+
     const newPayments = payments.filter(
       (p) => p.paymentMethodId !== paymentMethodId,
     );
@@ -2246,6 +2290,68 @@ export default function Home() {
   };
 
   const handleCompletePayment = async () => {
+    if (isPartialPayment) {
+      if (isProcessingPayment) {
+        return;
+      }
+
+      setIsProcessingPayment(true);
+
+      try {
+        let invoiceResponse;
+
+        if (isEditingExistingInvoice && bills[currentBillIndex]?.invoiceId) {
+          invoiceResponse = await updateExistingInvoice(false, []);
+        } else {
+          invoiceResponse = await createInvoice(false, []);
+        }
+
+        if (invoiceResponse) {
+          const updatedBills = [...bills];
+          updatedBills[currentBillIndex] = {
+            ...updatedBills[currentBillIndex],
+            completed: false,
+            isPartialPaid: true,
+            paymentMethod: "partial",
+            invoiceId: invoiceResponse.id,
+            invoiceNumber: invoiceResponse.invoiceNumber,
+            invoiceStatus: InvoiceStatus.PartialPaid,
+            isPending: false,
+          };
+          setBills(updatedBills);
+
+          if (selectedTable && selectedHall) {
+            updateTableStatus(
+              selectedHall.id,
+              selectedTable.id,
+              "occupied",
+              null,
+            );
+          }
+
+          toast.success(
+            `تم تأجيل المبلغ كاملاً للفاتورة رقم ${invoiceResponse.invoiceNumber}`,
+          );
+
+          setShowPaymentModal(false);
+          setPayments([]);
+          setRemainingAmount(0);
+          setExcessAmount(0);
+          setIsPartialPayment(false);
+          addNewBill();
+        }
+
+        await fetchShiftDetails();
+        await fetchLastInvoice();
+      } catch (error) {
+        console.error("خطأ في تأجيل المبلغ:", error);
+        toast.error("حدث خطأ في تأجيل المبلغ");
+      } finally {
+        setIsProcessingPayment(false);
+      }
+      return;
+    }
+
     if (payments.length === 0) {
       toast.error("يرجى اختيار طريقة دفع واحدة على الأقل");
       return;
@@ -2335,6 +2441,7 @@ export default function Home() {
           setPayments([]);
           setRemainingAmount(0);
           setExcessAmount(0);
+          setIsPartialPayment(false);
           addNewBill();
         }
       } else {
@@ -2401,6 +2508,7 @@ export default function Home() {
           setPayments([]);
           setRemainingAmount(0);
           setExcessAmount(0);
+          setIsPartialPayment(false);
           addNewBill();
         }
       }
@@ -2411,7 +2519,9 @@ export default function Home() {
       console.error("خطأ في إتمام الدفع:", error);
 
       if (error.response?.data?.errors) {
-        const paymentError = error.response.data.errors.find(
+        const errors = error.response.data.errors;
+
+        const paymentError = errors.find(
           (err) => err.code === "Invoice.InvalidPayment",
         );
 
@@ -2422,17 +2532,26 @@ export default function Home() {
             )
           ) {
             toast.error("المبلغ المدفوع أكثر من إجمالي الفاتورة");
-          } else if (
+            return null;
+          }
+
+          if (
             paymentError.description.includes(
               "Paid amount is less than invoice total",
             )
           ) {
             toast.error("المبلغ المدفوع أقل من إجمالي الفاتورة");
-          } else {
-            toast.error(paymentError.description);
+            return null;
           }
-        } else {
-          toast.error("حدث خطأ في إتمام عملية الدفع");
+        }
+
+        const customerError = errors.find(
+          (err) => err.code === "Invoice.CustomerRequired",
+        );
+
+        if (customerError) {
+          toast.error("يجب اختيار عميل للفاتورة");
+          return null;
         }
       } else {
         toast.error("حدث خطأ في إتمام عملية الدفع");
@@ -3958,7 +4077,7 @@ export default function Home() {
                   )}
                 </div>
 
-                {payments.length > 0 && (
+                {!isPartialPayment && payments.length > 0 && (
                   <div className="mb-3 space-y-2">
                     <p className="text-xs font-medium text-gray-700">
                       طرق الدفع المختارة:
@@ -4024,102 +4143,168 @@ export default function Home() {
                   </div>
                 )}
 
-                <div className="bg-gray-50 p-2 rounded-lg mb-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-xs text-gray-600">
-                      المبلغ المتبقي:
-                    </span>
-                    <span
-                      className={`font-bold text-sm ${remainingAmount < 0 ? "text-green-600" : remainingAmount > 0 ? "text-red-600" : "text-green-600"}`}
-                    >
-                      {Math.abs(remainingAmount).toFixed(2)} ج.م
-                      {remainingAmount < 0 && (
-                        <span className="text-[10px] mr-1 text-green-600">
-                          (زيادة)
-                        </span>
-                      )}
-                      {remainingAmount > 0 && (
-                        <span className="text-[10px] mr-1 text-red-600">
-                          (باقي)
-                        </span>
-                      )}
-                    </span>
+                {isPartialPayment && (
+                  <div className="mb-3">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                          <span className="text-yellow-600 text-lg">⏰</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-yellow-800">
+                            تأجيل المبلغ كاملاً
+                          </p>
+                          <p className="text-xs text-yellow-700">
+                            سيتم حفظ الفاتورة كآجل والمبلغ {total.toFixed(2)}{" "}
+                            ج.م سيتم تحصيله لاحقاً
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  {remainingAmount < 0 && payments.length > 0 && (
-                    <p className="text-[10px] text-green-600 mt-0.5">
-                      ✓ تم دفع مبلغ إضافي قدره{" "}
-                      {Math.abs(remainingAmount).toFixed(2)} ج.م
-                    </p>
-                  )}
-                  {remainingAmount > 0 && payments.length > 0 && (
-                    <p className="text-[10px] text-yellow-600 mt-0.5">
-                      ✓ سيتم حفظ الفاتورة كـ "آجل" (باقي{" "}
-                      {remainingAmount.toFixed(2)} ج.م)
-                    </p>
-                  )}
-                  {Math.abs(remainingAmount) < 0.01 && payments.length > 0 && (
-                    <p className="text-[10px] text-green-600 mt-0.5">
-                      ✓ تم تغطية كامل المبلغ
-                    </p>
-                  )}
-                </div>
+                )}
 
-                {paymentMethodsLoading ? (
-                  <div className="text-center py-4">
-                    <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                    <p className="text-[10px] text-gray-500 mt-1">
-                      جاري تحميل طرق الدفع...
-                    </p>
+                {!isPartialPayment && (
+                  <div className="bg-gray-50 p-2 rounded-lg mb-3">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-xs text-gray-600">
+                        المبلغ المتبقي:
+                      </span>
+                      <span
+                        className={`font-bold text-sm ${remainingAmount < 0 ? "text-green-600" : remainingAmount > 0 ? "text-red-600" : "text-green-600"}`}
+                      >
+                        {Math.abs(remainingAmount).toFixed(2)} ج.م
+                        {remainingAmount < 0 && (
+                          <span className="text-[10px] mr-1 text-green-600">
+                            (زيادة)
+                          </span>
+                        )}
+                        {remainingAmount > 0 && (
+                          <span className="text-[10px] mr-1 text-red-600">
+                            (باقي)
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    {remainingAmount < 0 && payments.length > 0 && (
+                      <p className="text-[10px] text-green-600 mt-0.5">
+                        ✓ تم دفع مبلغ إضافي قدره{" "}
+                        {Math.abs(remainingAmount).toFixed(2)} ج.م
+                      </p>
+                    )}
+                    {remainingAmount > 0 && payments.length > 0 && (
+                      <p className="text-[10px] text-yellow-600 mt-0.5">
+                        ✓ سيتم حفظ الفاتورة كـ "آجل" (باقي{" "}
+                        {remainingAmount.toFixed(2)} ج.م)
+                      </p>
+                    )}
+                    {Math.abs(remainingAmount) < 0.01 &&
+                      payments.length > 0 && (
+                        <p className="text-[10px] text-green-600 mt-0.5">
+                          ✓ تم تغطية كامل المبلغ
+                        </p>
+                      )}
                   </div>
-                ) : paymentMethods.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500">
-                    <p className="text-xs">لا توجد طرق دفع متاحة</p>
+                )}
+
+                {!isPartialPayment && (
+                  <>
+                    {paymentMethodsLoading ? (
+                      <div className="text-center py-4">
+                        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          جاري تحميل طرق الدفع...
+                        </p>
+                      </div>
+                    ) : paymentMethods.length === 0 ? (
+                      <div className="text-center py-4 text-gray-500">
+                        <p className="text-xs">لا توجد طرق دفع متاحة</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                        <p className="text-xs font-medium text-gray-700">
+                          اختر طريقة الدفع:
+                        </p>
+                        {paymentMethods
+                          .filter((method) => method.isActive)
+                          .map((method) => {
+                            const isSelected = payments.some(
+                              (p) => p.paymentMethodId === method.id,
+                            );
+                            return (
+                              <button
+                                key={method.id}
+                                onClick={() => handleAddPayment(method.id)}
+                                disabled={isProcessingPayment}
+                                className={`w-full p-2 rounded-lg border flex items-center justify-between transition-all ${
+                                  isSelected
+                                    ? "border-blue-500 bg-blue-50"
+                                    : "border-gray-200 hover:border-gray-300"
+                                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                              >
+                                <div className="flex items-center">
+                                  <div
+                                    className="w-1 h-6 rounded-full ml-2"
+                                    style={{ backgroundColor: method.color }}
+                                  ></div>
+                                  <p className="text-xs font-medium">
+                                    {method.name}
+                                  </p>
+                                </div>
+                                <div
+                                  className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                    isSelected
+                                      ? "border-blue-500 bg-blue-500"
+                                      : "border-gray-300"
+                                  }`}
+                                >
+                                  {isSelected && (
+                                    <div className="w-2 h-2 rounded-full bg-white"></div>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Partial Payment Button */}
+                {!isPartialPayment && (
+                  <div className="mt-3 pt-2 border-t border-gray-200">
+                    <button
+                      onClick={handlePartialPayment}
+                      disabled={isProcessingPayment}
+                      className="w-full py-2 px-3 rounded-lg border-2 border-yellow-400 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 font-medium transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      تأجيل المبلغ كاملاً (آجل)
+                    </button>
                   </div>
-                ) : (
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
-                    <p className="text-xs font-medium text-gray-700">
-                      اختر طريقة الدفع:
-                    </p>
-                    {paymentMethods
-                      .filter((method) => method.isActive)
-                      .map((method) => {
-                        const isSelected = payments.some(
-                          (p) => p.paymentMethodId === method.id,
-                        );
-                        return (
-                          <button
-                            key={method.id}
-                            onClick={() => handleAddPayment(method.id)}
-                            disabled={isProcessingPayment}
-                            className={`w-full p-2 rounded-lg border flex items-center justify-between transition-all ${
-                              isSelected
-                                ? "border-blue-500 bg-blue-50"
-                                : "border-gray-200 hover:border-gray-300"
-                            } disabled:opacity-50 disabled:cursor-not-allowed`}
-                          >
-                            <div className="flex items-center">
-                              <div
-                                className="w-1 h-6 rounded-full ml-2"
-                                style={{ backgroundColor: method.color }}
-                              ></div>
-                              <p className="text-xs font-medium">
-                                {method.name}
-                              </p>
-                            </div>
-                            <div
-                              className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                                isSelected
-                                  ? "border-blue-500 bg-blue-500"
-                                  : "border-gray-300"
-                              }`}
-                            >
-                              {isSelected && (
-                                <div className="w-2 h-2 rounded-full bg-white"></div>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
+                )}
+
+                {isPartialPayment && (
+                  <div className="mt-3 pt-2 border-t border-gray-200">
+                    <button
+                      onClick={() => setIsPartialPayment(false)}
+                      disabled={isProcessingPayment}
+                      className="w-full py-2 px-3 rounded-lg border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium transition-all text-xs disabled:opacity-50"
+                    >
+                      إلغاء التأجيل والدفع العادي
+                    </button>
                   </div>
                 )}
               </div>
@@ -4134,15 +4319,20 @@ export default function Home() {
                 </button>
                 <button
                   onClick={handleCompletePayment}
-                  disabled={payments.length === 0 || isProcessingPayment}
+                  disabled={
+                    (!isPartialPayment && payments.length === 0) ||
+                    isProcessingPayment
+                  }
                   className={`flex-1 py-2 px-3 rounded-lg font-bold text-white transition-colors text-xs ${
-                    payments.length === 0 || isProcessingPayment
+                    (!isPartialPayment && payments.length === 0) ||
+                    isProcessingPayment
                       ? "opacity-50 cursor-not-allowed bg-gray-400"
                       : "bg-blue-600 hover:bg-blue-700"
                   }`}
                   style={{
                     backgroundColor:
-                      payments.length === 0 || isProcessingPayment
+                      (!isPartialPayment && payments.length === 0) ||
+                      isProcessingPayment
                         ? ""
                         : "#193F94",
                   }}
@@ -4152,6 +4342,8 @@ export default function Home() {
                       <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin ml-1"></div>
                       جاري تأكيد الدفع...
                     </span>
+                  ) : isPartialPayment ? (
+                    "تأكيد التأجيل"
                   ) : (
                     "تأكيد الدفع"
                   )}
