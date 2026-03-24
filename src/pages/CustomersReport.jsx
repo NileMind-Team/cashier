@@ -10,8 +10,11 @@ export default function CustomersReports() {
   const [phoneSearch, setPhoneSearch] = useState("");
   const [customerData, setCustomerData] = useState(null);
   const [reportData, setReportData] = useState(null);
+  const [customerInvoices, setCustomerInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [expandedInvoice, setExpandedInvoice] = useState(null);
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -48,12 +51,14 @@ export default function CustomersReports() {
       if (response.status === 200 && response.data) {
         setCustomerData(response.data);
         toast.success(`تم العثور على ${response.data.name}`);
+        setCustomerInvoices([]);
       }
     } catch (error) {
       console.error("خطأ في البحث عن العميل:", error);
       if (error.response?.status === 404) {
         toast.error(`لم يتم العثور على عميل برقم التليفون ${phoneSearch}`);
         setCustomerData(null);
+        setCustomerInvoices([]);
       } else if (error.response?.status === 400) {
         toast.error("بيانات غير صالحة: تأكد من رقم التليفون");
       } else {
@@ -74,6 +79,68 @@ export default function CustomersReports() {
     setPhoneSearch("");
     setCustomerData(null);
     setReportData(null);
+    setCustomerInvoices([]);
+    setExpandedInvoice(null);
+  };
+
+  const fetchCustomerInvoices = async (customerId) => {
+    setLedgerLoading(true);
+    try {
+      const response = await axiosInstance.get(
+        `/api/Invoices/GetCustomerLedger/customer/${customerId}`,
+      );
+
+      if (response.status === 200 && response.data) {
+        let invoices = response.data.invoices || [];
+
+        // Filter invoices by date range if needed
+        if (startDate && endDate) {
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+
+          invoices = invoices.filter((invoice) => {
+            const invoiceDate = new Date(invoice.date);
+            return invoiceDate >= start && invoiceDate <= end;
+          });
+        }
+
+        // Sort by date (newest first)
+        invoices.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Get all transactions for this customer
+        const transactions = response.data.transactions || [];
+
+        // Group transactions by invoiceId
+        const transactionsByInvoice = {};
+        transactions.forEach((transaction) => {
+          if (!transactionsByInvoice[transaction.invoiceId]) {
+            transactionsByInvoice[transaction.invoiceId] = [];
+          }
+          transactionsByInvoice[transaction.invoiceId].push(transaction);
+        });
+
+        // Attach transactions to each invoice
+        const invoicesWithTransactions = invoices.map((invoice) => ({
+          ...invoice,
+          transactions: transactionsByInvoice[invoice.invoiceId] || [],
+          remainingAmount: invoice.remainingAmount || 0,
+          paidAmount: invoice.paidAmount || 0,
+        }));
+
+        setCustomerInvoices(invoicesWithTransactions);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب فواتير العميل:", error);
+      if (error.response?.status === 404) {
+        toast.info("لا توجد فواتير للعميل");
+        setCustomerInvoices([]);
+      } else {
+        toast.error("حدث خطأ في جلب فواتير العميل");
+      }
+    } finally {
+      setLedgerLoading(false);
+    }
   };
 
   const generateReport = async () => {
@@ -121,6 +188,9 @@ export default function CustomersReports() {
           },
         });
 
+        // Fetch customer invoices after getting report
+        await fetchCustomerInvoices(customerData.id);
+
         toast.success(`تم إنشاء تقرير ${data.customerName}`);
       }
     } catch (error) {
@@ -147,6 +217,18 @@ export default function CustomersReports() {
     });
   };
 
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("ar-EG", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   const formatCurrency = (amount) => {
     if (amount === undefined || amount === null) return "0.00";
     return new Intl.NumberFormat("ar-EG", {
@@ -154,6 +236,35 @@ export default function CustomersReports() {
       maximumFractionDigits: 2,
     }).format(amount);
   };
+
+  const toggleInvoiceDetails = (invoiceId) => {
+    if (expandedInvoice === invoiceId) {
+      setExpandedInvoice(null);
+    } else {
+      setExpandedInvoice(invoiceId);
+    }
+  };
+
+  // Calculate totals
+  const calculateTotals = () => {
+    let totalInvoicesAmount = 0;
+    let totalPaid = 0;
+    let totalRemaining = 0;
+
+    customerInvoices.forEach((invoice) => {
+      totalInvoicesAmount += invoice.totalAmount || 0;
+      totalPaid += invoice.paidAmount || 0;
+      totalRemaining += invoice.remainingAmount || 0;
+    });
+
+    return {
+      totalInvoicesAmount,
+      totalPaid,
+      totalRemaining,
+    };
+  };
+
+  const totals = calculateTotals();
 
   return (
     <div
@@ -439,16 +550,16 @@ export default function CustomersReports() {
                       </span>
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      {reportData.customer.analytics.totalInvoices} فاتورة
+                      {customerInvoices.length} فاتورة في هذه الفترة
                     </p>
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse print:hidden">
                     <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
-                      {reportData.customer.analytics.totalInvoices} فاتورة
+                      {customerInvoices.length} فاتورة
                     </div>
-                    {reportData.customer.analytics.hasDebt && (
+                    {totals.totalRemaining > 0 && (
                       <div className="px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">
-                        عليه مدفوعات
+                        متبقي {formatCurrency(totals.totalRemaining)} ج.م
                       </div>
                     )}
                   </div>
@@ -461,10 +572,7 @@ export default function CustomersReports() {
                       <div>
                         <p className="text-sm text-blue-800">إجمالي المبيعات</p>
                         <p className="text-2xl font-bold text-blue-900 mt-1">
-                          {formatCurrency(
-                            reportData.customer.analytics.totalSales,
-                          )}{" "}
-                          ج.م
+                          {formatCurrency(totals.totalInvoicesAmount)} ج.م
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
@@ -489,12 +597,9 @@ export default function CustomersReports() {
                   <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-green-800">صافي الإيرادات</p>
+                        <p className="text-sm text-green-800">إجمالي المدفوع</p>
                         <p className="text-2xl font-bold text-green-900 mt-1">
-                          {formatCurrency(
-                            reportData.customer.analytics.netRevenue,
-                          )}{" "}
-                          ج.م
+                          {formatCurrency(totals.totalPaid)} ج.م
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
@@ -516,82 +621,12 @@ export default function CustomersReports() {
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-purple-800">
-                          إجمالي المدفوعات
-                        </p>
-                        <p className="text-2xl font-bold text-purple-900 mt-1">
-                          {formatCurrency(
-                            reportData.customer.analytics.totalPaid,
-                          )}{" "}
-                          ج.م
-                        </p>
-                      </div>
-                      <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-purple-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                          />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* إحصائيات إضافية */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-amber-800">
-                          إجمالي المشتريات
-                        </p>
-                        <p className="text-2xl font-bold text-amber-900 mt-1">
-                          {formatCurrency(
-                            reportData.customer.analytics.totalPurchases,
-                          )}{" "}
-                          ج.م
-                        </p>
-                      </div>
-                      <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-amber-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                          />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-red-800">إجمالي المرتجعات</p>
+                        <p className="text-sm text-red-800">المتبقي</p>
                         <p className="text-2xl font-bold text-red-900 mt-1">
-                          {formatCurrency(
-                            reportData.customer.analytics.totalReturns,
-                          )}{" "}
-                          ج.م
+                          {formatCurrency(totals.totalRemaining)} ج.م
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-red-200 rounded-full flex items-center justify-center">
@@ -606,69 +641,7 @@ export default function CustomersReports() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 3v6a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V15z"
-                          />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-teal-50 to-teal-100 rounded-xl p-4 border border-teal-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-teal-800">إجمالي الضرائب</p>
-                        <p className="text-2xl font-bold text-teal-900 mt-1">
-                          {formatCurrency(
-                            reportData.customer.analytics.totalTax,
-                          )}{" "}
-                          ج.م
-                        </p>
-                      </div>
-                      <div className="w-12 h-12 bg-teal-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-teal-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"
-                          />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-xl p-4 border border-indigo-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-indigo-800">
-                          إجمالي الخصومات
-                        </p>
-                        <p className="text-2xl font-bold text-indigo-900 mt-1">
-                          {formatCurrency(
-                            reportData.customer.analytics.totalDiscount,
-                          )}{" "}
-                          ج.م
-                        </p>
-                      </div>
-                      <div className="w-12 h-12 bg-indigo-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-indigo-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                           />
                         </svg>
                       </div>
@@ -676,73 +649,214 @@ export default function CustomersReports() {
                   </div>
                 </div>
 
-                {/* إحصائيات الفواتير */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-4 border border-blue-200">
-                    <h4 className="font-bold mb-3 text-blue-800">
-                      إحصائيات المبيعات
-                    </h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">عدد عمليات البيع:</span>
-                        <span className="font-bold">
-                          {reportData.customer.analytics.salesCount}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">
-                          عدد عمليات المرتجع:
-                        </span>
-                        <span className="font-bold">
-                          {reportData.customer.analytics.returnsCount}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">إجمالي الفواتير:</span>
-                        <span className="font-bold">
-                          {reportData.customer.analytics.totalInvoices}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                {/* قائمة الفواتير مع تفاصيل المدفوعات */}
+                <div className="mb-6">
+                  <h3
+                    className="text-lg font-bold mb-4"
+                    style={{ color: "#193F94" }}
+                  >
+                    فواتير العميل
+                  </h3>
 
-                  <div className="bg-gradient-to-r from-purple-50 to-white rounded-xl p-4 border border-purple-200">
-                    <h4 className="font-bold mb-3 text-purple-800">
-                      متوسطات العميل
-                    </h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">متوسط الإنفاق:</span>
-                        <span className="font-bold">
-                          {formatCurrency(
-                            reportData.customer.analytics.averageSpending,
-                          )}{" "}
-                          ج.م
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">المتبقي:</span>
-                        <span
-                          className={`font-bold ${reportData.customer.analytics.hasDebt ? "text-red-600" : "text-green-600"}`}
-                        >
-                          {formatCurrency(
-                            reportData.customer.analytics.totalRemaining,
-                          )}{" "}
-                          ج.م
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">الحالة:</span>
-                        <span
-                          className={`font-bold ${reportData.customer.analytics.hasDebt ? "text-red-600" : "text-green-600"}`}
-                        >
-                          {reportData.customer.analytics.hasDebt
-                            ? "عليه مدفوعات"
-                            : "مدفوع بالكامل"}
-                        </span>
-                      </div>
+                  {ledgerLoading ? (
+                    <div className="bg-gray-50 rounded-xl p-8 flex flex-col items-center justify-center">
+                      <div className="w-12 h-12 border-t-2 border-blue-600 rounded-full animate-spin mb-3"></div>
+                      <p className="text-gray-500">جاري تحميل الفواتير...</p>
                     </div>
-                  </div>
+                  ) : customerInvoices.length > 0 ? (
+                    <div className="space-y-4">
+                      {customerInvoices.map((invoice) => (
+                        <div
+                          key={invoice.invoiceId}
+                          className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
+                        >
+                          {/* Invoice Header */}
+                          <div
+                            className="bg-gradient-to-r from-gray-50 to-white p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                            onClick={() =>
+                              toggleInvoiceDetails(invoice.invoiceId)
+                            }
+                          >
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className={`h-5 w-5 text-gray-500 transform transition-transform ${expandedInvoice === invoice.invoiceId ? "rotate-180" : ""}`}
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 9l-7 7-7-7"
+                                  />
+                                </svg>
+                                <span className="font-bold text-blue-900">
+                                  فاتورة #{invoice.invoiceNumber}
+                                </span>
+                                <span className="text-sm text-gray-500">
+                                  {formatDateTime(invoice.date)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="text-sm">
+                                  <span className="text-gray-600">
+                                    القيمة:{" "}
+                                  </span>
+                                  <span className="font-bold text-blue-700">
+                                    {formatCurrency(invoice.totalAmount)} ج.م
+                                  </span>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="text-gray-600">مدفوع: </span>
+                                  <span className="font-bold text-green-600">
+                                    {formatCurrency(invoice.paidAmount)} ج.م
+                                  </span>
+                                </div>
+                                {invoice.remainingAmount > 0 && (
+                                  <div className="text-sm">
+                                    <span className="text-gray-600">
+                                      متبقي:{" "}
+                                    </span>
+                                    <span className="font-bold text-red-600">
+                                      {formatCurrency(invoice.remainingAmount)}{" "}
+                                      ج.م
+                                    </span>
+                                  </div>
+                                )}
+                                {invoice.remainingAmount === 0 && (
+                                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                                    مدفوع بالكامل
+                                  </span>
+                                )}
+                                {invoice.remainingAmount > 0 && (
+                                  <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-medium">
+                                    باقي{" "}
+                                    {formatCurrency(invoice.remainingAmount)}{" "}
+                                    ج.م
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Invoice Details (Expandable) */}
+                          {expandedInvoice === invoice.invoiceId && (
+                            <div className="p-4 bg-gray-50 border-t border-gray-200">
+                              <h4 className="font-bold mb-3 text-gray-700">
+                                تفاصيل المدفوعات
+                              </h4>
+                              {invoice.transactions &&
+                              invoice.transactions.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                  <table className="w-full">
+                                    <thead className="bg-gray-100">
+                                      <tr>
+                                        <th className="py-2 px-3 text-right text-sm font-medium text-gray-700">
+                                          التاريخ
+                                        </th>
+                                        <th className="py-2 px-3 text-right text-sm font-medium text-gray-700">
+                                          طريقة الدفع
+                                        </th>
+                                        <th className="py-2 px-3 text-right text-sm font-medium text-gray-700">
+                                          المبلغ
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {invoice.transactions.map(
+                                        (transaction, idx) => (
+                                          <tr
+                                            key={idx}
+                                            className="border-b border-gray-200"
+                                          >
+                                            <td className="py-2 px-3 text-sm">
+                                              {formatDateTime(transaction.date)}
+                                            </td>
+                                            <td className="py-2 px-3 text-sm">
+                                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                                                {transaction.paymentMethod ||
+                                                  "كاش"}
+                                              </span>
+                                            </td>
+                                            <td className="py-2 px-3 text-sm">
+                                              <span className="font-bold text-green-600">
+                                                {formatCurrency(
+                                                  transaction.debit ||
+                                                    transaction.credit,
+                                                )}{" "}
+                                                ج.م
+                                              </span>
+                                            </td>
+                                          </tr>
+                                        ),
+                                      )}
+                                    </tbody>
+                                    <tfoot className="bg-gray-100">
+                                      <tr>
+                                        <td
+                                          colSpan="2"
+                                          className="py-2 px-3 text-sm font-bold"
+                                        >
+                                          إجمالي المدفوعات:
+                                        </td>
+                                        <td className="py-2 px-3 text-sm font-bold text-green-600">
+                                          {formatCurrency(invoice.paidAmount)}{" "}
+                                          ج.م
+                                        </td>
+                                      </tr>
+                                      {invoice.remainingAmount > 0 && (
+                                        <tr>
+                                          <td
+                                            colSpan="2"
+                                            className="py-2 px-3 text-sm font-bold text-red-600"
+                                          >
+                                            المتبقي:
+                                          </td>
+                                          <td className="py-2 px-3 text-sm font-bold text-red-600">
+                                            {formatCurrency(
+                                              invoice.remainingAmount,
+                                            )}{" "}
+                                            ج.م
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </tfoot>
+                                  </table>
+                                </div>
+                              ) : (
+                                <p className="text-gray-500 text-center py-4">
+                                  لا توجد مدفوعات مسجلة لهذه الفاتورة
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded-xl p-8 text-center">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-12 w-12 mx-auto text-gray-400 mb-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      <p className="text-gray-500">
+                        لا توجد فواتير للعميل في الفترة المحددة
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mb-6">
@@ -801,30 +915,34 @@ export default function CustomersReports() {
                         <div className="space-y-3">
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600">
-                              المشتريات في الفترة:
+                              إجمالي الفواتير:
                             </span>
-                            <span className="font-bold text-blue-700">
-                              {formatCurrency(
-                                reportData.customer.analytics.totalPurchases,
-                              )}{" "}
-                              ج.م
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">عدد الفواتير:</span>
                             <span className="font-bold">
-                              {reportData.customer.analytics.totalInvoices}
+                              {customerInvoices.length}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600">
-                              متوسط الإنفاق:
+                              إجمالي المبيعات:
                             </span>
-                            <span className="font-bold">
-                              {formatCurrency(
-                                reportData.customer.analytics.averageSpending,
-                              )}{" "}
-                              ج.م
+                            <span className="font-bold text-blue-700">
+                              {formatCurrency(totals.totalInvoicesAmount)} ج.م
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">
+                              إجمالي المدفوعات:
+                            </span>
+                            <span className="font-bold text-green-600">
+                              {formatCurrency(totals.totalPaid)} ج.م
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">المتبقي:</span>
+                            <span
+                              className={`font-bold ${totals.totalRemaining > 0 ? "text-red-600" : "text-green-600"}`}
+                            >
+                              {formatCurrency(totals.totalRemaining)} ج.م
                             </span>
                           </div>
                         </div>
@@ -846,7 +964,7 @@ export default function CustomersReports() {
                         className="text-2xl font-bold"
                         style={{ color: "#193F94" }}
                       >
-                        {reportData.customer.analytics.totalInvoices}
+                        {customerInvoices.length}
                       </div>
                       <div className="text-sm text-gray-600">عدد الفواتير</div>
                     </div>
@@ -855,9 +973,7 @@ export default function CustomersReports() {
                         className="text-2xl font-bold"
                         style={{ color: "#10B981" }}
                       >
-                        {formatCurrency(
-                          reportData.customer.analytics.totalSales,
-                        )}
+                        {formatCurrency(totals.totalInvoicesAmount)}
                       </div>
                       <div className="text-sm text-gray-600">
                         إجمالي المبيعات
@@ -866,27 +982,19 @@ export default function CustomersReports() {
                     <div className="text-center">
                       <div
                         className="text-2xl font-bold"
-                        style={{ color: "#8B5CF6" }}
+                        style={{ color: "#3B82F6" }}
                       >
-                        {formatCurrency(
-                          reportData.customer.analytics.netRevenue,
-                        )}
+                        {formatCurrency(totals.totalPaid)}
                       </div>
                       <div className="text-sm text-gray-600">
-                        صافي الإيرادات
+                        إجمالي المدفوع
                       </div>
                     </div>
                     <div className="text-center">
                       <div
-                        className={`text-2xl font-bold ${
-                          reportData.customer.analytics.hasDebt
-                            ? "text-red-600"
-                            : "text-green-600"
-                        }`}
+                        className={`text-2xl font-bold ${totals.totalRemaining > 0 ? "text-red-600" : "text-green-600"}`}
                       >
-                        {formatCurrency(
-                          reportData.customer.analytics.totalRemaining,
-                        )}
+                        {formatCurrency(totals.totalRemaining)}
                       </div>
                       <div className="text-sm text-gray-600">المتبقي</div>
                     </div>
