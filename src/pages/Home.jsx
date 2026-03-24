@@ -135,6 +135,7 @@ export default function Home() {
   const [excessAmount, setExcessAmount] = useState(0);
   const [isEditingExistingInvoice, setIsEditingExistingInvoice] =
     useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const DeliveryType = {
     Store: "store",
@@ -1174,15 +1175,38 @@ export default function Home() {
         cleanInvoiceData,
       );
 
-      if (response.status === 200 && response.data) {
+      if (response.status === 200) {
         shiftFetchedRef.current = false;
         await fetchShiftDetails();
 
         invoicesFetchedRef.current = false;
         await fetchLastInvoice();
 
-        return response.data;
+        const updatedInvoices = await fetchLastInvoice();
+
+        if (updatedInvoices && updatedInvoices.length > 0) {
+          const updatedInvoice = updatedInvoices.find(
+            (inv) => inv.id === currentBill.invoiceId,
+          );
+
+          if (updatedInvoice) {
+            const billIndex = bills.findIndex(
+              (bill) => bill.invoiceId === currentBill.invoiceId,
+            );
+
+            if (billIndex !== -1) {
+              convertInvoiceToBill(updatedInvoice, billIndex);
+              setCurrentBillIndex(billIndex);
+            }
+
+            return updatedInvoice;
+          }
+        }
+
+        return { id: currentBill.invoiceId, success: true };
       }
+
+      return null;
     } catch (error) {
       console.error("خطأ في تحديث الفاتورة:", error);
 
@@ -2227,85 +2251,162 @@ export default function Home() {
       return;
     }
 
+    if (isProcessingPayment) {
+      return;
+    }
+
+    setIsProcessingPayment(true);
+
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
     try {
       let invoiceResponse;
+      let isPartialPaid = false;
+      let isOverPaid = false;
 
       if (isEditingExistingInvoice && bills[currentBillIndex]?.invoiceId) {
         invoiceResponse = await updateExistingInvoice(false, payments);
+
+        if (invoiceResponse) {
+          isPartialPaid =
+            Math.abs(totalPaid - total) > 0.01 && totalPaid < total;
+          isOverPaid = totalPaid > total;
+
+          const updatedInvoiceStatus = isPartialPaid
+            ? InvoiceStatus.PartialPaid
+            : isOverPaid
+              ? InvoiceStatus.Done
+              : InvoiceStatus.Done;
+
+          const updatedBills = [...bills];
+          updatedBills[currentBillIndex] = {
+            ...updatedBills[currentBillIndex],
+            completed: !isPartialPaid && !isOverPaid,
+            completedDate:
+              !isPartialPaid && !isOverPaid
+                ? new Date().toLocaleString()
+                : null,
+            paymentMethod: payments.map((p) => p.paymentMethodId).join(","),
+            isReturned: false,
+            isPartialPaid: isPartialPaid,
+            returnReason: "",
+            invoiceId: invoiceResponse.id || bills[currentBillIndex].invoiceId,
+            invoiceNumber:
+              invoiceResponse.invoiceNumber ||
+              bills[currentBillIndex].invoiceNumber,
+            invoiceStatus: updatedInvoiceStatus,
+            isPending: false,
+          };
+          setBills(updatedBills);
+
+          if (selectedTable && selectedHall && !isPartialPaid) {
+            updateTableStatus(
+              selectedHall.id,
+              selectedTable.id,
+              "available",
+              null,
+            );
+          }
+
+          if (isPartialPaid) {
+            toast.success(
+              `تم دفع ${totalPaid.toFixed(2)} ج.م من إجمالي ${total.toFixed(2)} ج.م للفاتورة رقم ${
+                invoiceResponse.invoiceNumber ||
+                bills[currentBillIndex].invoiceNumber
+              } (باقي ${remainingAmount.toFixed(2)} ج.م)`,
+            );
+          } else if (isOverPaid) {
+            toast.success(
+              `تم دفع ${totalPaid.toFixed(2)} ج.م (زيادة ${(totalPaid - total).toFixed(2)} ج.م) للفاتورة رقم ${
+                invoiceResponse.invoiceNumber ||
+                bills[currentBillIndex].invoiceNumber
+              }`,
+            );
+          } else {
+            toast.success(
+              `تم إتمام البيع للفاتورة رقم ${
+                invoiceResponse.invoiceNumber ||
+                bills[currentBillIndex].invoiceNumber
+              }`,
+            );
+          }
+
+          setShowPaymentModal(false);
+          setPayments([]);
+          setRemainingAmount(0);
+          setExcessAmount(0);
+          addNewBill();
+        }
       } else {
         invoiceResponse = await createInvoice(false, payments);
+
+        if (invoiceResponse) {
+          isPartialPaid =
+            Math.abs(totalPaid - total) > 0.01 && totalPaid < total;
+          isOverPaid = totalPaid > total;
+
+          const updatedInvoiceStatus = isPartialPaid
+            ? InvoiceStatus.PartialPaid
+            : isOverPaid
+              ? InvoiceStatus.Done
+              : InvoiceStatus.Done;
+
+          const updatedBills = [...bills];
+          updatedBills[currentBillIndex] = {
+            ...updatedBills[currentBillIndex],
+            completed: !isPartialPaid && !isOverPaid,
+            completedDate:
+              !isPartialPaid && !isOverPaid
+                ? new Date().toLocaleString()
+                : null,
+            paymentMethod: payments.map((p) => p.paymentMethodId).join(","),
+            isReturned: false,
+            isPartialPaid: isPartialPaid,
+            returnReason: "",
+            invoiceId: invoiceResponse.id,
+            invoiceNumber: invoiceResponse.invoiceNumber,
+            invoiceStatus: updatedInvoiceStatus,
+            isPending: false,
+          };
+          setBills(updatedBills);
+
+          if (selectedTable && selectedHall && !isPartialPaid) {
+            updateTableStatus(
+              selectedHall.id,
+              selectedTable.id,
+              "available",
+              null,
+            );
+          }
+
+          if (isPartialPaid) {
+            toast.success(
+              `تم دفع ${totalPaid.toFixed(2)} ج.م من إجمالي ${total.toFixed(2)} ج.م للفاتورة رقم ${
+                invoiceResponse.invoiceNumber
+              } (باقي ${remainingAmount.toFixed(2)} ج.م)`,
+            );
+          } else if (isOverPaid) {
+            toast.success(
+              `تم دفع ${totalPaid.toFixed(2)} ج.م (زيادة ${(totalPaid - total).toFixed(2)} ج.م) للفاتورة رقم ${
+                invoiceResponse.invoiceNumber
+              }`,
+            );
+          } else {
+            toast.success(
+              `تم إتمام البيع للفاتورة رقم ${invoiceResponse.invoiceNumber}`,
+            );
+          }
+
+          setShowPaymentModal(false);
+          setPayments([]);
+          setRemainingAmount(0);
+          setExcessAmount(0);
+          addNewBill();
+        }
       }
 
-      if (invoiceResponse) {
-        const isPartialPaid =
-          Math.abs(totalPaid - total) > 0.01 && totalPaid < total;
-        const isOverPaid = totalPaid > total;
-
-        const updatedInvoiceStatus = isPartialPaid
-          ? InvoiceStatus.PartialPaid
-          : isOverPaid
-            ? InvoiceStatus.Done
-            : InvoiceStatus.Done;
-
-        const updatedBills = [...bills];
-        updatedBills[currentBillIndex] = {
-          ...updatedBills[currentBillIndex],
-          completed: !isPartialPaid && !isOverPaid,
-          completedDate:
-            !isPartialPaid && !isOverPaid ? new Date().toLocaleString() : null,
-          paymentMethod: payments.map((p) => p.paymentMethodId).join(","),
-          isReturned: false,
-          isPartialPaid: isPartialPaid,
-          returnReason: "",
-          invoiceId: invoiceResponse.id,
-          invoiceNumber: invoiceResponse.invoiceNumber,
-          invoiceStatus: updatedInvoiceStatus,
-          isPending: false,
-        };
-        setBills(updatedBills);
-
-        if (selectedTable && selectedHall && !isPartialPaid) {
-          updateTableStatus(
-            selectedHall.id,
-            selectedTable.id,
-            "available",
-            null,
-          );
-        }
-
-        if (isPartialPaid) {
-          toast.success(
-            `تم دفع ${totalPaid.toFixed(2)} ج.م من إجمالي ${total.toFixed(2)} ج.م للفاتورة رقم ${
-              invoiceResponse.invoiceNumber || currentBillIndex + 1
-            } (باقي ${remainingAmount.toFixed(2)} ج.م)`,
-          );
-          addNewBill();
-        } else if (isOverPaid) {
-          toast.success(
-            `تم دفع ${totalPaid.toFixed(2)} ج.م (زيادة ${(totalPaid - total).toFixed(2)} ج.م) للفاتورة رقم ${
-              invoiceResponse.invoiceNumber || currentBillIndex + 1
-            }`,
-          );
-          addNewBill();
-        } else {
-          toast.success(
-            `تم إتمام البيع للفاتورة رقم ${
-              invoiceResponse.invoiceNumber || currentBillIndex + 1
-            } باستخدام ${payments.length} طريقة دفع`,
-          );
-          addNewBill();
-        }
-
-        setShowPaymentModal(false);
-        setPayments([]);
-        setRemainingAmount(0);
-        setExcessAmount(0);
-
-        await fetchLastInvoice();
-        await fetchShiftDetails();
-      }
+      await fetchShiftDetails();
+      await fetchLastInvoice();
     } catch (error) {
       console.error("خطأ في إتمام الدفع:", error);
 
@@ -2321,21 +2422,23 @@ export default function Home() {
             )
           ) {
             toast.error("المبلغ المدفوع أكثر من إجمالي الفاتورة");
-            return null;
-          }
-
-          if (
+          } else if (
             paymentError.description.includes(
               "Paid amount is less than invoice total",
             )
           ) {
             toast.error("المبلغ المدفوع أقل من إجمالي الفاتورة");
-            return null;
+          } else {
+            toast.error(paymentError.description);
           }
+        } else {
+          toast.error("حدث خطأ في إتمام عملية الدفع");
         }
+      } else {
+        toast.error("حدث خطأ في إتمام عملية الدفع");
       }
-
-      toast.error("حدث خطأ في إتمام عملية الدفع");
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -3815,7 +3918,8 @@ export default function Home() {
                 </h3>
                 <button
                   onClick={closePaymentModal}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  disabled={isProcessingPayment}
+                  className="text-gray-500 hover:text-gray-700 text-2xl disabled:opacity-50"
                 >
                   ×
                 </button>
@@ -3885,7 +3989,8 @@ export default function Home() {
                                   e.target.value,
                                 )
                               }
-                              className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              disabled={isProcessingPayment}
+                              className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 disabled:bg-gray-100"
                               placeholder="المبلغ"
                               min="0"
                               step="0.01"
@@ -3896,7 +4001,8 @@ export default function Home() {
                             onClick={() =>
                               handleRemovePayment(payment.paymentMethodId)
                             }
-                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                            disabled={isProcessingPayment}
+                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                           >
                             <svg
                               className="w-4 h-4"
@@ -3984,11 +4090,12 @@ export default function Home() {
                           <button
                             key={method.id}
                             onClick={() => handleAddPayment(method.id)}
+                            disabled={isProcessingPayment}
                             className={`w-full p-2 rounded-lg border flex items-center justify-between transition-all ${
                               isSelected
                                 ? "border-blue-500 bg-blue-50"
                                 : "border-gray-200 hover:border-gray-300"
-                            }`}
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
                           >
                             <div className="flex items-center">
                               <div
@@ -4020,23 +4127,34 @@ export default function Home() {
               <div className="flex space-x-2 rtl:space-x-reverse">
                 <button
                   onClick={closePaymentModal}
-                  className="flex-1 py-2 px-3 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors text-xs"
+                  disabled={isProcessingPayment}
+                  className="flex-1 py-2 px-3 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors text-xs disabled:opacity-50"
                 >
                   إلغاء
                 </button>
                 <button
                   onClick={handleCompletePayment}
-                  disabled={payments.length === 0}
+                  disabled={payments.length === 0 || isProcessingPayment}
                   className={`flex-1 py-2 px-3 rounded-lg font-bold text-white transition-colors text-xs ${
-                    payments.length === 0
+                    payments.length === 0 || isProcessingPayment
                       ? "opacity-50 cursor-not-allowed bg-gray-400"
                       : "bg-blue-600 hover:bg-blue-700"
                   }`}
                   style={{
-                    backgroundColor: payments.length === 0 ? "" : "#193F94",
+                    backgroundColor:
+                      payments.length === 0 || isProcessingPayment
+                        ? ""
+                        : "#193F94",
                   }}
                 >
-                  تأكيد الدفع
+                  {isProcessingPayment ? (
+                    <span className="flex items-center justify-center">
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin ml-1"></div>
+                      جاري تأكيد الدفع...
+                    </span>
+                  ) : (
+                    "تأكيد الدفع"
+                  )}
                 </button>
               </div>
             </div>
@@ -5341,20 +5459,20 @@ export default function Home() {
               ) : (
                 <button
                   onClick={handleCompleteBill}
-                  disabled={cart.length === 0}
+                  disabled={cart.length === 0 || isProcessingPayment}
                   className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 ${
-                    cart.length === 0
+                    cart.length === 0 || isProcessingPayment
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:scale-[1.02] active:scale-[0.98]"
                   }`}
                   style={{ backgroundColor: "#20A4D4" }}
                   onMouseEnter={(e) => {
-                    if (cart.length > 0) {
+                    if (cart.length > 0 && !isProcessingPayment) {
                       e.target.style.backgroundColor = "#1DC7E0";
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (cart.length > 0) {
+                    if (cart.length > 0 && !isProcessingPayment) {
                       e.target.style.backgroundColor = "#20A4D4";
                     }
                   }}
