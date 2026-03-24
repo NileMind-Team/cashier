@@ -15,6 +15,15 @@ export default function CustomersReports() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [expandedInvoice, setExpandedInvoice] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [payments, setPayments] = useState([]);
+  const [remainingAmount, setRemainingAmount] = useState(0);
+  // eslint-disable-next-line no-unused-vars
+  const [excessAmount, setExcessAmount] = useState(0);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
+  const paymentMethodsFetchedRef = { current: false };
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -24,7 +33,53 @@ export default function CustomersReports() {
 
     setStartDate(thirtyDaysAgoFormatted);
     setEndDate(today);
+
+    fetchPaymentMethods();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchPaymentMethods = async () => {
+    if (paymentMethodsFetchedRef.current) {
+      return;
+    }
+
+    try {
+      setPaymentMethodsLoading(true);
+      const response = await axiosInstance.get("/api/Payment/GetAll");
+
+      if (response.status === 200 && Array.isArray(response.data)) {
+        const formattedMethods = response.data.map((method) => ({
+          id: method.id,
+          name: method.name || "",
+          isActive: method.isActive || false,
+          color: getPaymentMethodColor(method.id),
+        }));
+        setPaymentMethods(formattedMethods);
+        paymentMethodsFetchedRef.current = true;
+      } else {
+        setPaymentMethods([]);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب طرق الدفع:", error);
+      toast.error("حدث خطأ في جلب طرق الدفع");
+      setPaymentMethods([]);
+    } finally {
+      setPaymentMethodsLoading(false);
+    }
+  };
+
+  const getPaymentMethodColor = (id) => {
+    const colors = [
+      "#10B981",
+      "#3B82F6",
+      "#8B5CF6",
+      "#F59E0B",
+      "#EF4444",
+      "#EC4899",
+      "#6366F1",
+    ];
+    return colors[id % colors.length];
+  };
 
   const handlePhoneSearch = async () => {
     if (!phoneSearch.trim()) {
@@ -93,7 +148,6 @@ export default function CustomersReports() {
       if (response.status === 200 && response.data) {
         let invoices = response.data.invoices || [];
 
-        // Filter invoices by date range if needed
         if (startDate && endDate) {
           const start = new Date(startDate);
           const end = new Date(endDate);
@@ -105,13 +159,10 @@ export default function CustomersReports() {
           });
         }
 
-        // Sort by date (newest first)
         invoices.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        // Get all transactions for this customer
         const transactions = response.data.transactions || [];
 
-        // Group transactions by invoiceId
         const transactionsByInvoice = {};
         transactions.forEach((transaction) => {
           if (!transactionsByInvoice[transaction.invoiceId]) {
@@ -120,7 +171,6 @@ export default function CustomersReports() {
           transactionsByInvoice[transaction.invoiceId].push(transaction);
         });
 
-        // Attach transactions to each invoice
         const invoicesWithTransactions = invoices.map((invoice) => ({
           ...invoice,
           transactions: transactionsByInvoice[invoice.invoiceId] || [],
@@ -188,7 +238,6 @@ export default function CustomersReports() {
           },
         });
 
-        // Fetch customer invoices after getting report
         await fetchCustomerInvoices(customerData.id);
 
         toast.success(`تم إنشاء تقرير ${data.customerName}`);
@@ -245,7 +294,6 @@ export default function CustomersReports() {
     }
   };
 
-  // Calculate totals
   const calculateTotals = () => {
     let totalInvoicesAmount = 0;
     let totalPaid = 0;
@@ -262,6 +310,180 @@ export default function CustomersReports() {
       totalPaid,
       totalRemaining,
     };
+  };
+
+  const openPaymentModal = () => {
+    if (!customerData) {
+      toast.error("يرجى البحث عن عميل أولاً");
+      return;
+    }
+
+    if (totals.totalRemaining <= 0) {
+      toast.info("لا توجد مبالغ مستحقة على هذا العميل");
+      return;
+    }
+
+    setRemainingAmount(totals.totalRemaining);
+    setPayments([]);
+    setExcessAmount(0);
+    setShowPaymentModal(true);
+  };
+
+  const closePaymentModal = () => {
+    setShowPaymentModal(false);
+    setPayments([]);
+    setRemainingAmount(0);
+    setExcessAmount(0);
+  };
+
+  const handleAddPayment = (paymentMethodId) => {
+    const existingPaymentIndex = payments.findIndex(
+      (p) => p.paymentMethodId === paymentMethodId,
+    );
+
+    if (existingPaymentIndex !== -1) {
+      const newPayments = payments.filter(
+        (_, index) => index !== existingPaymentIndex,
+      );
+      setPayments(newPayments);
+
+      const totalPaid = newPayments.reduce((sum, p) => sum + p.amount, 0);
+      setRemainingAmount(totals.totalRemaining - totalPaid);
+      setExcessAmount(
+        totalPaid > totals.totalRemaining
+          ? totalPaid - totals.totalRemaining
+          : 0,
+      );
+    } else {
+      const currentTotalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+      const remaining = totals.totalRemaining - currentTotalPaid;
+
+      const newPayments = [...payments, { paymentMethodId, amount: remaining }];
+      setPayments(newPayments);
+      setRemainingAmount(0);
+      setExcessAmount(0);
+    }
+  };
+
+  const handlePaymentAmountChange = (paymentMethodId, amount) => {
+    const updatedPayments = payments.map((payment) =>
+      payment.paymentMethodId === paymentMethodId
+        ? { ...payment, amount: parseFloat(amount) || 0 }
+        : payment,
+    );
+    setPayments(updatedPayments);
+
+    const totalPaid = updatedPayments.reduce((sum, p) => sum + p.amount, 0);
+    setRemainingAmount(totals.totalRemaining - totalPaid);
+    setExcessAmount(
+      totalPaid > totals.totalRemaining ? totalPaid - totals.totalRemaining : 0,
+    );
+  };
+
+  const handleRemovePayment = (paymentMethodId) => {
+    const newPayments = payments.filter(
+      (p) => p.paymentMethodId !== paymentMethodId,
+    );
+    setPayments(newPayments);
+
+    const totalPaid = newPayments.reduce((sum, p) => sum + p.amount, 0);
+    setRemainingAmount(totals.totalRemaining - totalPaid);
+    setExcessAmount(
+      totalPaid > totals.totalRemaining ? totalPaid - totals.totalRemaining : 0,
+    );
+  };
+
+  const handleCompletePayment = async () => {
+    if (payments.length === 0) {
+      toast.error("يرجى اختيار طريقة دفع واحدة على الأقل");
+      return;
+    }
+
+    if (isProcessingPayment) {
+      return;
+    }
+
+    setIsProcessingPayment(true);
+
+    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+    const totalRequired = totals.totalRemaining;
+
+    if (totalPaid <= 0) {
+      toast.error("المبلغ المدفوع يجب أن يكون أكبر من صفر");
+      setIsProcessingPayment(false);
+      return;
+    }
+
+    try {
+      const paymentsData = payments.map((payment) => ({
+        paymentMethodId: payment.paymentMethodId,
+        amount: payment.amount,
+      }));
+
+      const response = await axiosInstance.post(
+        "/api/Invoices/PayCustomerInvoices",
+        {
+          customerId: customerData.id,
+          payments: paymentsData,
+        },
+      );
+
+      if (response.status === 200) {
+        if (totalPaid >= totalRequired) {
+          toast.success(
+            `تم استكمال الدفع بالكامل بقيمة ${formatCurrency(totalPaid)} ج.م`,
+          );
+        } else {
+          toast.success(
+            `تم دفع ${formatCurrency(totalPaid)} ج.م من إجمالي ${formatCurrency(totalRequired)} ج.م (باقي ${formatCurrency(totalRequired - totalPaid)} ج.م)`,
+          );
+        }
+
+        setShowPaymentModal(false);
+        setPayments([]);
+        setRemainingAmount(0);
+        setExcessAmount(0);
+
+        await fetchCustomerInvoices(customerData.id);
+
+        if (reportData) {
+          await generateReport();
+        }
+      }
+    } catch (error) {
+      console.error("خطأ في استكمال الدفع:", error);
+
+      if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        const paymentError = errors.find(
+          (err) => err.code === "Invoice.InvalidPayment",
+        );
+
+        if (paymentError) {
+          if (
+            paymentError.description.includes(
+              "Paid amount is More than invoice total",
+            )
+          ) {
+            toast.error("المبلغ المدفوع أكثر من إجمالي المبلغ المستحق");
+          } else if (
+            paymentError.description.includes(
+              "Paid amount is less than invoice total",
+            )
+          ) {
+            toast.error("المبلغ المدفوع أقل من إجمالي المبلغ المستحق");
+          } else {
+            toast.error("خطأ في عملية الدفع");
+          }
+        } else {
+          toast.error("حدث خطأ في استكمال الدفع");
+        }
+      } else {
+        toast.error("حدث خطأ في استكمال الدفع");
+      }
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   const totals = calculateTotals();
@@ -479,7 +701,7 @@ export default function CustomersReports() {
                   </label>
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-4 space-y-3">
                   <button
                     onClick={generateReport}
                     disabled={
@@ -522,6 +744,30 @@ export default function CustomersReports() {
                       </>
                     )}
                   </button>
+
+                  {customerData && totals.totalRemaining > 0 && (
+                    <button
+                      onClick={openPaymentModal}
+                      className="w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 ml-2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                        />
+                      </svg>
+                      استكمال الدفع ({formatCurrency(totals.totalRemaining)}{" "}
+                      ج.م)
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1049,6 +1295,228 @@ export default function CustomersReports() {
           </div>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full">
+            <div className="p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold" style={{ color: "#193F94" }}>
+                  استكمال الدفع
+                </h3>
+                <button
+                  onClick={closePaymentModal}
+                  disabled={isProcessingPayment}
+                  className="text-gray-500 hover:text-gray-700 text-2xl disabled:opacity-50"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <div className="bg-blue-50 p-3 rounded-lg mb-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-xs text-gray-600">المبلغ المستحق</p>
+                      <p
+                        className="text-xl font-bold"
+                        style={{ color: "#193F94" }}
+                      >
+                        {formatCurrency(totals.totalRemaining)} ج.م
+                      </p>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs text-gray-600">
+                        {customerData?.name}
+                      </p>
+                      <p className="text-[10px] text-gray-500">
+                        {customerData?.phone}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {payments.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    <p className="text-xs font-medium text-gray-700">
+                      طرق الدفع المختارة:
+                    </p>
+                    {payments.map((payment) => {
+                      const method = paymentMethods.find(
+                        (m) => m.id === payment.paymentMethodId,
+                      );
+                      return (
+                        <div
+                          key={payment.paymentMethodId}
+                          className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-lg border border-gray-200"
+                        >
+                          <div
+                            className="w-1 h-8 rounded-full"
+                            style={{ backgroundColor: method?.color }}
+                          ></div>
+                          <div className="flex-1 flex items-center gap-2">
+                            <p className="text-xs font-medium min-w-[60px]">
+                              {method?.name}
+                            </p>
+                            <input
+                              type="number"
+                              value={payment.amount}
+                              onChange={(e) =>
+                                handlePaymentAmountChange(
+                                  payment.paymentMethodId,
+                                  e.target.value,
+                                )
+                              }
+                              disabled={isProcessingPayment}
+                              className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 disabled:bg-gray-100"
+                              placeholder="المبلغ"
+                              min="0"
+                              step="0.01"
+                              dir="ltr"
+                            />
+                          </div>
+                          <button
+                            onClick={() =>
+                              handleRemovePayment(payment.paymentMethodId)
+                            }
+                            disabled={isProcessingPayment}
+                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="bg-gray-50 p-2 rounded-lg mb-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-xs text-gray-600">
+                      المبلغ المتبقي:
+                    </span>
+                    <span
+                      className={`font-bold text-sm ${remainingAmount < 0 ? "text-green-600" : remainingAmount > 0 ? "text-red-600" : "text-green-600"}`}
+                    >
+                      {Math.abs(remainingAmount).toFixed(2)} ج.م
+                      {remainingAmount < 0 && (
+                        <span className="text-[10px] mr-1 text-green-600">
+                          (زيادة)
+                        </span>
+                      )}
+                      {remainingAmount > 0 && (
+                        <span className="text-[10px] mr-1 text-red-600">
+                          (باقي)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {paymentMethodsLoading ? (
+                  <div className="text-center py-4">
+                    <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      جاري تحميل طرق الدفع...
+                    </p>
+                  </div>
+                ) : paymentMethods.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500">
+                    <p className="text-xs">لا توجد طرق دفع متاحة</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                    <p className="text-xs font-medium text-gray-700">
+                      اختر طريقة الدفع:
+                    </p>
+                    {paymentMethods
+                      .filter((method) => method.isActive)
+                      .map((method) => {
+                        const isSelected = payments.some(
+                          (p) => p.paymentMethodId === method.id,
+                        );
+                        return (
+                          <button
+                            key={method.id}
+                            onClick={() => handleAddPayment(method.id)}
+                            disabled={isProcessingPayment}
+                            className={`w-full p-2 rounded-lg border flex items-center justify-between transition-all ${
+                              isSelected
+                                ? "border-blue-500 bg-blue-50"
+                                : "border-gray-200 hover:border-gray-300"
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            <div className="flex items-center">
+                              <div
+                                className="w-1 h-6 rounded-full ml-2"
+                                style={{ backgroundColor: method.color }}
+                              ></div>
+                              <p className="text-xs font-medium">
+                                {method.name}
+                              </p>
+                            </div>
+                            <div
+                              className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                isSelected
+                                  ? "border-blue-500 bg-blue-500"
+                                  : "border-gray-300"
+                              }`}
+                            >
+                              {isSelected && (
+                                <div className="w-2 h-2 rounded-full bg-white"></div>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex space-x-2 rtl:space-x-reverse">
+                <button
+                  onClick={closePaymentModal}
+                  disabled={isProcessingPayment}
+                  className="flex-1 py-2 px-3 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors text-xs disabled:opacity-50"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleCompletePayment}
+                  disabled={payments.length === 0 || isProcessingPayment}
+                  className={`flex-1 py-2 px-3 rounded-lg font-bold text-white transition-colors text-xs ${
+                    payments.length === 0 || isProcessingPayment
+                      ? "opacity-50 cursor-not-allowed bg-gray-400"
+                      : "bg-yellow-600 hover:bg-yellow-700"
+                  }`}
+                >
+                  {isProcessingPayment ? (
+                    <span className="flex items-center justify-center">
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin ml-1"></div>
+                      جاري تأكيد الدفع...
+                    </span>
+                  ) : (
+                    "تأكيد الدفع"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
