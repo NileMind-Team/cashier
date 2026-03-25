@@ -31,7 +31,7 @@ export default function Home() {
   const [currentShift, setCurrentShift] = useState(null);
   const [shiftLoading, setShiftLoading] = useState(false);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
-  const [discountValue, setDiscountValue] = useState(0);
+  const [discountValue, setDiscountValue] = useState("");
   const [discountType, setDiscountType] = useState(0);
   // eslint-disable-next-line no-unused-vars
   const [invoices, setInvoices] = useState([]);
@@ -45,9 +45,9 @@ export default function Home() {
       id: 1,
       cart: [],
       tax: 14,
-      discount: 0,
+      discount: "",
       discountType: 0,
-      deliveryFee: 0,
+      deliveryFee: "",
       completed: false,
       isReturned: false,
       returnReason: "",
@@ -77,8 +77,8 @@ export default function Home() {
   const [currentBillIndex, setCurrentBillIndex] = useState(0);
   const [cart, setCart] = useState([]);
   const [tax, setTax] = useState(14);
-  const [discount, setDiscount] = useState(0);
-  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [discount, setDiscount] = useState("");
+  const [deliveryFee, setDeliveryFee] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
@@ -885,9 +885,9 @@ export default function Home() {
       id: index + 1,
       cart: cartItems,
       tax: taxPercentage,
-      discount: invoice.invoiceDiscount || 0,
+      discount: invoice.invoiceDiscount || "",
       discountType: invoice.invoiceDiscountType || 0,
-      deliveryFee: invoice.deliveryFee || 0,
+      deliveryFee: invoice.deliveryFee || "",
       billType: billType,
       customerName: invoice.customerName || "",
       customerPhone: invoice.customerPhone || "",
@@ -971,9 +971,9 @@ export default function Home() {
       id: bills.length + 1,
       cart: [],
       tax: 14,
-      discount: 0,
+      discount: "",
       discountType: 0,
-      deliveryFee: 0,
+      deliveryFee: "",
       billType: "takeaway",
       customerPhone: "",
       customerName: "",
@@ -1008,8 +1008,8 @@ export default function Home() {
     setCurrentBillIndex(bills.length);
     setCart([]);
     setTax(14);
-    setDiscount(0);
-    setDeliveryFee(0);
+    setDiscount("");
+    setDeliveryFee("");
     setCustomerPhone("");
     setCustomerName("");
     setCustomerAddress("");
@@ -1042,11 +1042,12 @@ export default function Home() {
       customerId: customerId || null,
       isPending: isPending,
       notes: generalNote || null,
-      invoiceDiscount: discount > 0 ? discount : null,
+      invoiceDiscount: discount && discount > 0 ? discount : null,
       invoiceDiscountType: discountType,
       type: getInvoiceTypeFromBillType(currentBill.billType),
       deliveryCompanyId: selectedDeliveryCompany?.id || null,
-      deliveryFee: currentBill.billType === "delivery" ? deliveryFee : null,
+      deliveryFee:
+        currentBill.billType === "delivery" && deliveryFee ? deliveryFee : null,
       payments: isPending ? [] : paymentsData,
       items: cart.map((item) => {
         let itemDiscount = null;
@@ -1081,7 +1082,7 @@ export default function Home() {
 
     const cleanInvoiceData = JSON.parse(
       JSON.stringify(invoiceData, (key, value) => {
-        if (value === null || value === undefined) {
+        if (value === null || value === undefined || value === "") {
           return undefined;
         }
         return value;
@@ -1163,10 +1164,11 @@ export default function Home() {
       customerId: customerId || null,
       notes: generalNote || null,
       isPending: isPending,
-      invoiceDiscount: discount > 0 ? discount : null,
+      invoiceDiscount: discount && discount > 0 ? discount : null,
       type: getInvoiceTypeFromBillType(currentBill.billType),
       deliveryCompanyId: selectedDeliveryCompany?.id || null,
-      deliveryFee: currentBill.billType === "delivery" ? deliveryFee : null,
+      deliveryFee:
+        currentBill.billType === "delivery" && deliveryFee ? deliveryFee : null,
       invoiceDiscountType: discountType,
       items: cart.map((item) => {
         let itemDiscount = null;
@@ -1202,7 +1204,7 @@ export default function Home() {
 
     const cleanInvoiceData = JSON.parse(
       JSON.stringify(invoiceData, (key, value) => {
-        if (value === null || value === undefined) {
+        if (value === null || value === undefined || value === "") {
           return undefined;
         }
         return value;
@@ -1538,13 +1540,13 @@ export default function Home() {
         setShowDeliveryTypeModal(true);
         setDeliveryType(null);
         setSelectedDeliveryCompany(null);
-        setDeliveryFee(0);
+        setDeliveryFee("");
       }
     } else {
       updatedBills[currentBillIndex] = {
         ...updatedBills[currentBillIndex],
         billType: type,
-        deliveryFee: 0,
+        deliveryFee: "",
         tableInfo: null,
         tableStatus: null,
         tableId: null,
@@ -1556,7 +1558,7 @@ export default function Home() {
       };
       setBills(updatedBills);
 
-      setDeliveryFee(0);
+      setDeliveryFee("");
       setDeliveryType(null);
       setSelectedDeliveryCompany(null);
       setOrderPrepared(false);
@@ -1591,7 +1593,7 @@ export default function Home() {
         setCart([...tableBill.cart]);
         setTax(tableBill.tax);
         setDiscount(tableBill.discount);
-        setDeliveryFee(0);
+        setDeliveryFee("");
         setCustomerPhone(tableBill.customerPhone || "");
         setCustomerName(tableBill.customerName || "");
         setCustomerAddress(tableBill.customerAddress || "");
@@ -1631,7 +1633,7 @@ export default function Home() {
       deliveryCompanyId: null,
       deliveryCompanyName: null,
       deliveryCompanyContact: null,
-      deliveryFee: 0,
+      deliveryFee: "",
     };
     setBills(updatedBills);
 
@@ -1782,8 +1784,8 @@ export default function Home() {
 
                 setCart([]);
                 setTax(14);
-                setDiscount(0);
-                setDeliveryFee(0);
+                setDiscount("");
+                setDeliveryFee("");
                 setCustomerPhone("");
                 setCustomerName("");
                 setCustomerAddress("");
@@ -1854,9 +1856,12 @@ export default function Home() {
         id: currentBillIndex + 1,
         cart: [...cart],
         tax,
-        discount,
+        discount: discount === "" ? null : discount,
         discountType: currentBill?.discountType || 0,
-        deliveryFee: currentBill?.billType === "delivery" ? deliveryFee : 0,
+        deliveryFee:
+          currentBill?.billType === "delivery" && deliveryFee
+            ? deliveryFee
+            : null,
         billType: currentBill?.billType || "takeaway",
         customerPhone: customerPhone,
         customerName: customerName,
@@ -1921,7 +1926,7 @@ export default function Home() {
       setGeneralNote(currentBill.generalNote || "");
 
       if (currentBill.billType === "delivery") {
-        setDeliveryFee(currentBill.deliveryFee || 0);
+        setDeliveryFee(currentBill.deliveryFee || "");
         setDeliveryType(currentBill.deliveryType || null);
         if (currentBill.deliveryCompanyId) {
           const company = deliveryCompanies.find(
@@ -1930,7 +1935,7 @@ export default function Home() {
           setSelectedDeliveryCompany(company || null);
         }
       } else {
-        setDeliveryFee(0);
+        setDeliveryFee("");
         setDeliveryType(null);
         setSelectedDeliveryCompany(null);
       }
@@ -2406,7 +2411,7 @@ export default function Home() {
       return;
     }
 
-    setDiscountValue(discount);
+    setDiscountValue(discount === "" ? "" : discount);
     setDiscountType(bills[currentBillIndex]?.discountType || 0);
     setShowDiscountModal(true);
   };
@@ -2417,18 +2422,19 @@ export default function Home() {
 
   const handleApplyDiscount = async () => {
     const currentBill = bills[currentBillIndex];
+    const discountNum = parseFloat(discountValue) || 0;
 
-    if (discountValue < 0) {
+    if (discountNum < 0) {
       toast.error("قيمة الخصم يجب أن تكون أكبر من صفر");
       return;
     }
 
-    if (discountType === DiscountType.Percentage && discountValue > 100) {
+    if (discountType === DiscountType.Percentage && discountNum > 100) {
       toast.error("نسبة الخصم لا يمكن أن تزيد عن 100%");
       return;
     }
 
-    if (discountType === DiscountType.Fixed && discountValue > subtotal) {
+    if (discountType === DiscountType.Fixed && discountNum > subtotal) {
       toast.error("قيمة الخصم لا يمكن أن تزيد عن إجمالي الفاتورة");
       return;
     }
@@ -2437,17 +2443,17 @@ export default function Home() {
       try {
         const success = await applyDiscount(
           currentBill.invoiceId,
-          discountValue,
+          discountNum,
           discountType,
         );
 
         if (success) {
-          setDiscount(discountValue);
+          setDiscount(discountNum);
 
           const updatedBills = [...bills];
           updatedBills[currentBillIndex] = {
             ...currentBill,
-            discount: discountValue,
+            discount: discountNum,
             discountType: discountType,
           };
           setBills(updatedBills);
@@ -2460,12 +2466,12 @@ export default function Home() {
         toast.error("حدث خطأ في تطبيق الخصم");
       }
     } else {
-      setDiscount(discountValue);
+      setDiscount(discountNum);
 
       const updatedBills = [...bills];
       updatedBills[currentBillIndex] = {
         ...currentBill,
-        discount: discountValue,
+        discount: discountNum,
         discountType: discountType,
       };
       setBills(updatedBills);
@@ -2949,15 +2955,19 @@ export default function Home() {
     }
   }, 0);
 
-  const discountAmount =
-    discountType === DiscountType.Fixed
-      ? discount
-      : (subtotal * discount) / 100;
+  const discountAmountCalc =
+    discount && discount !== ""
+      ? discountType === DiscountType.Fixed
+        ? discount
+        : (subtotal * discount) / 100
+      : 0;
 
   const total =
     totalWithTax -
-    discountAmount +
-    (bills[currentBillIndex]?.billType === "delivery" ? deliveryFee : 0);
+    discountAmountCalc +
+    (bills[currentBillIndex]?.billType === "delivery" && deliveryFee
+      ? deliveryFee
+      : 0);
 
   const handlePrepareOrder = async () => {
     if (cart.length === 0) {
@@ -2984,10 +2994,12 @@ export default function Home() {
         id: currentBillIndex + 1,
         cart: [...cart],
         tax,
-        discount,
+        discount: discount === "" ? null : discount,
         discountType: bills[currentBillIndex]?.discountType || 0,
         deliveryFee:
-          bills[currentBillIndex]?.billType === "delivery" ? deliveryFee : 0,
+          bills[currentBillIndex]?.billType === "delivery" && deliveryFee
+            ? deliveryFee
+            : null,
         billType: "dinein",
         customerPhone: customerPhone,
         customerName: customerName,
@@ -3181,8 +3193,8 @@ export default function Home() {
 
     setCart([]);
     setTax(14);
-    setDiscount(0);
-    setDeliveryFee(0);
+    setDiscount("");
+    setDeliveryFee("");
     setCustomerPhone("");
     setCustomerName("");
     setCustomerAddress("");
@@ -3612,7 +3624,7 @@ export default function Home() {
                     <input
                       type="number"
                       value={discountValue}
-                      onChange={(e) => setDiscountValue(Number(e.target.value))}
+                      onChange={(e) => setDiscountValue(e.target.value)}
                       className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm"
                       min="0"
                       max={
@@ -3630,9 +3642,12 @@ export default function Home() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">قيمة الخصم:</span>
                       <span className="font-bold text-blue-600">
-                        {discountType === DiscountType.Percentage
-                          ? `${((subtotal * discountValue) / 100).toFixed(2)} ج.م (${discountValue}%)`
-                          : `${discountValue.toFixed(2)} ج.م`}
+                        {discountType === DiscountType.Percentage &&
+                        discountValue
+                          ? `${((subtotal * parseFloat(discountValue)) / 100).toFixed(2)} ج.م (${discountValue}%)`
+                          : discountType === DiscountType.Fixed && discountValue
+                            ? `${parseFloat(discountValue).toFixed(2)} ج.م`
+                            : "0.00 ج.م"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center mt-1">
@@ -3640,12 +3655,15 @@ export default function Home() {
                         الإجمالي بعد الخصم:
                       </span>
                       <span className="font-bold text-green-600">
-                        {discountType === DiscountType.Percentage
+                        {discountType === DiscountType.Percentage &&
+                        discountValue
                           ? (
                               subtotal -
-                              (subtotal * discountValue) / 100
+                              (subtotal * parseFloat(discountValue)) / 100
                             ).toFixed(2)
-                          : (subtotal - discountValue).toFixed(2)}{" "}
+                          : discountType === DiscountType.Fixed && discountValue
+                            ? (subtotal - parseFloat(discountValue)).toFixed(2)
+                            : subtotal.toFixed(2)}{" "}
                         ج.م
                       </span>
                     </div>
@@ -4352,9 +4370,9 @@ export default function Home() {
                       </p>
                     </div>
                   </div>
-                  {discount > 0 && (
+                  {discount && discount > 0 && (
                     <div className="mt-1 text-[10px] text-green-600">
-                      الخصم: {discountAmount.toFixed(2)} ج.م
+                      الخصم: {discountAmountCalc.toFixed(2)} ج.م
                       {discountType === DiscountType.Percentage
                         ? ` (${discount}%)`
                         : ""}
@@ -4823,13 +4841,15 @@ export default function Home() {
                     <div className="flex justify-between text-sm">
                       <span>الخصم:</span>
                       <span className="text-green-600">
-                        {discountAmount.toFixed(2)} ج.م{" "}
+                        {discountAmountCalc.toFixed(2)} ج.م{" "}
                         {discountType === DiscountType.Percentage &&
+                          discount &&
                           discount > 0 &&
                           `(${discount}%)`}
                       </span>
                     </div>
                     {bills[currentBillIndex]?.billType === "delivery" &&
+                      deliveryFee &&
                       deliveryFee > 0 && (
                         <div className="flex justify-between text-sm">
                           <span>رسوم التوصيل:</span>
@@ -5860,11 +5880,12 @@ export default function Home() {
                           : "bg-blue-50 hover:bg-blue-100 cursor-pointer border-blue-200"
                       }`}
                     >
-                      {discount}
+                      {discount === "" ? 0 : discount}
                     </button>
                     <span className="font-bold">
-                      {discountAmount.toFixed(2)} ج.م
+                      {discountAmountCalc.toFixed(2)} ج.م
                       {discountType === DiscountType.Percentage &&
+                        discount &&
                         discount > 0 &&
                         ` (${discount}%)`}
                     </span>
@@ -5880,9 +5901,7 @@ export default function Home() {
                           <input
                             type="number"
                             value={deliveryFee}
-                            onChange={(e) =>
-                              setDeliveryFee(Number(e.target.value))
-                            }
+                            onChange={(e) => setDeliveryFee(e.target.value)}
                             className="w-12 text-right px-1 py-1 border rounded mr-1.5 text-xs"
                             min="0"
                             disabled={
@@ -5891,12 +5910,18 @@ export default function Home() {
                             }
                           />
                           <span className="font-bold">
-                            {deliveryFee.toFixed(2)} ج.م
+                            {deliveryFee
+                              ? parseFloat(deliveryFee).toFixed(2)
+                              : "0.00"}{" "}
+                            ج.م
                           </span>
                         </>
                       ) : (
                         <span className="font-bold ml-1">
-                          {deliveryFee.toFixed(2)} ج.م
+                          {deliveryFee
+                            ? parseFloat(deliveryFee).toFixed(2)
+                            : "0.00"}{" "}
+                          ج.م
                         </span>
                       )}
                     </div>
