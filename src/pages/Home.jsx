@@ -2314,17 +2314,30 @@ export default function Home() {
       setPayments(newPayments);
 
       const totalPaid = newPayments.reduce((sum, p) => sum + p.amount, 0);
-      setRemainingAmount(remainingAmount - totalPaid);
-      setExcessAmount(
-        totalPaid > remainingAmount ? totalPaid - remainingAmount : 0,
-      );
+      const invoiceTotal =
+        bills[currentBillIndex]?.isPartialPaid &&
+        bills[currentBillIndex]?.remainingAmount
+          ? bills[currentBillIndex].remainingAmount
+          : total;
+      setRemainingAmount(invoiceTotal - totalPaid);
+      setExcessAmount(totalPaid > invoiceTotal ? totalPaid - invoiceTotal : 0);
     } else {
-      const currentTotalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-      const remaining = remainingAmount - currentTotalPaid;
+      const totalPaidSoFar = payments.reduce((sum, p) => sum + p.amount, 0);
+      const invoiceTotal =
+        bills[currentBillIndex]?.isPartialPaid &&
+        bills[currentBillIndex]?.remainingAmount
+          ? bills[currentBillIndex].remainingAmount
+          : total;
+      const currentRemaining = invoiceTotal - totalPaidSoFar;
 
-      const newPayments = [...payments, { paymentMethodId, amount: remaining }];
+      const newPaymentAmount = currentRemaining > 0 ? currentRemaining : 0;
+
+      const newPayments = [
+        ...payments,
+        { paymentMethodId, amount: newPaymentAmount },
+      ];
       setPayments(newPayments);
-      setRemainingAmount(0);
+      setRemainingAmount(currentRemaining - newPaymentAmount);
       setExcessAmount(0);
     }
   };
@@ -2334,23 +2347,25 @@ export default function Home() {
       setIsPartialPayment(false);
     }
 
+    const newAmount = parseFloat(amount) || 0;
+
     const updatedPayments = payments.map((payment) =>
       payment.paymentMethodId === paymentMethodId
-        ? { ...payment, amount: parseFloat(amount) || 0 }
+        ? { ...payment, amount: newAmount }
         : payment,
     );
     setPayments(updatedPayments);
 
     const totalPaid = updatedPayments.reduce((sum, p) => sum + p.amount, 0);
-    const currentRemaining =
+    const invoiceTotal =
       bills[currentBillIndex]?.isPartialPaid &&
       bills[currentBillIndex]?.remainingAmount
         ? bills[currentBillIndex].remainingAmount
         : total;
-    setRemainingAmount(currentRemaining - totalPaid);
-    setExcessAmount(
-      totalPaid > currentRemaining ? totalPaid - currentRemaining : 0,
-    );
+
+    const newRemaining = invoiceTotal - totalPaid;
+    setRemainingAmount(newRemaining);
+    setExcessAmount(totalPaid > invoiceTotal ? totalPaid - invoiceTotal : 0);
   };
 
   const handleRemovePayment = (paymentMethodId) => {
@@ -2364,15 +2379,13 @@ export default function Home() {
     setPayments(newPayments);
 
     const totalPaid = newPayments.reduce((sum, p) => sum + p.amount, 0);
-    const currentRemaining =
+    const invoiceTotal =
       bills[currentBillIndex]?.isPartialPaid &&
       bills[currentBillIndex]?.remainingAmount
         ? bills[currentBillIndex].remainingAmount
         : total;
-    setRemainingAmount(currentRemaining - totalPaid);
-    setExcessAmount(
-      totalPaid > currentRemaining ? totalPaid - currentRemaining : 0,
-    );
+    setRemainingAmount(invoiceTotal - totalPaid);
+    setExcessAmount(totalPaid > invoiceTotal ? totalPaid - invoiceTotal : 0);
   };
 
   const openDiscountModal = () => {
