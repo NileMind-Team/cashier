@@ -955,7 +955,6 @@ export default function CustomersReports() {
                   </div>
                 </div>
 
-                {/* Timeline View - Grouped by Date with Expand/Collapse like old invoices */}
                 <div className="mb-6">
                   <h3
                     className="text-lg font-bold mb-4"
@@ -979,6 +978,10 @@ export default function CustomersReports() {
                         );
                         const dayTotalPayments = dayData.payments.reduce(
                           (sum, pay) => sum + (pay.debit || pay.credit || 0),
+                          0,
+                        );
+                        const dayTotalRemaining = dayData.invoices.reduce(
+                          (sum, inv) => sum + (inv.remainingAmount || 0),
                           0,
                         );
                         const isExpanded = expandedDay === date;
@@ -1040,8 +1043,23 @@ export default function CustomersReports() {
                                       {formatCurrency(dayTotalPayments)} ج.م
                                     </span>
                                   </div>
+                                  <div className="text-sm">
+                                    <span className="text-gray-600">
+                                      المتبقي:{" "}
+                                    </span>
+                                    <span
+                                      className={`font-bold ${
+                                        dayTotalRemaining > 0
+                                          ? "text-red-600"
+                                          : "text-green-600"
+                                      }`}
+                                    >
+                                      {formatCurrency(dayTotalRemaining)} ج.م
+                                    </span>
+                                  </div>
                                   {dayTotalInvoices === 0 &&
-                                    dayTotalPayments === 0 && (
+                                    dayTotalPayments === 0 &&
+                                    dayTotalRemaining === 0 && (
                                       <span className="text-xs text-gray-500">
                                         لا توجد حركات
                                       </span>
@@ -1050,7 +1068,7 @@ export default function CustomersReports() {
                               </div>
                             </div>
 
-                            {/* Day Details (Expandable) - Payments as rows like table */}
+                            {/* Day Details (Expandable) */}
                             {isExpanded && (
                               <div className="p-4 bg-gray-50 border-t border-gray-200">
                                 {/* Invoices Section */}
@@ -1119,7 +1137,7 @@ export default function CustomersReports() {
                                             </div>
                                           </div>
 
-                                          {/* Payment details for this invoice - as rows */}
+                                          {/* Payment details for this invoice */}
                                           {invoice.transactions &&
                                             invoice.transactions.length > 0 && (
                                               <div className="mt-3 pt-3 border-t border-gray-100">
@@ -1215,24 +1233,18 @@ export default function CustomersReports() {
                                   </div>
                                 )}
 
-                                {/* Payments without invoice association - as rows */}
-                                {dayData.payments.filter((payment) => {
-                                  const isLinkedToInvoice =
-                                    customerInvoices.some((invoice) =>
-                                      invoice.transactions.some(
-                                        (t) => t.id === payment.id,
-                                      ),
-                                    );
-                                  return !isLinkedToInvoice;
-                                }).length > 0 && (
+                                {dayData.payments.length > 0 && (
                                   <div>
                                     <h4 className="font-bold mb-3 text-gray-700">
-                                      مدفوعات منفصلة
+                                      المدفوعات
                                     </h4>
                                     <div className="overflow-x-auto">
                                       <table className="w-full text-sm bg-white rounded-lg border border-gray-200">
                                         <thead className="bg-gray-100">
                                           <tr>
+                                            <th className="py-2 px-3 text-right text-xs font-medium text-gray-700">
+                                              رقم الفاتورة
+                                            </th>
                                             <th className="py-2 px-3 text-right text-xs font-medium text-gray-700">
                                               التاريخ
                                             </th>
@@ -1247,23 +1259,24 @@ export default function CustomersReports() {
                                         <tbody>
                                           {dayData.payments.map(
                                             (payment, idx) => {
-                                              const isLinkedToInvoice =
-                                                customerInvoices.some(
-                                                  (invoice) =>
-                                                    invoice.transactions.some(
-                                                      (t) =>
-                                                        t.id === payment.id,
-                                                    ),
+                                              const invoice =
+                                                dayData.invoices.find(
+                                                  (inv) =>
+                                                    inv.invoiceId ===
+                                                    payment.invoiceId,
                                                 );
-
-                                              if (isLinkedToInvoice)
-                                                return null;
+                                              const invoiceNumber = invoice
+                                                ? invoice.invoiceNumber
+                                                : "مدفوعات منفصلة";
 
                                               return (
                                                 <tr
                                                   key={payment.id || idx}
-                                                  className="border-b border-gray-200"
+                                                  className="border-b border-gray-200 hover:bg-gray-50"
                                                 >
+                                                  <td className="py-2 px-3 text-xs font-medium">
+                                                    {invoiceNumber}
+                                                  </td>
                                                   <td className="py-2 px-3 text-xs">
                                                     {formatDateTime(
                                                       payment.date,
@@ -1289,21 +1302,36 @@ export default function CustomersReports() {
                                             },
                                           )}
                                         </tbody>
+                                        <tfoot className="bg-gray-100">
+                                          <tr>
+                                            <td
+                                              colSpan="3"
+                                              className="py-2 px-3 text-xs font-bold"
+                                            >
+                                              إجمالي المدفوعات:
+                                            </td>
+                                            <td className="py-2 px-3 text-xs font-bold text-green-600">
+                                              {formatCurrency(
+                                                dayData.payments.reduce(
+                                                  (sum, pay) =>
+                                                    sum +
+                                                    (pay.debit ||
+                                                      pay.credit ||
+                                                      0),
+                                                  0,
+                                                ),
+                                              )}{" "}
+                                              ج.م
+                                            </td>
+                                          </tr>
+                                        </tfoot>
                                       </table>
                                     </div>
                                   </div>
                                 )}
 
                                 {dayData.invoices.length === 0 &&
-                                  dayData.payments.filter((payment) => {
-                                    const isLinkedToInvoice =
-                                      customerInvoices.some((invoice) =>
-                                        invoice.transactions.some(
-                                          (t) => t.id === payment.id,
-                                        ),
-                                      );
-                                    return !isLinkedToInvoice;
-                                  }).length === 0 && (
+                                  dayData.payments.length === 0 && (
                                     <div className="text-center text-gray-500 py-4">
                                       لا توجد حركات في هذا اليوم
                                     </div>
