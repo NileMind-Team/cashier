@@ -19,6 +19,7 @@ export default function Home() {
   const [shiftStartTime, setShiftStartTime] = useState(
     new Date().toLocaleTimeString("ar-EG"),
   );
+  // eslint-disable-next-line no-unused-vars
   const [loading, setLoading] = useState(false);
   const [hallsLoading, setHallsLoading] = useState(false);
   const [tablesLoading, setTablesLoading] = useState(false);
@@ -140,6 +141,8 @@ export default function Home() {
     useState(0);
   // eslint-disable-next-line no-unused-vars
   const [currentBillIndex, setCurrentBillIndex] = useState(0);
+  // Add a new state to track if products are loading
+  const [productsLoading, setProductsLoading] = useState(true);
 
   const DeliveryType = {
     Store: "store",
@@ -598,7 +601,7 @@ export default function Home() {
     }
 
     try {
-      setLoading(true);
+      setProductsLoading(true);
       const response = await axiosInstance.get(
         "/api/MainCategories/GetAllMainCategories",
       );
@@ -677,7 +680,7 @@ export default function Home() {
       console.error("خطأ في جلب الفئات الرئيسية:", error);
       toast.error("حدث خطأ في جلب الفئات الرئيسية");
     } finally {
-      setLoading(false);
+      setProductsLoading(false);
     }
   };
 
@@ -4564,7 +4567,7 @@ export default function Home() {
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-lg p-4 h-full overflow-hidden flex flex-col">
-              {loading || shiftLoading ? (
+              {loading || shiftLoading || productsLoading ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                 </div>
