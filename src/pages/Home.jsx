@@ -40,41 +40,37 @@ export default function Home() {
   const [currentInvoicePage, setCurrentInvoicePage] = useState(1);
   const [pageSize] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [bills, setBills] = useState([
-    {
-      id: 1,
-      cart: [],
-      tax: 14,
-      discount: "",
-      discountType: 0,
-      deliveryFee: "",
-      completed: false,
-      isReturned: false,
-      returnReason: "",
-      billType: "takeaway",
-      customerName: "",
-      customerPhone: "",
-      customerAddress: "",
-      customerNationalId: "",
-      customerId: null,
-      tableStatus: null,
-      generalNote: "",
-      paymentMethod: null,
-      invoiceId: null,
-      isPending: true,
-      invoiceNumber: null,
-      invoiceDate: null,
-      tableId: null,
-      tableName: null,
-      deliveryType: null,
-      deliveryCompanyId: null,
-      deliveryCompanyName: null,
-      deliveryCompanyContact: null,
-      remainingAmount: null,
-      paidAmount: null,
-    },
-  ]);
-  const [currentBillIndex, setCurrentBillIndex] = useState(0);
+  const [currentBillData, setCurrentBillData] = useState({
+    cart: [],
+    tax: 14,
+    discount: "",
+    discountType: 0,
+    deliveryFee: "",
+    completed: false,
+    isReturned: false,
+    returnReason: "",
+    billType: "takeaway",
+    customerName: "",
+    customerPhone: "",
+    customerAddress: "",
+    customerNationalId: "",
+    customerId: null,
+    tableStatus: null,
+    generalNote: "",
+    paymentMethod: null,
+    invoiceId: null,
+    isPending: true,
+    invoiceNumber: null,
+    invoiceDate: null,
+    tableId: null,
+    tableName: null,
+    deliveryType: null,
+    deliveryCompanyId: null,
+    deliveryCompanyName: null,
+    deliveryCompanyContact: null,
+    remainingAmount: null,
+    paidAmount: null,
+  });
   const [cart, setCart] = useState([]);
   const [tax, setTax] = useState(14);
   const [discount, setDiscount] = useState("");
@@ -142,6 +138,8 @@ export default function Home() {
   // eslint-disable-next-line no-unused-vars
   const [currentInvoiceRemainingAmount, setCurrentInvoiceRemainingAmount] =
     useState(0);
+  // eslint-disable-next-line no-unused-vars
+  const [currentBillIndex, setCurrentBillIndex] = useState(0);
 
   const DeliveryType = {
     Store: "store",
@@ -305,53 +303,18 @@ export default function Home() {
       };
     }
 
-    const totalBills = bills.length;
-    const completedBills = bills.filter((bill) => bill.completed).length;
-    const pendingBills = totalBills - completedBills;
-    const returnedBills = bills.filter((bill) => bill.isReturned).length;
-
-    let totalSales = 0;
-    let totalTax = 0;
-    let totalDiscount = 0;
-    let netRevenue = 0;
-
-    bills.forEach((bill) => {
-      if (bill.completed && !bill.isReturned) {
-        const subtotal = bill.cart.reduce(
-          (sum, item) => sum + item.price * item.quantity,
-          0,
-        );
-        const billTax = (subtotal * bill.tax) / 100;
-        const billDiscount =
-          bill.discountType === DiscountType.Fixed
-            ? bill.discount
-            : (subtotal * bill.discount) / 100;
-        const billTotal =
-          subtotal +
-          billTax -
-          billDiscount +
-          (bill.billType === "delivery" ? bill.deliveryFee : 0);
-
-        totalSales += billTotal;
-        totalTax += billTax;
-        totalDiscount += billDiscount;
-        netRevenue += billTotal;
-      }
-    });
-
     return {
-      totalBills,
-      completedBills,
-      pendingBills,
-      returnedBills,
-      totalSales,
-      totalTax,
-      totalDiscount,
-      netRevenue,
+      totalBills: 0,
+      completedBills: 0,
+      pendingBills: 0,
+      returnedBills: 0,
+      totalSales: 0,
+      totalTax: 0,
+      totalDiscount: 0,
+      netRevenue: 0,
       startTime: shiftStartTime,
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bills, shiftStartTime, currentShift]);
+  }, [currentShift, shiftStartTime]);
 
   const fetchPaymentMethods = async () => {
     if (paymentMethodsFetchedRef.current) {
@@ -786,7 +749,7 @@ export default function Home() {
 
         if (invoicesData.length > 0) {
           const invoice = invoicesData[0];
-          convertInvoiceToBill(invoice, 0);
+          convertInvoiceToBill(invoice);
           setIsNewBillActive(false);
           setIsEditingExistingInvoice(true);
           setOrderPrepared(false);
@@ -814,7 +777,7 @@ export default function Home() {
     return 14;
   };
 
-  const convertInvoiceToBill = (invoice, index) => {
+  const convertInvoiceToBill = (invoice) => {
     const cartItems =
       invoice.items?.map((item) => {
         let finalPrice = item.itemPriceSnapShoot || 0;
@@ -881,8 +844,7 @@ export default function Home() {
 
     const taxPercentage = calculateTaxFromInvoice(invoice);
 
-    const bill = {
-      id: index + 1,
+    setCurrentBillData({
       cart: cartItems,
       tax: taxPercentage,
       discount: invoice.invoiceDiscount || "",
@@ -914,29 +876,18 @@ export default function Home() {
       deliveryCompanyContact: null,
       remainingAmount: invoice.remainingAmount || null,
       paidAmount: invoice.paidAmount || null,
-    };
-
-    setBills((prev) => {
-      const newBills = [...prev];
-      if (newBills[index]) {
-        newBills[index] = bill;
-      } else {
-        newBills.push(bill);
-      }
-      return newBills;
     });
 
-    setCurrentBillIndex(index);
     setCart(cartItems);
-    setTax(bill.tax);
-    setDiscount(bill.discount);
-    setDeliveryFee(bill.deliveryFee);
-    setCustomerPhone(bill.customerPhone || "");
-    setCustomerName(bill.customerName || "");
-    setCustomerAddress(bill.customerAddress || "");
-    setCustomerNationalId(bill.customerNationalId || "");
-    setCustomerId(bill.customerId || null);
-    setGeneralNote(bill.generalNote || "");
+    setTax(taxPercentage);
+    setDiscount(invoice.invoiceDiscount || "");
+    setDeliveryFee(invoice.deliveryFee || "");
+    setCustomerPhone(invoice.customerPhone || "");
+    setCustomerName(invoice.customerName || "");
+    setCustomerAddress(invoice.customerAddress || "");
+    setCustomerNationalId(invoice.customerNationalId || "");
+    setCustomerId(invoice.customerId || null);
+    setGeneralNote(invoice.notosinvoice || "");
 
     if (isPartialPaid && invoice.remainingAmount) {
       setCurrentInvoiceRemainingAmount(invoice.remainingAmount);
@@ -966,46 +917,57 @@ export default function Home() {
     }
   };
 
-  const addNewBill = () => {
-    const newBill = {
-      id: bills.length + 1,
+  const refreshCurrentBill = async () => {
+    if (currentBillData.invoiceId) {
+      try {
+        const response = await axiosInstance.get(
+          `/api/Invoices/GetById/${currentBillData.invoiceId}`,
+        );
+        if (response.status === 200 && response.data) {
+          convertInvoiceToBill(response.data);
+          await refreshTablesAndHalls();
+        }
+      } catch (error) {
+        console.error("خطأ في تحديث الفاتورة:", error);
+        toast.error("حدث خطأ في تحديث بيانات الفاتورة");
+      }
+    } else if (isNewBillActive) {
+      resetBillData();
+    }
+  };
+
+  const resetBillData = () => {
+    setCurrentBillData({
       cart: [],
       tax: 14,
       discount: "",
       discountType: 0,
       deliveryFee: "",
+      completed: false,
+      isReturned: false,
+      returnReason: "",
       billType: "takeaway",
-      customerPhone: "",
       customerName: "",
+      customerPhone: "",
       customerAddress: "",
       customerNationalId: "",
       customerId: null,
+      tableStatus: null,
       generalNote: "",
       paymentMethod: null,
-      completed: false,
-      completedDate: null,
-      tableInfo: null,
-      tableStatus: null,
-      isReturned: false,
-      isPartialPaid: false,
-      returnReason: "",
       invoiceId: null,
+      isPending: true,
       invoiceNumber: null,
       invoiceDate: null,
-      invoiceStatus: InvoiceStatus.Open,
       tableId: null,
       tableName: null,
-      isPending: true,
       deliveryType: null,
       deliveryCompanyId: null,
       deliveryCompanyName: null,
       deliveryCompanyContact: null,
       remainingAmount: null,
       paidAmount: null,
-    };
-
-    setBills((prev) => [...prev, newBill]);
-    setCurrentBillIndex(bills.length);
+    });
     setCart([]);
     setTax(14);
     setDiscount("");
@@ -1020,17 +982,24 @@ export default function Home() {
     setSelectedTable(null);
     setShowTableInfo(false);
     setTableStatus("available");
-    setIsNewBillActive(true);
-    setIsEditingExistingInvoice(false);
     setDeliveryType(null);
     setSelectedDeliveryCompany(null);
     setOrderPrepared(false);
     setCurrentInvoiceRemainingAmount(0);
   };
 
-  const createInvoice = async (isPending = true, paymentsData = null) => {
-    const currentBill = bills[currentBillIndex];
+  const refreshTablesAndHalls = async () => {
+    try {
+      hallsFetchedRef.current = false;
+      tablesFetchedRef.current = false;
+      await fetchHalls();
+      await fetchTables();
+    } catch (error) {
+      console.error("خطأ في تحديث بيانات الصالات والطاولات:", error);
+    }
+  };
 
+  const createInvoice = async (isPending = true, paymentsData = null) => {
     if (!currentShift?.shiftId) {
       toast.error("لا توجد وردية نشطة");
       return null;
@@ -1044,10 +1013,12 @@ export default function Home() {
       notes: generalNote || null,
       invoiceDiscount: discount && discount > 0 ? discount : null,
       invoiceDiscountType: discountType,
-      type: getInvoiceTypeFromBillType(currentBill.billType),
+      type: getInvoiceTypeFromBillType(currentBillData.billType),
       deliveryCompanyId: selectedDeliveryCompany?.id || null,
       deliveryFee:
-        currentBill.billType === "delivery" && deliveryFee ? deliveryFee : null,
+        currentBillData.billType === "delivery" && deliveryFee
+          ? deliveryFee
+          : null,
       payments: isPending ? [] : paymentsData,
       items: cart.map((item) => {
         let itemDiscount = null;
@@ -1152,9 +1123,7 @@ export default function Home() {
     isPending = true,
     paymentsData = null,
   ) => {
-    const currentBill = bills[currentBillIndex];
-
-    if (!currentBill.invoiceId) {
+    if (!currentBillData.invoiceId) {
       toast.error("لا يوجد رقم فاتورة للتحديث");
       return null;
     }
@@ -1165,10 +1134,12 @@ export default function Home() {
       notes: generalNote || null,
       isPending: isPending,
       invoiceDiscount: discount && discount > 0 ? discount : null,
-      type: getInvoiceTypeFromBillType(currentBill.billType),
+      type: getInvoiceTypeFromBillType(currentBillData.billType),
       deliveryCompanyId: selectedDeliveryCompany?.id || null,
       deliveryFee:
-        currentBill.billType === "delivery" && deliveryFee ? deliveryFee : null,
+        currentBillData.billType === "delivery" && deliveryFee
+          ? deliveryFee
+          : null,
       invoiceDiscountType: discountType,
       items: cart.map((item) => {
         let itemDiscount = null;
@@ -1213,7 +1184,7 @@ export default function Home() {
 
     try {
       const response = await axiosInstance.put(
-        `/api/Invoices/UpdateInvoice/${currentBill.invoiceId}/update`,
+        `/api/Invoices/UpdateInvoice/${currentBillData.invoiceId}/update`,
         cleanInvoiceData,
       );
 
@@ -1224,28 +1195,9 @@ export default function Home() {
         invoicesFetchedRef.current = false;
         await fetchLastInvoice();
 
-        const updatedInvoices = await fetchLastInvoice();
+        await refreshCurrentBill();
 
-        if (updatedInvoices && updatedInvoices.length > 0) {
-          const updatedInvoice = updatedInvoices.find(
-            (inv) => inv.id === currentBill.invoiceId,
-          );
-
-          if (updatedInvoice) {
-            const billIndex = bills.findIndex(
-              (bill) => bill.invoiceId === currentBill.invoiceId,
-            );
-
-            if (billIndex !== -1) {
-              convertInvoiceToBill(updatedInvoice, billIndex);
-              setCurrentBillIndex(billIndex);
-            }
-
-            return updatedInvoice;
-          }
-        }
-
-        return { id: currentBill.invoiceId, success: true };
+        return { id: currentBillData.invoiceId, success: true };
       }
 
       return null;
@@ -1304,7 +1256,6 @@ export default function Home() {
       );
 
       if (response.status === 200) {
-        // The endpoint returns empty data on success
         return { success: true };
       }
       return null;
@@ -1372,12 +1323,12 @@ export default function Home() {
         return;
       }
 
-      fetchHalls();
-      fetchTables();
-      fetchMainCategories();
-      fetchPaymentMethods();
-      fetchDeliveryCompanies();
-      addNewBill();
+      await fetchHalls();
+      await fetchTables();
+      await fetchMainCategories();
+      await fetchPaymentMethods();
+      await fetchDeliveryCompanies();
+      resetBillData();
     };
 
     initializeData();
@@ -1462,13 +1413,7 @@ export default function Home() {
       });
 
       if (response.status === 200) {
-        setTables((prev) =>
-          prev.map((t) =>
-            t.id === tableId
-              ? { ...t, status: getTableStatusFromText(newStatus) }
-              : t,
-          ),
-        );
+        await refreshTablesAndHalls();
       }
     } catch (error) {
       console.error("خطأ في تحديث حالة الطاولة:", error);
@@ -1484,24 +1429,19 @@ export default function Home() {
   };
 
   const handleBillTypeChange = (type) => {
-    const currentBill = bills[currentBillIndex];
-
-    if (currentBill?.completed) {
+    if (currentBillData.completed) {
       toast.error("لا يمكن تغيير نوع الفاتورة المكتملة");
       return;
     }
 
-    if (currentBill?.isPartialPaid) {
+    if (currentBillData.isPartialPaid) {
       toast.error("لا يمكن تغيير نوع الفاتورة الآجلة");
       return;
     }
 
-    const updatedBills = [...bills];
-
-    // Clear table selection when switching from dinein to other types
     if (type !== "dinein") {
       if (selectedTable && selectedHall) {
-        updateTableStatus(selectedHall.id, selectedTable.id, "available", null);
+        updateTableStatus(selectedHall.id, selectedTable.id, "available");
       }
       setSelectedTable(null);
       setSelectedHall(null);
@@ -1514,15 +1454,14 @@ export default function Home() {
       if (!selectedHall && halls.length > 0) {
         setSelectedHall(halls[0]);
       }
-      return;
     } else if (type === "delivery") {
       if (deliveryCompanies.length === 0) {
         setDeliveryType(DeliveryType.Store);
         setDeliveryFee(25);
         setSelectedDeliveryCompany(null);
 
-        updatedBills[currentBillIndex] = {
-          ...updatedBills[currentBillIndex],
+        setCurrentBillData({
+          ...currentBillData,
           billType: "delivery",
           deliveryFee: 25,
           deliveryType: DeliveryType.Store,
@@ -1532,8 +1471,7 @@ export default function Home() {
           tableId: null,
           tableName: null,
           tableStatus: null,
-        };
-        setBills(updatedBills);
+        });
 
         toast.success("تم اختيار دليفري المحل تلقائياً (لا توجد شركات توصيل)");
       } else {
@@ -1543,20 +1481,17 @@ export default function Home() {
         setDeliveryFee("");
       }
     } else {
-      updatedBills[currentBillIndex] = {
-        ...updatedBills[currentBillIndex],
+      setCurrentBillData({
+        ...currentBillData,
         billType: type,
         deliveryFee: "",
-        tableInfo: null,
-        tableStatus: null,
         tableId: null,
         tableName: null,
         deliveryType: null,
         deliveryCompanyId: null,
         deliveryCompanyName: null,
         deliveryCompanyContact: null,
-      };
-      setBills(updatedBills);
+      });
 
       setDeliveryFee("");
       setDeliveryType(null);
@@ -1571,10 +1506,8 @@ export default function Home() {
     setSelectedHall(hall);
   };
 
-  const handleSelectTable = (table) => {
-    const currentBill = bills[currentBillIndex];
-
-    if (currentBill?.isPartialPaid) {
+  const handleSelectTable = async (table) => {
+    if (currentBillData.isPartialPaid) {
       toast.error("لا يمكن اختيار طاولة للفاتورة الآجلة");
       return;
     }
@@ -1582,50 +1515,38 @@ export default function Home() {
     if (table.status === "occupied") {
       toast.info("جاري تحميل الفاتورة الخاصة بهذه الطاولة");
 
-      const tableBillIndex = bills.findIndex(
-        (bill) =>
-          bill.tableId === table.id && !bill.completed && !bill.isPartialPaid,
-      );
-
-      if (tableBillIndex !== -1) {
-        const tableBill = bills[tableBillIndex];
-        setCurrentBillIndex(tableBillIndex);
-        setCart([...tableBill.cart]);
-        setTax(tableBill.tax);
-        setDiscount(tableBill.discount);
-        setDeliveryFee("");
-        setCustomerPhone(tableBill.customerPhone || "");
-        setCustomerName(tableBill.customerName || "");
-        setCustomerAddress(tableBill.customerAddress || "");
-        setCustomerNationalId(tableBill.customerNationalId || "");
-        setCustomerId(tableBill.customerId || null);
-        setSelectedHall(halls.find((h) => h.id === table.hallId));
-        setSelectedTable(table);
-        setShowTableInfo(true);
-        setTableStatus(tableBill.tableStatus || "occupied");
-        setOrderPrepared(false);
-
-        setShowTableSelection(false);
-        toast.success(`تم تحميل فاتورة الطاولة ${table.number}`);
-        return;
-      } else {
-        toast.error("لا توجد فاتورة نشطة لهذه الطاولة");
+      try {
+        const response = await axiosInstance.get(
+          `/api/Invoices/GetByTableId/${table.id}`,
+        );
+        if (
+          response.status === 200 &&
+          response.data &&
+          response.data.length > 0
+        ) {
+          const invoice = response.data[0];
+          convertInvoiceToBill(invoice);
+          setIsNewBillActive(false);
+          setIsEditingExistingInvoice(true);
+          setShowTableSelection(false);
+          toast.success(`تم تحميل فاتورة الطاولة ${table.number}`);
+          return;
+        } else {
+          toast.error("لا توجد فاتورة نشطة لهذه الطاولة");
+          return;
+        }
+      } catch (error) {
+        console.error("خطأ في تحميل فاتورة الطاولة:", error);
+        toast.error("حدث خطأ في تحميل فاتورة الطاولة");
         return;
       }
     }
 
     setSelectedTable(table);
 
-    const updatedBills = [...bills];
-    updatedBills[currentBillIndex] = {
-      ...updatedBills[currentBillIndex],
+    setCurrentBillData({
+      ...currentBillData,
       billType: "dinein",
-      tableInfo: {
-        hallId: selectedHall.id,
-        hallName: selectedHall.name,
-        tableId: table.id,
-        tableNumber: table.number,
-      },
       tableId: table.id,
       tableName: table.number,
       tableStatus: "available",
@@ -1634,15 +1555,8 @@ export default function Home() {
       deliveryCompanyName: null,
       deliveryCompanyContact: null,
       deliveryFee: "",
-    };
-    setBills(updatedBills);
+    });
 
-    updateTableStatus(
-      selectedHall.id,
-      table.id,
-      "available",
-      currentBillIndex + 1,
-    );
     setTableStatus("available");
 
     setShowTableSelection(false);
@@ -1654,17 +1568,13 @@ export default function Home() {
   const handleCloseTableSelection = () => {
     setShowTableSelection(false);
 
-    if (bills[currentBillIndex]?.billType === "dinein" && !selectedTable) {
-      const updatedBills = [...bills];
-      updatedBills[currentBillIndex] = {
-        ...updatedBills[currentBillIndex],
+    if (currentBillData.billType === "dinein" && !selectedTable) {
+      setCurrentBillData({
+        ...currentBillData,
         billType: "takeaway",
-        tableInfo: null,
-        tableStatus: null,
         tableId: null,
         tableName: null,
-      };
-      setBills(updatedBills);
+      });
 
       toast.info("تم إلغاء اختيار الطاولة");
     }
@@ -1683,9 +1593,8 @@ export default function Home() {
       setDeliveryFee(25);
       setSelectedDeliveryCompany(null);
 
-      const updatedBills = [...bills];
-      updatedBills[currentBillIndex] = {
-        ...updatedBills[currentBillIndex],
+      setCurrentBillData({
+        ...currentBillData,
         billType: "delivery",
         deliveryFee: 25,
         deliveryType: DeliveryType.Store,
@@ -1695,8 +1604,7 @@ export default function Home() {
         tableId: null,
         tableName: null,
         tableStatus: null,
-      };
-      setBills(updatedBills);
+      });
 
       toast.success("تم اختيار دليفري المحل");
     } else if (type === DeliveryType.Company) {
@@ -1711,9 +1619,8 @@ export default function Home() {
     setShowDeliveryCompanyModal(false);
     setShowDeliveryTypeModal(false);
 
-    const updatedBills = [...bills];
-    updatedBills[currentBillIndex] = {
-      ...updatedBills[currentBillIndex],
+    setCurrentBillData({
+      ...currentBillData,
       billType: "delivery",
       deliveryFee: company.deliveryCost || 0,
       deliveryType: DeliveryType.Company,
@@ -1723,15 +1630,14 @@ export default function Home() {
       tableId: null,
       tableName: null,
       tableStatus: null,
-    };
-    setBills(updatedBills);
+    });
 
     toast.success(
       `تم اختيار شركة ${company.name} (رسوم التوصيل: ${company.deliveryCost || 0} ج.م)`,
     );
   };
 
-  const handleRemoveTable = () => {
+  const handleRemoveTable = async () => {
     if (!selectedTable || !selectedHall) {
       toast.error("لم يتم اختيار طاولة");
       return;
@@ -1757,45 +1663,15 @@ export default function Home() {
           </p>
           <div className="flex justify-end space-x-2 rtl:space-x-reverse mt-3">
             <button
-              onClick={() => {
+              onClick={async () => {
                 toast.dismiss();
-                updateTableStatus(
+                await updateTableStatus(
                   selectedHall.id,
                   selectedTable.id,
                   "available",
-                  null,
                 );
 
-                const updatedBills = [...bills];
-                updatedBills[currentBillIndex] = {
-                  ...updatedBills[currentBillIndex],
-                  cart: [],
-                  tableInfo: null,
-                  tableStatus: null,
-                  billType: "takeaway",
-                  generalNote: "",
-                  paymentMethod: null,
-                  invoiceId: null,
-                  invoiceNumber: null,
-                  tableId: null,
-                  tableName: null,
-                };
-                setBills(updatedBills);
-
-                setCart([]);
-                setTax(14);
-                setDiscount("");
-                setDeliveryFee("");
-                setCustomerPhone("");
-                setCustomerName("");
-                setCustomerAddress("");
-                setCustomerNationalId("");
-                setCustomerId(null);
-                setTableStatus("available");
-                setSelectedTable(null);
-                setSelectedHall(null);
-                setShowTableInfo(false);
-                setOrderPrepared(false);
+                resetBillData();
 
                 toast.success(
                   <div>
@@ -1825,18 +1701,14 @@ export default function Home() {
         },
       );
     } else {
-      updateTableStatus(selectedHall.id, selectedTable.id, "available", null);
+      await updateTableStatus(selectedHall.id, selectedTable.id, "available");
 
-      const updatedBills = [...bills];
-      updatedBills[currentBillIndex] = {
-        ...updatedBills[currentBillIndex],
-        tableInfo: null,
-        tableStatus: null,
-        billType: "takeaway",
+      setCurrentBillData({
+        ...currentBillData,
         tableId: null,
         tableName: null,
-      };
-      setBills(updatedBills);
+        billType: "takeaway",
+      });
 
       setTableStatus("available");
       setSelectedTable(null);
@@ -1849,142 +1721,30 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const saveCurrentBill = () => {
-      const currentBill = bills[currentBillIndex];
-      const updatedBills = [...bills];
-      updatedBills[currentBillIndex] = {
-        id: currentBillIndex + 1,
-        cart: [...cart],
-        tax,
-        discount: discount === "" ? null : discount,
-        discountType: currentBill?.discountType || 0,
-        deliveryFee:
-          currentBill?.billType === "delivery" && deliveryFee
-            ? deliveryFee
-            : null,
-        billType: currentBill?.billType || "takeaway",
-        customerPhone: customerPhone,
-        customerName: customerName,
-        customerAddress: customerAddress,
-        customerNationalId: customerNationalId,
-        customerId: customerId,
-        generalNote: generalNote,
-        paymentMethod: currentBill?.paymentMethod || null,
-        completed: currentBill?.completed || false,
-        completedDate: currentBill?.completedDate || null,
-        tableInfo: currentBill?.tableInfo || null,
-        tableStatus: currentBill?.tableStatus || null,
-        tableId: currentBill?.tableId || null,
-        tableName: currentBill?.tableName || null,
-        isReturned: currentBill?.isReturned || false,
-        isPartialPaid: currentBill?.isPartialPaid || false,
-        returnReason: currentBill?.returnReason || "",
-        invoiceId: currentBill?.invoiceId || null,
-        invoiceNumber: currentBill?.invoiceNumber || null,
-        invoiceDate: currentBill?.invoiceDate || null,
-        invoiceStatus: currentBill?.invoiceStatus || InvoiceStatus.Open,
-        isPending: currentBill?.isPending !== false,
-        deliveryType: currentBill?.deliveryType || deliveryType,
-        deliveryCompanyId:
-          currentBill?.deliveryCompanyId || selectedDeliveryCompany?.id,
-        deliveryCompanyName:
-          currentBill?.deliveryCompanyName || selectedDeliveryCompany?.name,
-        deliveryCompanyContact:
-          currentBill?.deliveryCompanyContact ||
-          selectedDeliveryCompany?.contactNumber,
-        remainingAmount: currentBill?.remainingAmount || null,
-        paidAmount: currentBill?.paidAmount || null,
-      };
-      setBills(updatedBills);
+    const refreshCurrentBillData = async () => {
+      if (currentBillData.invoiceId && !isNewBillActive) {
+        await refreshCurrentBill();
+      }
     };
 
-    saveCurrentBill();
+    refreshCurrentBillData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    cart,
-    tax,
-    discount,
-    deliveryFee,
-    customerPhone,
-    customerName,
-    customerAddress,
-    customerNationalId,
-    customerId,
-    generalNote,
-    deliveryType,
-    selectedDeliveryCompany,
-  ]);
+  }, [currentBillData.invoiceId, isNewBillActive]);
 
   useEffect(() => {
-    const currentBill = bills[currentBillIndex];
-    if (currentBill) {
-      setCustomerPhone(currentBill.customerPhone || "");
-      setCustomerName(currentBill.customerName || "");
-      setCustomerAddress(currentBill.customerAddress || "");
-      setCustomerNationalId(currentBill.customerNationalId || "");
-      setCustomerId(currentBill.customerId || null);
-      setGeneralNote(currentBill.generalNote || "");
-
-      if (currentBill.billType === "delivery") {
-        setDeliveryFee(currentBill.deliveryFee || "");
-        setDeliveryType(currentBill.deliveryType || null);
-        if (currentBill.deliveryCompanyId) {
-          const company = deliveryCompanies.find(
-            (c) => c.id === currentBill.deliveryCompanyId,
-          );
-          setSelectedDeliveryCompany(company || null);
-        }
-      } else {
-        setDeliveryFee("");
-        setDeliveryType(null);
-        setSelectedDeliveryCompany(null);
-      }
-
-      if (currentBill.tableId) {
-        const table = tables.find((t) => t.id === currentBill.tableId);
-        const hall = table ? halls.find((h) => h.id === table.hallId) : null;
-
-        if (table && hall) {
-          setSelectedHall(hall);
-          setSelectedTable({
-            id: table.id,
-            number: table.name,
-            status: currentBill.tableStatus || "occupied",
-          });
-          setShowTableInfo(true);
-          setTableStatus(currentBill.tableStatus || "occupied");
-        }
-      } else {
-        setSelectedHall(null);
-        setSelectedTable(null);
-        setShowTableInfo(false);
-        setTableStatus("available");
-      }
-
-      if (!currentBill.completed && currentBill.invoiceId) {
-        setOrderPrepared(true);
-      } else {
-        setOrderPrepared(false);
-      }
-
-      // Set remaining amount for partial payment
-      if (currentBill.isPartialPaid && currentBill.remainingAmount) {
-        setCurrentInvoiceRemainingAmount(currentBill.remainingAmount);
-      } else {
-        setCurrentInvoiceRemainingAmount(0);
-      }
+    if (currentBillData.invoiceId && !isNewBillActive) {
+      refreshCurrentBill();
     }
-  }, [currentBillIndex, bills, halls, tables, deliveryCompanies]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tables, halls]);
 
   const handleProductClick = (product) => {
-    const currentBill = bills[currentBillIndex];
-
-    if (currentBill?.completed) {
+    if (currentBillData.completed) {
       toast.error("لا يمكن إضافة منتجات إلى فاتورة مكتملة");
       return;
     }
 
-    if (currentBill?.isPartialPaid) {
+    if (currentBillData.isPartialPaid) {
       toast.error("لا يمكن إضافة منتجات إلى فاتورة آجلة");
       return;
     }
@@ -1997,7 +1757,7 @@ export default function Home() {
     setShowProductModal(true);
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!selectedProduct) return;
 
     const optionsTotal = selectedOptions.reduce(
@@ -2111,14 +1871,12 @@ export default function Home() {
   };
 
   const removeFromCart = (uniqueId) => {
-    const currentBill = bills[currentBillIndex];
-
-    if (currentBill?.completed) {
+    if (currentBillData.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
       return;
     }
 
-    if (currentBill?.isPartialPaid) {
+    if (currentBillData.isPartialPaid) {
       toast.error("لا يمكن تعديل فاتورة آجلة");
       return;
     }
@@ -2139,14 +1897,12 @@ export default function Home() {
   };
 
   const deleteFromCart = (uniqueId) => {
-    const currentBill = bills[currentBillIndex];
-
-    if (currentBill?.completed) {
+    if (currentBillData.completed) {
       toast.error("لا يمكن حذف منتجات من فاتورة مكتملة");
       return;
     }
 
-    if (currentBill?.isPartialPaid) {
+    if (currentBillData.isPartialPaid) {
       toast.error("لا يمكن حذف منتجات من فاتورة آجلة");
       return;
     }
@@ -2155,14 +1911,12 @@ export default function Home() {
   };
 
   const handleAddNote = (uniqueId, note) => {
-    const currentBill = bills[currentBillIndex];
-
-    if (currentBill?.completed) {
+    if (currentBillData.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
       return;
     }
 
-    if (currentBill?.isPartialPaid) {
+    if (currentBillData.isPartialPaid) {
       toast.error("لا يمكن تعديل فاتورة آجلة");
       return;
     }
@@ -2181,14 +1935,12 @@ export default function Home() {
   };
 
   const startEditingNote = (uniqueId, currentNote) => {
-    const currentBill = bills[currentBillIndex];
-
-    if (currentBill?.completed) {
+    if (currentBillData.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
       return;
     }
 
-    if (currentBill?.isPartialPaid) {
+    if (currentBillData.isPartialPaid) {
       toast.error("لا يمكن تعديل فاتورة آجلة");
       return;
     }
@@ -2198,14 +1950,12 @@ export default function Home() {
   };
 
   const startEditingGeneralNote = () => {
-    const currentBill = bills[currentBillIndex];
-
-    if (currentBill?.completed) {
+    if (currentBillData.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
       return;
     }
 
-    if (currentBill?.isPartialPaid) {
+    if (currentBillData.isPartialPaid) {
       toast.error("لا يمكن تعديل فاتورة آجلة");
       return;
     }
@@ -2215,14 +1965,12 @@ export default function Home() {
   };
 
   const handleSaveGeneralNote = () => {
-    const currentBill = bills[currentBillIndex];
-
-    if (currentBill?.completed) {
+    if (currentBillData.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
       return;
     }
 
-    if (currentBill?.isPartialPaid) {
+    if (currentBillData.isPartialPaid) {
       toast.error("لا يمكن تعديل فاتورة آجلة");
       return;
     }
@@ -2241,24 +1989,22 @@ export default function Home() {
   };
 
   const openPaymentModal = () => {
-    const currentBill = bills[currentBillIndex];
-
-    if (cart.length === 0 && !currentBill?.isPartialPaid) {
+    if (cart.length === 0 && !currentBillData.isPartialPaid) {
       toast.error("الفاتورة فارغة");
       return;
     }
 
     if (
-      currentBill?.billType === "dinein" &&
+      currentBillData.billType === "dinein" &&
       !selectedTable &&
-      !currentBill?.isPartialPaid
+      !currentBillData.isPartialPaid
     ) {
       toast.error("يرجى اختيار طاولة أولاً");
       setShowTableSelection(true);
       return;
     }
 
-    if (currentBill?.billType === "delivery") {
+    if (currentBillData.billType === "delivery") {
       if (!customerPhone || customerPhone.length < 11) {
         toast.error("يرجى إدخال رقم هاتف صحيح للتوصيل");
         return;
@@ -2273,8 +2019,8 @@ export default function Home() {
     setIsPartialPayment(false);
     setPayments([]);
 
-    if (currentBill?.isPartialPaid && currentBill.remainingAmount) {
-      setRemainingAmount(currentBill.remainingAmount);
+    if (currentBillData.isPartialPaid && currentBillData.remainingAmount) {
+      setRemainingAmount(currentBillData.remainingAmount);
     } else {
       setRemainingAmount(total);
     }
@@ -2294,9 +2040,8 @@ export default function Home() {
   const handlePartialPayment = () => {
     setIsPartialPayment(true);
     setPayments([]);
-    const currentBill = bills[currentBillIndex];
-    if (currentBill?.isPartialPaid && currentBill.remainingAmount) {
-      setRemainingAmount(currentBill.remainingAmount);
+    if (currentBillData.isPartialPaid && currentBillData.remainingAmount) {
+      setRemainingAmount(currentBillData.remainingAmount);
     } else {
       setRemainingAmount(total);
     }
@@ -2320,18 +2065,16 @@ export default function Home() {
 
       const totalPaid = newPayments.reduce((sum, p) => sum + p.amount, 0);
       const invoiceTotal =
-        bills[currentBillIndex]?.isPartialPaid &&
-        bills[currentBillIndex]?.remainingAmount
-          ? bills[currentBillIndex].remainingAmount
+        currentBillData.isPartialPaid && currentBillData.remainingAmount
+          ? currentBillData.remainingAmount
           : total;
       setRemainingAmount(invoiceTotal - totalPaid);
       setExcessAmount(totalPaid > invoiceTotal ? totalPaid - invoiceTotal : 0);
     } else {
       const totalPaidSoFar = payments.reduce((sum, p) => sum + p.amount, 0);
       const invoiceTotal =
-        bills[currentBillIndex]?.isPartialPaid &&
-        bills[currentBillIndex]?.remainingAmount
-          ? bills[currentBillIndex].remainingAmount
+        currentBillData.isPartialPaid && currentBillData.remainingAmount
+          ? currentBillData.remainingAmount
           : total;
       const currentRemaining = invoiceTotal - totalPaidSoFar;
 
@@ -2363,9 +2106,8 @@ export default function Home() {
 
     const totalPaid = updatedPayments.reduce((sum, p) => sum + p.amount, 0);
     const invoiceTotal =
-      bills[currentBillIndex]?.isPartialPaid &&
-      bills[currentBillIndex]?.remainingAmount
-        ? bills[currentBillIndex].remainingAmount
+      currentBillData.isPartialPaid && currentBillData.remainingAmount
+        ? currentBillData.remainingAmount
         : total;
 
     const newRemaining = invoiceTotal - totalPaid;
@@ -2385,34 +2127,31 @@ export default function Home() {
 
     const totalPaid = newPayments.reduce((sum, p) => sum + p.amount, 0);
     const invoiceTotal =
-      bills[currentBillIndex]?.isPartialPaid &&
-      bills[currentBillIndex]?.remainingAmount
-        ? bills[currentBillIndex].remainingAmount
+      currentBillData.isPartialPaid && currentBillData.remainingAmount
+        ? currentBillData.remainingAmount
         : total;
     setRemainingAmount(invoiceTotal - totalPaid);
     setExcessAmount(totalPaid > invoiceTotal ? totalPaid - invoiceTotal : 0);
   };
 
   const openDiscountModal = () => {
-    const currentBill = bills[currentBillIndex];
-
     if (cart.length === 0) {
       toast.error("الفاتورة فارغة");
       return;
     }
 
-    if (currentBill?.completed) {
+    if (currentBillData.completed) {
       toast.error("لا يمكن تطبيق خصم على فاتورة مكتملة");
       return;
     }
 
-    if (currentBill?.isPartialPaid) {
+    if (currentBillData.isPartialPaid) {
       toast.error("لا يمكن تطبيق خصم على فاتورة آجلة");
       return;
     }
 
     setDiscountValue(discount === "" ? "" : discount);
-    setDiscountType(bills[currentBillIndex]?.discountType || 0);
+    setDiscountType(currentBillData.discountType || 0);
     setShowDiscountModal(true);
   };
 
@@ -2421,7 +2160,6 @@ export default function Home() {
   };
 
   const handleApplyDiscount = async () => {
-    const currentBill = bills[currentBillIndex];
     const discountNum = parseFloat(discountValue) || 0;
 
     if (discountNum < 0) {
@@ -2439,25 +2177,21 @@ export default function Home() {
       return;
     }
 
-    if (currentBill.invoiceId && !isEditingExistingInvoice) {
+    if (currentBillData.invoiceId && !isEditingExistingInvoice) {
       try {
         const success = await applyDiscount(
-          currentBill.invoiceId,
+          currentBillData.invoiceId,
           discountNum,
           discountType,
         );
 
         if (success) {
           setDiscount(discountNum);
-
-          const updatedBills = [...bills];
-          updatedBills[currentBillIndex] = {
-            ...currentBill,
+          setCurrentBillData({
+            ...currentBillData,
             discount: discountNum,
             discountType: discountType,
-          };
-          setBills(updatedBills);
-
+          });
           setShowDiscountModal(false);
           toast.success("تم تطبيق الخصم بنجاح");
         }
@@ -2467,23 +2201,17 @@ export default function Home() {
       }
     } else {
       setDiscount(discountNum);
-
-      const updatedBills = [...bills];
-      updatedBills[currentBillIndex] = {
-        ...currentBill,
+      setCurrentBillData({
+        ...currentBillData,
         discount: discountNum,
         discountType: discountType,
-      };
-      setBills(updatedBills);
-
+      });
       setShowDiscountModal(false);
       toast.success("تم تطبيق الخصم بنجاح");
     }
   };
 
   const handleCompletePayment = async () => {
-    const currentBill = bills[currentBillIndex];
-
     if (isPartialPayment) {
       if (isProcessingPayment) {
         return;
@@ -2494,16 +2222,15 @@ export default function Home() {
       try {
         let invoiceResponse;
 
-        if (isEditingExistingInvoice && currentBill?.invoiceId) {
+        if (isEditingExistingInvoice && currentBillData?.invoiceId) {
           invoiceResponse = await updateExistingInvoice(false, []);
         } else {
           invoiceResponse = await createInvoice(false, []);
         }
 
         if (invoiceResponse) {
-          const updatedBills = [...bills];
-          updatedBills[currentBillIndex] = {
-            ...updatedBills[currentBillIndex],
+          setCurrentBillData({
+            ...currentBillData,
             completed: false,
             isPartialPaid: true,
             paymentMethod: "partial",
@@ -2513,15 +2240,13 @@ export default function Home() {
             isPending: false,
             remainingAmount: total,
             paidAmount: 0,
-          };
-          setBills(updatedBills);
+          });
 
           if (selectedTable && selectedHall) {
-            updateTableStatus(
+            await updateTableStatus(
               selectedHall.id,
               selectedTable.id,
               "occupied",
-              null,
             );
           }
 
@@ -2534,7 +2259,7 @@ export default function Home() {
           setRemainingAmount(0);
           setExcessAmount(0);
           setIsPartialPayment(false);
-          addNewBill();
+          resetBillData();
         }
 
         await fetchShiftDetails();
@@ -2561,21 +2286,20 @@ export default function Home() {
 
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
     const invoiceTotal =
-      currentBill?.isPartialPaid && currentBill?.remainingAmount
-        ? currentBill.remainingAmount
+      currentBillData.isPartialPaid && currentBillData.remainingAmount
+        ? currentBillData.remainingAmount
         : total;
 
     try {
-      if (currentBill?.isPartialPaid && currentBill?.customerId) {
+      if (currentBillData.isPartialPaid && currentBillData.customerId) {
         const result = await payCustomerInvoice(
-          currentBill.customerId,
+          currentBillData.customerId,
           payments,
         );
 
         if (result && result.success) {
-          const updatedBills = [...bills];
-          updatedBills[currentBillIndex] = {
-            ...currentBill,
+          setCurrentBillData({
+            ...currentBillData,
             completed: true,
             completedDate: new Date().toLocaleString(),
             paymentMethod: payments.map((p) => p.paymentMethodId).join(","),
@@ -2585,21 +2309,19 @@ export default function Home() {
             invoiceStatus: InvoiceStatus.Done,
             isPending: false,
             remainingAmount: 0,
-            paidAmount: (currentBill.paidAmount || 0) + totalPaid,
-          };
-          setBills(updatedBills);
+            paidAmount: (currentBillData.paidAmount || 0) + totalPaid,
+          });
 
           if (selectedTable && selectedHall) {
-            updateTableStatus(
+            await updateTableStatus(
               selectedHall.id,
               selectedTable.id,
               "available",
-              null,
             );
           }
 
           toast.success(
-            `تم استكمال دفع المبلغ المتبقي بنجاح للفاتورة رقم ${currentBill.invoiceNumber}`,
+            `تم استكمال دفع المبلغ المتبقي بنجاح للفاتورة رقم ${currentBillData.invoiceNumber}`,
           );
 
           setShowPaymentModal(false);
@@ -2607,7 +2329,7 @@ export default function Home() {
           setRemainingAmount(0);
           setExcessAmount(0);
           setIsPartialPayment(false);
-          addNewBill();
+          resetBillData();
 
           await fetchShiftDetails();
           await fetchLastInvoice();
@@ -2619,7 +2341,7 @@ export default function Home() {
         let isPartialPaid = false;
         let isOverPaid = false;
 
-        if (isEditingExistingInvoice && currentBill?.invoiceId) {
+        if (isEditingExistingInvoice && currentBillData?.invoiceId) {
           invoiceResponse = await updateExistingInvoice(false, payments);
 
           if (invoiceResponse) {
@@ -2634,9 +2356,8 @@ export default function Home() {
                 ? InvoiceStatus.Done
                 : InvoiceStatus.Done;
 
-            const updatedBills = [...bills];
-            updatedBills[currentBillIndex] = {
-              ...updatedBills[currentBillIndex],
+            setCurrentBillData({
+              ...currentBillData,
               completed: !isPartialPaid && !isOverPaid,
               completedDate:
                 !isPartialPaid && !isOverPaid
@@ -2646,41 +2367,39 @@ export default function Home() {
               isReturned: false,
               isPartialPaid: isPartialPaid,
               returnReason: "",
-              invoiceId: invoiceResponse.id || currentBill.invoiceId,
+              invoiceId: invoiceResponse.id || currentBillData.invoiceId,
               invoiceNumber:
-                invoiceResponse.invoiceNumber || currentBill.invoiceNumber,
+                invoiceResponse.invoiceNumber || currentBillData.invoiceNumber,
               invoiceStatus: updatedInvoiceStatus,
               isPending: false,
               remainingAmount: isPartialPaid ? invoiceTotal - totalPaid : null,
               paidAmount: totalPaid,
-            };
-            setBills(updatedBills);
+            });
 
             if (selectedTable && selectedHall && !isPartialPaid) {
-              updateTableStatus(
+              await updateTableStatus(
                 selectedHall.id,
                 selectedTable.id,
                 "available",
-                null,
               );
             }
 
             if (isPartialPaid) {
               toast.success(
                 `تم دفع ${totalPaid.toFixed(2)} ج.م من إجمالي ${invoiceTotal.toFixed(2)} ج.م للفاتورة رقم ${
-                  invoiceResponse.invoiceNumber || currentBill.invoiceNumber
+                  invoiceResponse.invoiceNumber || currentBillData.invoiceNumber
                 } (باقي ${(invoiceTotal - totalPaid).toFixed(2)} ج.م)`,
               );
             } else if (isOverPaid) {
               toast.success(
                 `تم دفع ${totalPaid.toFixed(2)} ج.م (زيادة ${(totalPaid - invoiceTotal).toFixed(2)} ج.م) للفاتورة رقم ${
-                  invoiceResponse.invoiceNumber || currentBill.invoiceNumber
+                  invoiceResponse.invoiceNumber || currentBillData.invoiceNumber
                 }`,
               );
             } else {
               toast.success(
                 `تم إتمام البيع للفاتورة رقم ${
-                  invoiceResponse.invoiceNumber || currentBill.invoiceNumber
+                  invoiceResponse.invoiceNumber || currentBillData.invoiceNumber
                 }`,
               );
             }
@@ -2690,7 +2409,7 @@ export default function Home() {
             setRemainingAmount(0);
             setExcessAmount(0);
             setIsPartialPayment(false);
-            addNewBill();
+            resetBillData();
           }
         } else {
           invoiceResponse = await createInvoice(false, payments);
@@ -2707,9 +2426,8 @@ export default function Home() {
                 ? InvoiceStatus.Done
                 : InvoiceStatus.Done;
 
-            const updatedBills = [...bills];
-            updatedBills[currentBillIndex] = {
-              ...updatedBills[currentBillIndex],
+            setCurrentBillData({
+              ...currentBillData,
               completed: !isPartialPaid && !isOverPaid,
               completedDate:
                 !isPartialPaid && !isOverPaid
@@ -2725,15 +2443,13 @@ export default function Home() {
               isPending: false,
               remainingAmount: isPartialPaid ? invoiceTotal - totalPaid : null,
               paidAmount: totalPaid,
-            };
-            setBills(updatedBills);
+            });
 
             if (selectedTable && selectedHall && !isPartialPaid) {
-              updateTableStatus(
+              await updateTableStatus(
                 selectedHall.id,
                 selectedTable.id,
                 "available",
-                null,
               );
             }
 
@@ -2760,7 +2476,7 @@ export default function Home() {
             setRemainingAmount(0);
             setExcessAmount(0);
             setIsPartialPayment(false);
-            addNewBill();
+            resetBillData();
           }
         }
 
@@ -2820,7 +2536,7 @@ export default function Home() {
         return;
       }
 
-      if (bills[currentBillIndex]?.billType === "delivery") {
+      if (currentBillData.billType === "delivery") {
         if (!customerPhone || customerPhone.length < 11) {
           toast.error("يرجى إدخال رقم هاتف صحيح للتوصيل");
           return;
@@ -2832,7 +2548,7 @@ export default function Home() {
         }
       }
 
-      if (bills[currentBillIndex]?.billType === "dinein" && !selectedTable) {
+      if (currentBillData.billType === "dinein" && !selectedTable) {
         toast.error("يرجى اختيار طاولة أولاً");
         setShowTableSelection(true);
         return;
@@ -2841,31 +2557,28 @@ export default function Home() {
       try {
         let invoiceResponse;
 
-        if (isEditingExistingInvoice && bills[currentBillIndex]?.invoiceId) {
+        if (isEditingExistingInvoice && currentBillData?.invoiceId) {
           invoiceResponse = await updateExistingInvoice(true, []);
         } else {
           invoiceResponse = await createInvoice(true, []);
         }
 
         if (invoiceResponse) {
-          const updatedBills = [...bills];
-          updatedBills[currentBillIndex] = {
-            ...updatedBills[currentBillIndex],
+          setCurrentBillData({
+            ...currentBillData,
             completed: true,
             completedDate: new Date().toLocaleString(),
             invoiceId: invoiceResponse.id,
             invoiceNumber: invoiceResponse.invoiceNumber,
             invoiceStatus: InvoiceStatus.Open,
             isPending: true,
-          };
-          setBills(updatedBills);
+          });
 
           if (selectedTable && selectedHall) {
-            updateTableStatus(
+            await updateTableStatus(
               selectedHall.id,
               selectedTable.id,
               "occupied",
-              null,
             );
           }
 
@@ -2877,7 +2590,7 @@ export default function Home() {
           setIsEditingExistingInvoice(false);
           setCurrentInvoicePage(totalPages + 1);
           setOrderPrepared(true);
-          addNewBill();
+          resetBillData();
         }
       } catch (error) {
         console.error("خطأ في إنشاء/تحديث الفاتورة المعلقة:", error);
@@ -2891,7 +2604,7 @@ export default function Home() {
         setIsNewBillActive(true);
         setIsEditingExistingInvoice(false);
         setCurrentInvoicePage(totalPages + 1);
-        addNewBill();
+        resetBillData();
         toast.info("فاتورة جديدة");
       }
     }
@@ -2915,7 +2628,7 @@ export default function Home() {
         setIsNewBillActive(true);
         setIsEditingExistingInvoice(false);
         setCurrentInvoicePage(0);
-        addNewBill();
+        resetBillData();
         toast.info("فاتورة جديدة");
       }
     }
@@ -2965,9 +2678,7 @@ export default function Home() {
   const total =
     totalWithTax -
     discountAmountCalc +
-    (bills[currentBillIndex]?.billType === "delivery" && deliveryFee
-      ? deliveryFee
-      : 0);
+    (currentBillData.billType === "delivery" && deliveryFee ? deliveryFee : 0);
 
   const handlePrepareOrder = async () => {
     if (cart.length === 0) {
@@ -2983,21 +2694,20 @@ export default function Home() {
     try {
       let invoiceResponse;
 
-      if (isEditingExistingInvoice && bills[currentBillIndex]?.invoiceId) {
+      if (isEditingExistingInvoice && currentBillData?.invoiceId) {
         invoiceResponse = await updateExistingInvoice(true, []);
       } else {
         invoiceResponse = await createInvoice(true, []);
       }
 
-      const updatedBills = [...bills];
-      updatedBills[currentBillIndex] = {
+      setCurrentBillData({
         id: currentBillIndex + 1,
         cart: [...cart],
         tax,
         discount: discount === "" ? null : discount,
-        discountType: bills[currentBillIndex]?.discountType || 0,
+        discountType: currentBillData.discountType || 0,
         deliveryFee:
-          bills[currentBillIndex]?.billType === "delivery" && deliveryFee
+          currentBillData.billType === "delivery" && deliveryFee
             ? deliveryFee
             : null,
         billType: "dinein",
@@ -3010,12 +2720,6 @@ export default function Home() {
         paymentMethod: null,
         completed: false,
         completedDate: null,
-        tableInfo: {
-          hallId: selectedHall.id,
-          hallName: selectedHall.name,
-          tableId: selectedTable.id,
-          tableNumber: selectedTable.number,
-        },
         tableId: selectedTable.id,
         tableName: selectedTable.number,
         tableStatus: "occupied",
@@ -3030,18 +2734,13 @@ export default function Home() {
         deliveryCompanyId: null,
         deliveryCompanyName: null,
         deliveryCompanyContact: null,
-      };
+      });
 
-      updateTableStatus(
-        selectedHall.id,
-        selectedTable.id,
-        "occupied",
-        currentBillIndex + 1,
-      );
+      await updateTableStatus(selectedHall.id, selectedTable.id, "occupied");
       setTableStatus("occupied");
       setOrderPrepared(true);
 
-      addNewBill();
+      resetBillData();
 
       toast.success(
         `تم تحضير طلب الطاولة ${selectedTable.number} وفتح فاتورة جديدة`,
@@ -3057,19 +2756,17 @@ export default function Home() {
   };
 
   const handleReturnBill = async () => {
-    const currentBill = bills[currentBillIndex];
-
-    if (!currentBill.completed) {
+    if (!currentBillData.completed) {
       toast.error("لا يمكن إرجاع فاتورة غير مكتملة");
       return;
     }
 
-    if (currentBill.isReturned) {
+    if (currentBillData.isReturned) {
       toast.error("هذه الفاتورة بالفعل مرتجعة");
       return;
     }
 
-    if (!currentBill.invoiceNumber) {
+    if (!currentBillData.invoiceNumber) {
       toast.error("لا يوجد رقم فاتورة للإرجاع");
       return;
     }
@@ -3078,7 +2775,7 @@ export default function Home() {
       title: "إرجاع الفاتورة",
       html: `
         <div class="text-right">
-          <p class="mb-3">فاتورة رقم #${currentBill.invoiceNumber}</p>
+          <p class="mb-3">فاتورة رقم #${currentBillData.invoiceNumber}</p>
           <p class="mb-4 text-gray-600">المبلغ الإجمالي: ${total.toFixed(2)} ج.م</p>
           <div class="mb-4">
             <label class="block text-sm text-gray-700 mb-2">سبب الارتجاع (اختياري)</label>
@@ -3125,22 +2822,20 @@ export default function Home() {
     }
 
     try {
-      if (currentBill.invoiceNumber) {
-        await createFullReturn(currentBill.invoiceNumber);
+      if (currentBillData.invoiceNumber) {
+        await createFullReturn(currentBillData.invoiceNumber);
       }
 
-      const updatedBills = [...bills];
-      updatedBills[currentBillIndex] = {
-        ...currentBill,
+      setCurrentBillData({
+        ...currentBillData,
         isReturned: true,
         returnReason: returnReason || "بدون سبب",
         returnedDate: new Date().toLocaleString(),
         invoiceStatus: InvoiceStatus.Returned,
-      };
-      setBills(updatedBills);
+      });
 
-      if (currentBill.tableId && selectedHall && selectedTable) {
-        updateTableStatus(selectedHall.id, selectedTable.id, "available", null);
+      if (currentBillData.tableId && selectedHall && selectedTable) {
+        await updateTableStatus(selectedHall.id, selectedTable.id, "available");
         setTableStatus("available");
       }
 
@@ -3148,7 +2843,7 @@ export default function Home() {
         title: "تم الإرجاع بنجاح!",
         html: `
           <div class="text-right">
-            <p>تم تحويل الفاتورة #${currentBill.invoiceNumber} إلى فاتورة مرتجعة</p>
+            <p>تم تحويل الفاتورة #${currentBillData.invoiceNumber} إلى فاتورة مرتجعة</p>
             <p class="mt-2 text-gray-600">${returnReason ? `السبب: ${returnReason}` : "بدون سبب محدد"}</p>
             <p class="mt-2 text-sm text-gray-500">التاريخ: ${new Date().toLocaleString()}</p>
           </div>
@@ -3158,7 +2853,9 @@ export default function Home() {
         confirmButtonColor: "#10B981",
       });
 
-      toast.success(`تم إرجاع الفاتورة رقم ${currentBill.invoiceNumber} بنجاح`);
+      toast.success(
+        `تم إرجاع الفاتورة رقم ${currentBillData.invoiceNumber} بنجاح`,
+      );
     } catch (error) {
       console.error("خطأ في إرجاع الفاتورة:", error);
       toast.error("حدث خطأ في إرجاع الفاتورة");
@@ -3174,14 +2871,12 @@ export default function Home() {
   };
 
   const resetCart = () => {
-    const currentBill = bills[currentBillIndex];
-
-    if (currentBill?.completed) {
+    if (currentBillData.completed) {
       toast.error("لا يمكن إعادة تعيين فاتورة مكتملة");
       return;
     }
 
-    if (currentBill?.isPartialPaid) {
+    if (currentBillData.isPartialPaid) {
       toast.error("لا يمكن إعادة تعيين فاتورة آجلة");
       return;
     }
@@ -3191,19 +2886,7 @@ export default function Home() {
       return;
     }
 
-    setCart([]);
-    setTax(14);
-    setDiscount("");
-    setDeliveryFee("");
-    setCustomerPhone("");
-    setCustomerName("");
-    setCustomerAddress("");
-    setCustomerNationalId("");
-    setCustomerId(null);
-    setGeneralNote("");
-    setDeliveryType(null);
-    setSelectedDeliveryCompany(null);
-    setOrderPrepared(false);
+    resetBillData();
     toast.info("تم إعادة تعيين الفاتورة");
   };
 
@@ -3215,26 +2898,25 @@ export default function Home() {
   const shouldShowPrepareOrderButton = () => {
     return (
       isNewBillActive &&
-      bills[currentBillIndex]?.billType === "dinein" &&
+      currentBillData.billType === "dinein" &&
       selectedTable &&
       cart.length > 0 &&
       !orderPrepared &&
-      !bills[currentBillIndex]?.isPartialPaid
+      !currentBillData.isPartialPaid
     );
   };
 
   const shouldShowCompleteBillButton = () => {
-    const currentBill = bills[currentBillIndex];
-    if (!currentBill) return false;
+    if (!currentBillData) return false;
 
-    if (currentBill.isPartialPaid && currentBill.remainingAmount > 0) {
+    if (currentBillData.isPartialPaid && currentBillData.remainingAmount > 0) {
       return true;
     }
 
     if (
       cart.length > 0 &&
-      !currentBill.completed &&
-      !currentBill.isPartialPaid
+      !currentBillData.completed &&
+      !currentBillData.isPartialPaid
     ) {
       return true;
     }
@@ -3243,8 +2925,7 @@ export default function Home() {
   };
 
   const getCompleteBillButtonText = () => {
-    const currentBill = bills[currentBillIndex];
-    if (currentBill?.isPartialPaid && currentBill.remainingAmount > 0) {
+    if (currentBillData.isPartialPaid && currentBillData.remainingAmount > 0) {
       return "استكمال الدفع";
     }
     return "إتمام البيع";
@@ -4352,9 +4033,9 @@ export default function Home() {
                         className="text-xl font-bold"
                         style={{ color: "#193F94" }}
                       >
-                        {bills[currentBillIndex]?.isPartialPaid &&
-                        bills[currentBillIndex]?.remainingAmount
-                          ? bills[currentBillIndex].remainingAmount.toFixed(2)
+                        {currentBillData.isPartialPaid &&
+                        currentBillData.remainingAmount
+                          ? currentBillData.remainingAmount.toFixed(2)
                           : total.toFixed(2)}{" "}
                         ج.م
                       </p>
@@ -4362,7 +4043,7 @@ export default function Home() {
                     <div className="text-left">
                       <p className="text-xs text-gray-600">
                         #
-                        {bills[currentBillIndex]?.invoiceNumber ||
+                        {currentBillData.invoiceNumber ||
                           (isNewBillActive ? "جديدة" : currentBillIndex + 1)}
                       </p>
                       <p className="text-[10px] text-gray-500">
@@ -4378,11 +4059,11 @@ export default function Home() {
                         : ""}
                     </div>
                   )}
-                  {bills[currentBillIndex]?.isPartialPaid &&
-                    bills[currentBillIndex]?.paidAmount && (
+                  {currentBillData.isPartialPaid &&
+                    currentBillData.paidAmount && (
                       <div className="mt-1 text-[10px] text-blue-600">
-                        تم دفعه سابقاً:{" "}
-                        {bills[currentBillIndex].paidAmount.toFixed(2)} ج.م
+                        تم دفعه سابقاً: {currentBillData.paidAmount.toFixed(2)}{" "}
+                        ج.م
                       </div>
                     )}
                 </div>
@@ -4466,11 +4147,9 @@ export default function Home() {
                           </p>
                           <p className="text-xs text-yellow-700">
                             سيتم حفظ الفاتورة كآجل والمبلغ{" "}
-                            {bills[currentBillIndex]?.isPartialPaid &&
-                            bills[currentBillIndex]?.remainingAmount
-                              ? bills[currentBillIndex].remainingAmount.toFixed(
-                                  2,
-                                )
+                            {currentBillData.isPartialPaid &&
+                            currentBillData.remainingAmount
+                              ? currentBillData.remainingAmount.toFixed(2)
                               : total.toFixed(2)}{" "}
                             ج.م سيتم تحصيله لاحقاً
                           </p>
@@ -4586,7 +4265,6 @@ export default function Home() {
                   </>
                 )}
 
-                {/* Partial Payment Button */}
                 {!isPartialPayment && (
                   <div className="mt-3 pt-2 border-t border-gray-200">
                     <button
@@ -4684,8 +4362,7 @@ export default function Home() {
                   </h3>
                   <p className="text-sm text-gray-500 mt-1">
                     فاتورة رقم #
-                    {bills[currentBillIndex]?.invoiceNumber ||
-                      currentBillIndex + 1}
+                    {currentBillData.invoiceNumber || currentBillIndex + 1}
                   </p>
                 </div>
                 <button
@@ -4702,15 +4379,13 @@ export default function Home() {
                     <div>
                       <p className="text-sm text-gray-600">رقم الفاتورة</p>
                       <p className="font-bold">
-                        #
-                        {bills[currentBillIndex]?.invoiceNumber ||
-                          currentBillIndex + 1}
+                        #{currentBillData.invoiceNumber || currentBillIndex + 1}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">التاريخ</p>
                       <p className="font-bold">
-                        {bills[currentBillIndex]?.completedDate ||
+                        {currentBillData.completedDate ||
                           new Date().toLocaleString()}
                       </p>
                     </div>
@@ -4726,7 +4401,7 @@ export default function Home() {
                         </div>
                       </>
                     )}
-                    {bills[currentBillIndex]?.billType === "delivery" &&
+                    {currentBillData.billType === "delivery" &&
                       deliveryType && (
                         <>
                           <div>
@@ -4748,11 +4423,9 @@ export default function Home() {
                     <div>
                       <p className="text-sm text-gray-600">حالة الفاتورة</p>
                       <span
-                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getInvoiceStatusStyle(bills[currentBillIndex]?.invoiceStatus)}`}
+                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getInvoiceStatusStyle(currentBillData.invoiceStatus)}`}
                       >
-                        {getInvoiceStatusText(
-                          bills[currentBillIndex]?.invoiceStatus,
-                        )}
+                        {getInvoiceStatusText(currentBillData.invoiceStatus)}
                       </span>
                     </div>
                     {customerName && (
@@ -4848,7 +4521,7 @@ export default function Home() {
                           `(${discount}%)`}
                       </span>
                     </div>
-                    {bills[currentBillIndex]?.billType === "delivery" &&
+                    {currentBillData.billType === "delivery" &&
                       deliveryFee &&
                       deliveryFee > 0 && (
                         <div className="flex justify-between text-sm">
@@ -4987,12 +4660,12 @@ export default function Home() {
                               key={product.id}
                               onClick={() => handleProductClick(product)}
                               disabled={
-                                bills[currentBillIndex]?.completed ||
-                                bills[currentBillIndex]?.isPartialPaid
+                                currentBillData.completed ||
+                                currentBillData.isPartialPaid
                               }
                               className={`bg-gray-50 hover:bg-blue-50 rounded-lg p-2 flex items-center transition-all duration-300 transform active:scale-[0.98] border border-gray-200 h-20 ${
-                                bills[currentBillIndex]?.completed ||
-                                bills[currentBillIndex]?.isPartialPaid
+                                currentBillData.completed ||
+                                currentBillData.isPartialPaid
                                   ? "opacity-50 cursor-not-allowed"
                                   : ""
                               }`}
@@ -5097,16 +4770,15 @@ export default function Home() {
                           <>
                             <span>
                               #
-                              {bills[currentBillIndex]?.invoiceNumber ||
+                              {currentBillData.invoiceNumber ||
                                 currentBillIndex + 1}
                             </span>
-                            {bills[currentBillIndex]?.invoiceStatus !==
-                              undefined && (
+                            {currentBillData.invoiceStatus !== undefined && (
                               <span
-                                className={`text-[10px] px-1.5 py-0.5 rounded-full ${getInvoiceStatusStyle(bills[currentBillIndex].invoiceStatus)}`}
+                                className={`text-[10px] px-1.5 py-0.5 rounded-full ${getInvoiceStatusStyle(currentBillData.invoiceStatus)}`}
                               >
                                 {getInvoiceStatusText(
-                                  bills[currentBillIndex].invoiceStatus,
+                                  currentBillData.invoiceStatus,
                                 )}
                               </span>
                             )}
@@ -5130,14 +4802,14 @@ export default function Home() {
                         key={type.value}
                         onClick={() => handleBillTypeChange(type.value)}
                         disabled={
-                          bills[currentBillIndex]?.completed ||
-                          bills[currentBillIndex]?.isPartialPaid
+                          currentBillData.completed ||
+                          currentBillData.isPartialPaid
                         }
                         className={`flex-1 flex items-center justify-center py-1.5 rounded border transition-all text-xs ${
-                          bills[currentBillIndex]?.billType === type.value
+                          currentBillData.billType === type.value
                             ? "bg-blue-100 border-blue-500 text-blue-700 font-medium"
                             : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
-                        } ${bills[currentBillIndex]?.completed || bills[currentBillIndex]?.isPartialPaid ? "opacity-70 cursor-not-allowed" : ""}`}
+                        } ${currentBillData.completed || currentBillData.isPartialPaid ? "opacity-70 cursor-not-allowed" : ""}`}
                       >
                         <span>{type.label}</span>
                       </button>
@@ -5185,8 +4857,8 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
-                      {!bills[currentBillIndex]?.completed &&
-                        !bills[currentBillIndex]?.isPartialPaid && (
+                      {!currentBillData.completed &&
+                        !currentBillData.isPartialPaid && (
                           <div className="flex space-x-1 rtl:space-x-reverse">
                             <button
                               onClick={handleOpenTableSelection}
@@ -5234,60 +4906,59 @@ export default function Home() {
                   </div>
                 )}
 
-                {bills[currentBillIndex]?.billType === "delivery" &&
-                  deliveryType && (
-                    <div className="mb-2">
-                      <div className="flex items-center justify-between bg-gradient-to-r from-amber-50 to-white py-2 px-2 rounded-lg border border-amber-200 shadow-sm">
-                        <div className="flex items-center">
-                          <span className="text-amber-700 text-xs ml-1">
-                            {deliveryType === DeliveryType.Store ? "🏪" : "🚚"}
-                          </span>
-                          <span className="text-amber-800 font-medium text-[13px]">
-                            {deliveryType === DeliveryType.Store
-                              ? "دليفري المحل"
-                              : selectedDeliveryCompany?.name}
-                          </span>
-                          <span className="mr-1 px-1 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-medium">
-                            {deliveryFee} ج.م
-                          </span>
-                        </div>
-                        {!bills[currentBillIndex]?.completed &&
-                          !bills[currentBillIndex]?.isPartialPaid && (
-                            <button
-                              onClick={() => setShowDeliveryTypeModal(true)}
-                              className="text-[9px] bg-amber-100 hover:bg-amber-200 text-amber-700 px-1 py-1 rounded transition-colors flex items-center"
-                            >
-                              <svg
-                                className="w-3 h-3 ml-0.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                />
-                              </svg>
-                            </button>
-                          )}
+                {currentBillData.billType === "delivery" && deliveryType && (
+                  <div className="mb-2">
+                    <div className="flex items-center justify-between bg-gradient-to-r from-amber-50 to-white py-2 px-2 rounded-lg border border-amber-200 shadow-sm">
+                      <div className="flex items-center">
+                        <span className="text-amber-700 text-xs ml-1">
+                          {deliveryType === DeliveryType.Store ? "🏪" : "🚚"}
+                        </span>
+                        <span className="text-amber-800 font-medium text-[13px]">
+                          {deliveryType === DeliveryType.Store
+                            ? "دليفري المحل"
+                            : selectedDeliveryCompany?.name}
+                        </span>
+                        <span className="mr-1 px-1 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-medium">
+                          {deliveryFee} ج.م
+                        </span>
                       </div>
-                      {deliveryType === DeliveryType.Company &&
-                        selectedDeliveryCompany?.contactNumber && (
-                          <div className="text-[8px] text-amber-600 mt-0.5 mr-5 flex items-center">
+                      {!currentBillData.completed &&
+                        !currentBillData.isPartialPaid && (
+                          <button
+                            onClick={() => setShowDeliveryTypeModal(true)}
+                            className="text-[9px] bg-amber-100 hover:bg-amber-200 text-amber-700 px-1 py-1 rounded transition-colors flex items-center"
+                          >
                             <svg
-                              className="w-2 h-2 ml-0.5"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
+                              className="w-3 h-3 ml-0.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
                             >
-                              <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                              />
                             </svg>
-                            {selectedDeliveryCompany.contactNumber}
-                          </div>
+                          </button>
                         )}
                     </div>
-                  )}
+                    {deliveryType === DeliveryType.Company &&
+                      selectedDeliveryCompany?.contactNumber && (
+                        <div className="text-[8px] text-amber-600 mt-0.5 mr-5 flex items-center">
+                          <svg
+                            className="w-2 h-2 ml-0.5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                          </svg>
+                          {selectedDeliveryCompany.contactNumber}
+                        </div>
+                      )}
+                  </div>
+                )}
 
                 <div className="mb-3">
                   <div className="flex items-center gap-2">
@@ -5299,8 +4970,8 @@ export default function Home() {
                         onFocus={() => handleFocus("phone")}
                         onBlur={handleBlur}
                         disabled={
-                          bills[currentBillIndex]?.completed ||
-                          bills[currentBillIndex]?.isPartialPaid
+                          currentBillData.completed ||
+                          currentBillData.isPartialPaid
                         }
                         className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white disabled:bg-gray-100"
                         dir="rtl"
@@ -5353,8 +5024,8 @@ export default function Home() {
                           <button
                             onClick={openEditCustomerModal}
                             disabled={
-                              bills[currentBillIndex]?.completed ||
-                              bills[currentBillIndex]?.isPartialPaid
+                              currentBillData.completed ||
+                              currentBillData.isPartialPaid
                             }
                             className="p-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 transition-all border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="تعديل بيانات العميل"
@@ -5383,8 +5054,8 @@ export default function Home() {
                         <button
                           onClick={openAddCustomerModal}
                           disabled={
-                            bills[currentBillIndex]?.completed ||
-                            bills[currentBillIndex]?.isPartialPaid
+                            currentBillData.completed ||
+                            currentBillData.isPartialPaid
                           }
                           className="p-2 rounded-xl bg-green-50 hover:bg-green-100 text-green-700 transition-all border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="إضافة عميل جديد"
@@ -5443,8 +5114,8 @@ export default function Home() {
                                 {generalNote}
                               </p>
                             </div>
-                            {!bills[currentBillIndex]?.completed &&
-                              !bills[currentBillIndex]?.isPartialPaid && (
+                            {!currentBillData.completed &&
+                              !currentBillData.isPartialPaid && (
                                 <button
                                   onClick={startEditingGeneralNote}
                                   className="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded-md transition-colors flex items-center border border-blue-300 mr-2"
@@ -5471,12 +5142,12 @@ export default function Home() {
                         <button
                           onClick={startEditingGeneralNote}
                           disabled={
-                            bills[currentBillIndex]?.completed ||
-                            bills[currentBillIndex]?.isPartialPaid
+                            currentBillData.completed ||
+                            currentBillData.isPartialPaid
                           }
                           className={`w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-right flex items-center justify-between ${
-                            bills[currentBillIndex]?.completed ||
-                            bills[currentBillIndex]?.isPartialPaid
+                            currentBillData.completed ||
+                            currentBillData.isPartialPaid
                               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                               : "bg-gray-50 text-gray-600 hover:bg-gray-100"
                           }`}
@@ -5506,20 +5177,17 @@ export default function Home() {
                     className={`text-xs font-medium px-2 py-1 rounded-full ${
                       isNewBillActive
                         ? "bg-purple-100 text-purple-800"
-                        : getInvoiceStatusStyle(
-                            bills[currentBillIndex]?.invoiceStatus,
-                          )
+                        : getInvoiceStatusStyle(currentBillData.invoiceStatus)
                     }`}
                   >
                     {cart.length} منتج
                     {isNewBillActive && " (جديدة)"}
                   </span>
-                  {!isNewBillActive &&
-                    bills[currentBillIndex]?.completedDate && (
-                      <span className="text-[10px] text-gray-500">
-                        {bills[currentBillIndex].completedDate}
-                      </span>
-                    )}
+                  {!isNewBillActive && currentBillData.completedDate && (
+                    <span className="text-[10px] text-gray-500">
+                      {currentBillData.completedDate}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -5636,12 +5304,12 @@ export default function Home() {
                                         removeFromCart(item.uniqueId || item.id)
                                       }
                                       disabled={
-                                        bills[currentBillIndex]?.completed ||
-                                        bills[currentBillIndex]?.isPartialPaid
+                                        currentBillData.completed ||
+                                        currentBillData.isPartialPaid
                                       }
                                       className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${
-                                        bills[currentBillIndex]?.completed ||
-                                        bills[currentBillIndex]?.isPartialPaid
+                                        currentBillData.completed ||
+                                        currentBillData.isPartialPaid
                                           ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                           : "bg-gray-200 hover:bg-gray-300 text-gray-700"
                                       }`}
@@ -5682,12 +5350,12 @@ export default function Home() {
                                         }
                                       }}
                                       disabled={
-                                        bills[currentBillIndex]?.completed ||
-                                        bills[currentBillIndex]?.isPartialPaid
+                                        currentBillData.completed ||
+                                        currentBillData.isPartialPaid
                                       }
                                       className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${
-                                        bills[currentBillIndex]?.completed ||
-                                        bills[currentBillIndex]?.isPartialPaid
+                                        currentBillData.completed ||
+                                        currentBillData.isPartialPaid
                                           ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                           : "bg-gray-200 hover:bg-gray-300 text-gray-700"
                                       }`}
@@ -5697,9 +5365,8 @@ export default function Home() {
                                   </div>
 
                                   <div className="flex items-center space-x-1 rtl:space-x-reverse">
-                                    {!bills[currentBillIndex]?.completed &&
-                                      !bills[currentBillIndex]
-                                        ?.isPartialPaid && (
+                                    {!currentBillData.completed &&
+                                      !currentBillData.isPartialPaid && (
                                         <>
                                           {item.note && item.note.trim() ? (
                                             <button
@@ -5754,9 +5421,8 @@ export default function Home() {
                                           )}
                                         </>
                                       )}
-                                    {!bills[currentBillIndex]?.completed &&
-                                      !bills[currentBillIndex]
-                                        ?.isPartialPaid && (
+                                    {!currentBillData.completed &&
+                                      !currentBillData.isPartialPaid && (
                                         <button
                                           onClick={() =>
                                             deleteFromCart(
@@ -5870,12 +5536,12 @@ export default function Home() {
                     <button
                       onClick={openDiscountModal}
                       disabled={
-                        bills[currentBillIndex]?.completed ||
-                        bills[currentBillIndex]?.isPartialPaid
+                        currentBillData.completed ||
+                        currentBillData.isPartialPaid
                       }
                       className={`w-12 text-center px-1 py-1 border rounded mr-1.5 text-xs ${
-                        bills[currentBillIndex]?.completed ||
-                        bills[currentBillIndex]?.isPartialPaid
+                        currentBillData.completed ||
+                        currentBillData.isPartialPaid
                           ? "bg-gray-100 cursor-not-allowed"
                           : "bg-blue-50 hover:bg-blue-100 cursor-pointer border-blue-200"
                       }`}
@@ -5892,7 +5558,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {bills[currentBillIndex]?.billType === "delivery" && (
+                {currentBillData.billType === "delivery" && (
                   <div className="flex justify-between items-center text-xs">
                     <span>رسوم التوصيل:</span>
                     <div className="flex items-center">
@@ -5905,8 +5571,8 @@ export default function Home() {
                             className="w-12 text-right px-1 py-1 border rounded mr-1.5 text-xs"
                             min="0"
                             disabled={
-                              bills[currentBillIndex]?.completed ||
-                              bills[currentBillIndex]?.isPartialPaid
+                              currentBillData.completed ||
+                              currentBillData.isPartialPaid
                             }
                           />
                           <span className="font-bold">
@@ -5941,20 +5607,18 @@ export default function Home() {
               <button
                 onClick={resetCart}
                 disabled={
-                  bills[currentBillIndex]?.completed ||
-                  bills[currentBillIndex]?.isPartialPaid
+                  currentBillData.completed || currentBillData.isPartialPaid
                 }
                 className={`py-2.5 px-3 rounded-lg font-medium border transition-all text-xs flex-1 ${
-                  bills[currentBillIndex]?.completed ||
-                  bills[currentBillIndex]?.isPartialPaid
+                  currentBillData.completed || currentBillData.isPartialPaid
                     ? "opacity-50 cursor-not-allowed"
                     : ""
                 }`}
                 style={{ borderColor: "#193F94", color: "#193F94" }}
                 onMouseEnter={(e) => {
                   if (
-                    !bills[currentBillIndex]?.completed &&
-                    !bills[currentBillIndex]?.isPartialPaid
+                    !currentBillData.completed &&
+                    !currentBillData.isPartialPaid
                   ) {
                     e.target.style.backgroundColor = "#193F94";
                     e.target.style.color = "white";
@@ -5962,8 +5626,8 @@ export default function Home() {
                 }}
                 onMouseLeave={(e) => {
                   if (
-                    !bills[currentBillIndex]?.completed &&
-                    !bills[currentBillIndex]?.isPartialPaid
+                    !currentBillData.completed &&
+                    !currentBillData.isPartialPaid
                   ) {
                     e.target.style.backgroundColor = "transparent";
                     e.target.style.color = "#193F94";
@@ -5974,8 +5638,8 @@ export default function Home() {
               </button>
 
               {!isNewBillActive &&
-              bills[currentBillIndex]?.completed &&
-              !bills[currentBillIndex]?.isReturned ? (
+              currentBillData.completed &&
+              !currentBillData.isReturned ? (
                 <button
                   onClick={handleReturnBill}
                   className="py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 hover:scale-[1.02] active:scale-[0.98]"
@@ -5990,8 +5654,7 @@ export default function Home() {
                   ارتجاع
                 </button>
               ) : !isNewBillActive &&
-                bills[currentBillIndex]?.invoiceStatus ===
-                  InvoiceStatus.Returned ? (
+                currentBillData.invoiceStatus === InvoiceStatus.Returned ? (
                 <button
                   onClick={handleReprintBill}
                   className="py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 hover:scale-[1.02] active:scale-[0.98]"
