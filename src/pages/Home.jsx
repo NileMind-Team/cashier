@@ -398,10 +398,19 @@ export default function Home() {
       });
 
       if (response.status === 200 && response.data) {
+        const customerAddress = response.data.address || "";
+
         setCustomerName(response.data.name || "");
-        setCustomerAddress(response.data.address || "");
+        setCustomerAddress(customerAddress);
         setCustomerNationalId(response.data.nationalId || "");
         setCustomerId(response.data.id);
+
+        if (
+          currentBillData.billType === "delivery" &&
+          (!customerAddress || customerAddress.trim() === "")
+        ) {
+          toast.error("يرجى إدخال عنوان العميل للتوصيل");
+        }
       } else {
         setCustomerName("");
         setCustomerAddress("");
@@ -2026,13 +2035,18 @@ export default function Home() {
     }
 
     if (currentBillData.billType === "delivery") {
-      if (!customerPhone || customerPhone.length < 11) {
-        toast.error("يرجى إدخال رقم هاتف صحيح للتوصيل");
+      if (!customerId) {
+        toast.error("يرجى إدخال عميل للتوصيل");
         return;
       }
       if (!deliveryType) {
         toast.error("يرجى اختيار نوع التوصيل");
         setShowDeliveryTypeModal(true);
+        return;
+      }
+
+      if (customerId && (!customerAddress || customerAddress.trim() === "")) {
+        toast.error("يرجى إدخال عنوان العميل للتوصيل");
         return;
       }
     }
@@ -2565,6 +2579,11 @@ export default function Home() {
         if (!deliveryType) {
           toast.error("يرجى اختيار نوع التوصيل");
           setShowDeliveryTypeModal(true);
+          return;
+        }
+
+        if (customerId && (!customerAddress || customerAddress.trim() === "")) {
+          toast.error("يرجى إدخال عنوان العميل للتوصيل");
           return;
         }
       }
