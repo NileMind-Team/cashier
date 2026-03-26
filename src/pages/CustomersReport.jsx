@@ -545,8 +545,266 @@ export default function CustomersReports() {
     }
   };
 
+  const getPrintableData = () => {
+    if (
+      !customerData ||
+      (customerInvoices.length === 0 && customerTransactions.length === 0)
+    )
+      return [];
+
+    const allTransactions = [];
+
+    // Add all invoices
+    customerInvoices.forEach((invoice) => {
+      const invoiceDate = new Date(invoice.date);
+      const formattedDateTime = invoiceDate.toLocaleDateString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      allTransactions.push({
+        date: invoiceDate,
+        dateTime: formattedDateTime,
+        type: "فاتورة",
+        description: `فاتورة رقم ${invoice.invoiceNumber}`,
+        amount: invoice.totalAmount,
+        paid: invoice.paidAmount,
+        remaining: invoice.remainingAmount,
+        isInvoice: true,
+      });
+    });
+
+    // Add all payments
+    customerTransactions.forEach((transaction) => {
+      const transactionDate = new Date(transaction.date);
+      const formattedDateTime = transactionDate.toLocaleDateString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const invoice = customerInvoices.find(
+        (inv) => inv.invoiceId === transaction.invoiceId,
+      );
+      const invoiceNumber = invoice ? invoice.invoiceNumber : "مدفوعات منفصلة";
+
+      allTransactions.push({
+        date: transactionDate,
+        dateTime: formattedDateTime,
+        type: "دفعة",
+        description: `دفعة على فاتورة ${invoiceNumber} - ${transaction.paymentMethod || "كاش"}`,
+        amount: 0,
+        paid: transaction.debit || transaction.credit || 0,
+        remaining: 0,
+        isInvoice: false,
+      });
+    });
+
+    allTransactions.sort((a, b) => b.date - a.date);
+
+    return allTransactions;
+  };
+
   const totals = calculateTotals();
   const groupedData = groupByDate();
+  const printableTransactions = getPrintableData();
+
+  const handlePrint = () => {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "absolute";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "none";
+    document.body.appendChild(iframe);
+
+    const printContent = document.getElementById("printable-content");
+    if (!printContent) return;
+
+    const iframeDoc = iframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html dir="rtl">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: white;
+            color: #333;
+          }
+          
+          .print-container {
+            max-width: 1200px;
+            margin: 0 auto;
+          }
+          
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #193F94;
+          }
+          
+          .header h1 {
+            color: #193F94;
+            margin-bottom: 10px;
+          }
+          
+          .header h3 {
+            color: #666;
+            font-size: 16px;
+          }
+          
+          .customer-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border: 1px solid #dee2e6;
+          }
+          
+          .customer-info h4 {
+            color: #193F94;
+            margin-bottom: 10px;
+          }
+          
+          .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+          }
+          
+          .info-item {
+            font-size: 14px;
+          }
+          
+          .info-label {
+            font-weight: bold;
+            color: #666;
+          }
+          
+          .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+          }
+          
+          .summary-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+          }
+          
+          .summary-card .amount {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 5px;
+          }
+          
+          .summary-card.sales .amount { color: #193F94; }
+          .summary-card.paid .amount { color: #28a745; }
+          .summary-card.remaining .amount { color: #dc3545; }
+          
+          .transactions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            page-break-after: avoid;
+          }
+          
+          .transactions-table th {
+            border: 1px solid #dee2e6;
+            padding: 12px 10px;
+            text-align: right;
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #4a5568;
+            color: white;
+          }
+          
+          .transactions-table td {
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            text-align: right;
+            font-size: 13px;
+          }
+          
+          .transactions-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+          }
+          
+          .invoice-row {
+            background-color: #e3f2fd;
+          }
+          
+          .payment-row {
+            background-color: #e8f5e9;
+          }
+          
+          .transactions-table tfoot {
+            display: table-row-group;
+            page-break-after: avoid;
+            page-break-inside: avoid;
+          }
+          
+          .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+          }
+          
+          @media print {
+            body {
+              padding: 0;
+            }
+            .transactions-table th {
+              background-color: #4a5568 !important;
+              color: white !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .transactions-table tfoot {
+              display: table-row-group;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-container">
+          ${printContent.innerHTML}
+        </div>
+        <script>
+          window.onload = () => {
+            window.print();
+            window.onafterprint = () => {
+              window.parent.document.body.removeChild(window.frameElement);
+            };
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    iframeDoc.close();
+  };
 
   return (
     <div
@@ -596,6 +854,109 @@ export default function CustomersReports() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Hidden Printable Content */}
+      <div id="printable-content" style={{ display: "none" }}>
+        <div className="header">
+          <h1>تقرير حركة العميل</h1>
+        </div>
+
+        <div className="customer-info">
+          <h4>بيانات العميل</h4>
+          <div className="info-grid">
+            <div className="info-item">
+              <span className="info-label">الاسم:</span>{" "}
+              {reportData?.customer.analytics.customerName ||
+                customerData?.name ||
+                ""}
+            </div>
+            <div className="info-item">
+              <span className="info-label">رقم التليفون:</span>{" "}
+              {reportData?.customer.analytics.phone ||
+                customerData?.phone ||
+                ""}
+            </div>
+            {reportData?.customer.address && (
+              <div className="info-item">
+                <span className="info-label">العنوان:</span>{" "}
+                {reportData.customer.address}
+              </div>
+            )}
+            <div className="info-item">
+              <span className="info-label">الفترة:</span>{" "}
+              {reportData?.dateRange.start || formatArabicDate(startDate)} -{" "}
+              {reportData?.dateRange.end || formatArabicDate(endDate)}
+            </div>
+          </div>
+        </div>
+
+        <div className="summary-cards">
+          <div className="summary-card sales">
+            <div>إجمالي المبيعات</div>
+            <div className="amount">
+              {formatCurrency(totals.totalInvoicesAmount)} ج.م
+            </div>
+          </div>
+          <div className="summary-card paid">
+            <div>إجمالي المدفوعات</div>
+            <div className="amount">{formatCurrency(totals.totalPaid)} ج.م</div>
+          </div>
+          <div className="summary-card remaining">
+            <div>المتبقي</div>
+            <div className="amount">
+              {formatCurrency(totals.totalRemaining)} ج.م
+            </div>
+          </div>
+        </div>
+
+        <table className="transactions-table">
+          <thead>
+            <tr>
+              <th>التاريخ والوقت</th>
+              <th>نوع العملية</th>
+              <th>الوصف</th>
+              <th>قيمة الفاتورة</th>
+              <th>المدفوع</th>
+              <th>المتبقي</th>
+            </tr>
+          </thead>
+          <tbody>
+            {printableTransactions.map((transaction, index) => (
+              <tr
+                key={index}
+                className={
+                  transaction.isInvoice ? "invoice-row" : "payment-row"
+                }
+              >
+                <td>{transaction.dateTime}</td>
+                <td>{transaction.type}</td>
+                <td>{transaction.description}</td>
+                <td>
+                  {transaction.isInvoice
+                    ? formatCurrency(transaction.amount)
+                    : "-"}
+                </td>
+                <td>{formatCurrency(transaction.paid)}</td>
+                <td>
+                  {transaction.isInvoice
+                    ? formatCurrency(transaction.remaining)
+                    : "-"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr style={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}>
+              <td colSpan="3" style={{ textAlign: "left" }}>
+                الإجمالي:
+              </td>
+              <td>{formatCurrency(totals.totalInvoicesAmount)} ج.م</td>
+              <td>{formatCurrency(totals.totalPaid)} ج.م</td>
+              <td>{formatCurrency(totals.totalRemaining)} ج.م</td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
       <div className="container mx-auto px-4 py-6">
@@ -772,12 +1133,6 @@ export default function CustomersReports() {
                         ? "opacity-50 cursor-not-allowed bg-gray-400"
                         : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                     }`}
-                    style={{
-                      backgroundColor:
-                        loading || !startDate || !endDate || !customerData
-                          ? ""
-                          : "#193F94",
-                    }}
                   >
                     {loading ? (
                       <>
@@ -828,6 +1183,30 @@ export default function CustomersReports() {
                       ج.م)
                     </button>
                   )}
+
+                  {/* Print Button */}
+                  {reportData && (
+                    <button
+                      onClick={handlePrint}
+                      className="w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 ml-2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                        />
+                      </svg>
+                      طباعة التقرير PDF
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -836,7 +1215,7 @@ export default function CustomersReports() {
           <div className="lg:col-span-3">
             {reportData ? (
               <div className="bg-white rounded-2xl shadow-lg p-6 print:shadow-none">
-                <div className="flex justify-between items-start mb-6 print:flex-col print:items-start">
+                <div className="flex justify-between items-start mb-6 print:hidden">
                   <div>
                     <h2
                       className="text-2xl font-bold"
@@ -859,20 +1238,10 @@ export default function CustomersReports() {
                       {customerInvoices.length} فاتورة في هذه الفترة
                     </p>
                   </div>
-                  <div className="flex items-center space-x-2 rtl:space-x-reverse print:hidden">
-                    <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
-                      {customerInvoices.length} فاتورة
-                    </div>
-                    {totals.totalRemaining > 0 && (
-                      <div className="px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">
-                        متبقي {formatCurrency(totals.totalRemaining)} ج.م
-                      </div>
-                    )}
-                  </div>
                 </div>
 
                 {/* البطاقات الرئيسية */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 print:grid-cols-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 print:hidden">
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
                     <div className="flex items-center justify-between">
                       <div>
@@ -955,7 +1324,7 @@ export default function CustomersReports() {
                   </div>
                 </div>
 
-                <div className="mb-6">
+                <div className="mb-6 print:hidden">
                   <h3
                     className="text-lg font-bold mb-4"
                     style={{ color: "#193F94" }}
@@ -991,7 +1360,6 @@ export default function CustomersReports() {
                             key={date}
                             className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
                           >
-                            {/* Day Header - Clickable like invoice header */}
                             <div
                               className="bg-gradient-to-r from-gray-50 to-white p-4 cursor-pointer hover:bg-gray-100 transition-colors"
                               onClick={() => toggleDayDetails(date)}
@@ -1000,9 +1368,7 @@ export default function CustomersReports() {
                                 <div className="flex items-center space-x-3 rtl:space-x-reverse">
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
-                                    className={`h-5 w-5 text-gray-500 transform transition-transform ${
-                                      isExpanded ? "rotate-180" : ""
-                                    }`}
+                                    className={`h-5 w-5 text-gray-500 transform transition-transform ${isExpanded ? "rotate-180" : ""}`}
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -1020,9 +1386,7 @@ export default function CustomersReports() {
                                   <span className="text-sm text-gray-500">
                                     {new Date(date).toLocaleDateString(
                                       "ar-EG",
-                                      {
-                                        weekday: "long",
-                                      },
+                                      { weekday: "long" },
                                     )}
                                   </span>
                                 </div>
@@ -1048,11 +1412,7 @@ export default function CustomersReports() {
                                       المتبقي:{" "}
                                     </span>
                                     <span
-                                      className={`font-bold ${
-                                        dayTotalRemaining > 0
-                                          ? "text-red-600"
-                                          : "text-green-600"
-                                      }`}
+                                      className={`font-bold ${dayTotalRemaining > 0 ? "text-red-600" : "text-green-600"}`}
                                     >
                                       {formatCurrency(dayTotalRemaining)} ج.م
                                     </span>
@@ -1068,10 +1428,8 @@ export default function CustomersReports() {
                               </div>
                             </div>
 
-                            {/* Day Details (Expandable) */}
                             {isExpanded && (
                               <div className="p-4 bg-gray-50 border-t border-gray-200">
-                                {/* Invoices Section */}
                                 {dayData.invoices.length > 0 && (
                                   <div className="mb-6">
                                     <h4 className="font-bold mb-3 text-gray-700">
@@ -1137,7 +1495,6 @@ export default function CustomersReports() {
                                             </div>
                                           </div>
 
-                                          {/* Payment details for this invoice */}
                                           {invoice.transactions &&
                                             invoice.transactions.length > 0 && (
                                               <div className="mt-3 pt-3 border-t border-gray-100">
@@ -1268,7 +1625,6 @@ export default function CustomersReports() {
                                               const invoiceNumber = invoice
                                                 ? invoice.invoiceNumber
                                                 : "مدفوعات منفصلة";
-
                                               return (
                                                 <tr
                                                   key={payment.id || idx}
@@ -1365,7 +1721,7 @@ export default function CustomersReports() {
                   )}
                 </div>
 
-                <div className="mb-6">
+                <div className="mb-6 print:hidden">
                   <h3
                     className="text-lg font-bold mb-4"
                     style={{ color: "#193F94" }}
@@ -1457,7 +1813,7 @@ export default function CustomersReports() {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-200">
+                <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-200 print:hidden">
                   <h4
                     className="font-bold mb-4 text-gray-800"
                     style={{ color: "#193F94" }}
@@ -1729,11 +2085,7 @@ export default function CustomersReports() {
                               </p>
                             </div>
                             <div
-                              className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                                isSelected
-                                  ? "border-blue-500 bg-blue-500"
-                                  : "border-gray-300"
-                              }`}
+                              className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300"}`}
                             >
                               {isSelected && (
                                 <div className="w-2 h-2 rounded-full bg-white"></div>
