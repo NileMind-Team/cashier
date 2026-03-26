@@ -2259,34 +2259,43 @@ export default function Home() {
 
         if (isEditingExistingInvoice && currentBillData?.invoiceId) {
           invoiceResponse = await updateExistingInvoice(false, []);
+
+          if (invoiceResponse) {
+            setCurrentBillData({
+              ...currentBillData,
+              completed: false,
+              isPartialPaid: true,
+              paymentMethod: "partial",
+              invoiceId: currentBillData.invoiceId,
+              invoiceNumber: currentBillData.invoiceNumber,
+              invoiceStatus: InvoiceStatus.PartialPaid,
+              isPending: false,
+              remainingAmount: total,
+              paidAmount: 0,
+            });
+          }
         } else {
           invoiceResponse = await createInvoice(false, []);
+
+          if (invoiceResponse) {
+            setCurrentBillData({
+              ...currentBillData,
+              completed: false,
+              isPartialPaid: true,
+              paymentMethod: "partial",
+              invoiceId: invoiceResponse.id,
+              invoiceNumber: invoiceResponse.invoiceNumber,
+              invoiceStatus: InvoiceStatus.PartialPaid,
+              isPending: false,
+              remainingAmount: total,
+              paidAmount: 0,
+            });
+          }
         }
 
         if (invoiceResponse) {
-          setCurrentBillData({
-            ...currentBillData,
-            completed: false,
-            isPartialPaid: true,
-            paymentMethod: "partial",
-            invoiceId: invoiceResponse.id,
-            invoiceNumber: invoiceResponse.invoiceNumber,
-            invoiceStatus: InvoiceStatus.PartialPaid,
-            isPending: false,
-            remainingAmount: total,
-            paidAmount: 0,
-          });
-
-          if (selectedTable && selectedHall) {
-            await updateTableStatus(
-              selectedHall.id,
-              selectedTable.id,
-              "occupied",
-            );
-          }
-
           toast.success(
-            `تم تأجيل المبلغ كاملاً للفاتورة رقم ${invoiceResponse.invoiceNumber}`,
+            `تم تأجيل المبلغ كاملاً للفاتورة رقم ${currentBillData.invoiceNumber || invoiceResponse.invoiceNumber}`,
           );
 
           setShowPaymentModal(false);
@@ -2295,6 +2304,8 @@ export default function Home() {
           setExcessAmount(0);
           setIsPartialPayment(false);
           resetBillData();
+          setIsNewBillActive(true);
+          setIsEditingExistingInvoice(false);
         }
 
         await fetchShiftDetails();
@@ -2365,6 +2376,8 @@ export default function Home() {
           setExcessAmount(0);
           setIsPartialPayment(false);
           resetBillData();
+          setIsNewBillActive(true);
+          setIsEditingExistingInvoice(false);
 
           await fetchShiftDetails();
           await fetchLastInvoice();
@@ -2402,9 +2415,8 @@ export default function Home() {
               isReturned: false,
               isPartialPaid: isPartialPaid,
               returnReason: "",
-              invoiceId: invoiceResponse.id || currentBillData.invoiceId,
-              invoiceNumber:
-                invoiceResponse.invoiceNumber || currentBillData.invoiceNumber,
+              invoiceId: currentBillData.invoiceId,
+              invoiceNumber: currentBillData.invoiceNumber,
               invoiceStatus: updatedInvoiceStatus,
               isPending: false,
               remainingAmount: isPartialPaid ? invoiceTotal - totalPaid : null,
@@ -2422,20 +2434,18 @@ export default function Home() {
             if (isPartialPaid) {
               toast.success(
                 `تم دفع ${totalPaid.toFixed(2)} ج.م من إجمالي ${invoiceTotal.toFixed(2)} ج.م للفاتورة رقم ${
-                  invoiceResponse.invoiceNumber || currentBillData.invoiceNumber
+                  currentBillData.invoiceNumber
                 } (باقي ${(invoiceTotal - totalPaid).toFixed(2)} ج.م)`,
               );
             } else if (isOverPaid) {
               toast.success(
                 `تم دفع ${totalPaid.toFixed(2)} ج.م (زيادة ${(totalPaid - invoiceTotal).toFixed(2)} ج.م) للفاتورة رقم ${
-                  invoiceResponse.invoiceNumber || currentBillData.invoiceNumber
+                  currentBillData.invoiceNumber
                 }`,
               );
             } else {
               toast.success(
-                `تم إتمام البيع للفاتورة رقم ${
-                  invoiceResponse.invoiceNumber || currentBillData.invoiceNumber
-                }`,
+                `تم إتمام البيع للفاتورة رقم ${currentBillData.invoiceNumber}`,
               );
             }
 
@@ -2445,6 +2455,8 @@ export default function Home() {
             setExcessAmount(0);
             setIsPartialPayment(false);
             resetBillData();
+            setIsNewBillActive(true);
+            setIsEditingExistingInvoice(false);
           }
         } else {
           invoiceResponse = await createInvoice(false, payments);
@@ -2512,6 +2524,8 @@ export default function Home() {
             setExcessAmount(0);
             setIsPartialPayment(false);
             resetBillData();
+            setIsNewBillActive(true);
+            setIsEditingExistingInvoice(false);
           }
         }
 
