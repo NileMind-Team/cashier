@@ -141,8 +141,8 @@ export default function Home() {
     useState(0);
   // eslint-disable-next-line no-unused-vars
   const [currentBillIndex, setCurrentBillIndex] = useState(0);
-  // Add a new state to track if products are loading
   const [productsLoading, setProductsLoading] = useState(true);
+  const isRefreshingRef = useRef(false);
 
   const DeliveryType = {
     Store: "store",
@@ -766,6 +766,25 @@ export default function Home() {
     }
   };
 
+  const fetchInvoiceByTableId = async (tableId) => {
+    try {
+      const response = await axiosInstance.get(
+        `/api/Invoices/GetInvoiceByTable/table/${tableId}`,
+      );
+
+      if (response.status === 200 && response.data) {
+        return response.data;
+      }
+      return null;
+    } catch (error) {
+      console.error("خطأ في جلب فاتورة الطاولة:", error);
+      if (error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  };
+
   const calculateTaxFromInvoice = (invoice) => {
     const subtotal = invoice.subTotal || 0;
     const discount = invoice.invoiceDiscount || 0;
@@ -921,19 +940,8 @@ export default function Home() {
   };
 
   const refreshCurrentBill = async () => {
-    if (currentBillData.invoiceId) {
-      try {
-        const response = await axiosInstance.get(
-          `/api/Invoices/GetById/${currentBillData.invoiceId}`,
-        );
-        if (response.status === 200 && response.data) {
-          convertInvoiceToBill(response.data);
-          await refreshTablesAndHalls();
-        }
-      } catch (error) {
-        console.error("خطأ في تحديث الفاتورة:", error);
-        toast.error("حدث خطأ في تحديث بيانات الفاتورة");
-      }
+    if (currentBillData.invoiceId && !isNewBillActive) {
+      await refreshTablesAndHalls();
     } else if (isNewBillActive) {
       resetBillData();
     }
@@ -992,13 +1000,20 @@ export default function Home() {
   };
 
   const refreshTablesAndHalls = async () => {
+    if (isRefreshingRef.current) {
+      return;
+    }
+
+    isRefreshingRef.current = true;
+
     try {
       hallsFetchedRef.current = false;
       tablesFetchedRef.current = false;
-      await fetchHalls();
-      await fetchTables();
+      await Promise.all([fetchHalls(), fetchTables()]);
     } catch (error) {
       console.error("خطأ في تحديث بيانات الصالات والطاولات:", error);
+    } finally {
+      isRefreshingRef.current = false;
     }
   };
 
@@ -1519,15 +1534,25 @@ export default function Home() {
       toast.info("جاري تحميل الفاتورة الخاصة بهذه الطاولة");
 
       try {
-        const response = await axiosInstance.get(
-          `/api/Invoices/GetByTableId/${table.id}`,
-        );
-        if (
-          response.status === 200 &&
-          response.data &&
-          response.data.length > 0
-        ) {
-          const invoice = response.data[0];
+        const invoice = await fetchInvoiceByTableId(table.id);
+
+        if (invoice) {
+          const tableInfo = tables.find((t) => t.id === table.id);
+          const hall = tableInfo
+            ? halls.find((h) => h.id === tableInfo.hallId)
+            : null;
+
+          if (hall) {
+            setSelectedHall(hall);
+            setSelectedTable({
+              id: table.id,
+              number: table.number,
+              status: "occupied",
+            });
+            setShowTableInfo(true);
+            setTableStatus("occupied");
+          }
+
           convertInvoiceToBill(invoice);
           setIsNewBillActive(false);
           setIsEditingExistingInvoice(true);
@@ -1733,13 +1758,6 @@ export default function Home() {
     refreshCurrentBillData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBillData.invoiceId, isNewBillActive]);
-
-  useEffect(() => {
-    if (currentBillData.invoiceId && !isNewBillActive) {
-      refreshCurrentBill();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tables, halls]);
 
   const handleProductClick = (product) => {
     if (currentBillData.completed) {
