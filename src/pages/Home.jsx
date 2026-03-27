@@ -73,6 +73,8 @@ export default function Home() {
     paidAmount: null,
   });
   const [cart, setCart] = useState([]);
+  const [originalCart, setOriginalCart] = useState([]);
+  const [hasCartChanges, setHasCartChanges] = useState(false);
   const [tax, setTax] = useState(14);
   const [discount, setDiscount] = useState("");
   const [deliveryFee, setDeliveryFee] = useState("");
@@ -910,6 +912,7 @@ export default function Home() {
     });
 
     setCart(cartItems);
+    setOriginalCart(JSON.parse(JSON.stringify(cartItems)));
     setTax(taxPercentage);
     setDiscount(invoice.invoiceDiscount || "");
     setDeliveryFee(invoice.deliveryFee || "");
@@ -989,6 +992,8 @@ export default function Home() {
       paidAmount: null,
     });
     setCart([]);
+    setOriginalCart([]);
+    setHasCartChanges(false);
     setTax(14);
     setDiscount("");
     setDeliveryFee("");
@@ -1380,6 +1385,25 @@ export default function Home() {
       }
     }
   }, [selectedMainCategory, subCategories]);
+
+  useEffect(() => {
+    if (
+      !isNewBillActive &&
+      currentBillData.isPending &&
+      currentBillData.billType === "dinein"
+    ) {
+      const hasChanges = JSON.stringify(cart) !== JSON.stringify(originalCart);
+      setHasCartChanges(hasChanges);
+    } else {
+      setHasCartChanges(false);
+    }
+  }, [
+    cart,
+    originalCart,
+    isNewBillActive,
+    currentBillData.isPending,
+    currentBillData.billType,
+  ]);
 
   const filteredProducts = useMemo(() => {
     if (!selectedSubCategory) return [];
@@ -2670,7 +2694,7 @@ export default function Home() {
         await fetchInvoiceByPage(totalPages);
         setIsNewBillActive(false);
         setIsEditingExistingInvoice(true);
-        setOrderPrepared(true);
+        setOrderPrepared(false);
       } else {
         toast.warning("لا توجد فواتير سابقة");
       }
@@ -2748,57 +2772,102 @@ export default function Home() {
     try {
       let invoiceResponse;
 
+      // تحديث الفاتورة الحالية بدلاً من إنشاء فاتورة جديدة
       if (isEditingExistingInvoice && currentBillData?.invoiceId) {
+        // تحديث الفاتورة الحالية مع جعلها معلقة
         invoiceResponse = await updateExistingInvoice(true, []);
-      } else {
+
+        if (invoiceResponse) {
+          // تحديث حالة الفاتورة الحالية
+          setCurrentBillData({
+            ...currentBillData,
+            invoiceStatus: InvoiceStatus.Open,
+            isPending: true,
+            completed: false,
+            isReturned: false,
+            isPartialPaid: false,
+            completedDate: null,
+          });
+
+          // تحديث حالة الطاولة إلى مشغولة
+          await updateTableStatus(
+            selectedHall.id,
+            selectedTable.id,
+            "occupied",
+          );
+          setTableStatus("occupied");
+
+          // تعيين أن الطلب تم تحضيره
+          setOrderPrepared(true);
+          setHasCartChanges(false);
+          setOriginalCart(JSON.parse(JSON.stringify(cart)));
+
+          toast.success(`تم تحضير طلب الطاولة ${selectedTable.number} بنجاح`);
+        }
+      } else if (isNewBillActive) {
+        // للفاتورة الجديدة: إنشاء فاتورة جديدة
         invoiceResponse = await createInvoice(true, []);
+
+        if (invoiceResponse) {
+          setCurrentBillData({
+            id: currentBillIndex + 1,
+            cart: [...cart],
+            tax,
+            discount: discount === "" ? null : discount,
+            discountType: currentBillData.discountType || 0,
+            deliveryFee:
+              currentBillData.billType === "delivery" && deliveryFee
+                ? deliveryFee
+                : null,
+            billType: "dinein",
+            customerPhone: customerPhone,
+            customerName: customerName,
+            customerAddress: customerAddress,
+            customerNationalId: customerNationalId,
+            customerId: customerId,
+            generalNote: generalNote,
+            paymentMethod: null,
+            completed: false,
+            completedDate: null,
+            tableId: selectedTable.id,
+            tableName: selectedTable.number,
+            tableStatus: "occupied",
+            isReturned: false,
+            isPartialPaid: false,
+            returnReason: "",
+            invoiceId: invoiceResponse.id,
+            invoiceNumber: invoiceResponse.invoiceNumber,
+            invoiceStatus: InvoiceStatus.Open,
+            isPending: true,
+            deliveryType: null,
+            deliveryCompanyId: null,
+            deliveryCompanyName: null,
+            deliveryCompanyContact: null,
+          });
+
+          await updateTableStatus(
+            selectedHall.id,
+            selectedTable.id,
+            "occupied",
+          );
+          setTableStatus("occupied");
+          setOrderPrepared(true);
+          setHasCartChanges(false);
+          setOriginalCart(JSON.parse(JSON.stringify(cart)));
+
+          resetBillData();
+
+          toast.success(
+            `تم تحضير طلب الطاولة ${selectedTable.number} وفتح فاتورة جديدة`,
+          );
+        }
       }
 
-      setCurrentBillData({
-        id: currentBillIndex + 1,
-        cart: [...cart],
-        tax,
-        discount: discount === "" ? null : discount,
-        discountType: currentBillData.discountType || 0,
-        deliveryFee:
-          currentBillData.billType === "delivery" && deliveryFee
-            ? deliveryFee
-            : null,
-        billType: "dinein",
-        customerPhone: customerPhone,
-        customerName: customerName,
-        customerAddress: customerAddress,
-        customerNationalId: customerNationalId,
-        customerId: customerId,
-        generalNote: generalNote,
-        paymentMethod: null,
-        completed: false,
-        completedDate: null,
-        tableId: selectedTable.id,
-        tableName: selectedTable.number,
-        tableStatus: "occupied",
-        isReturned: false,
-        isPartialPaid: false,
-        returnReason: "",
-        invoiceId: invoiceResponse.id,
-        invoiceNumber: invoiceResponse.invoiceNumber,
-        invoiceStatus: InvoiceStatus.Open,
-        isPending: true,
-        deliveryType: null,
-        deliveryCompanyId: null,
-        deliveryCompanyName: null,
-        deliveryCompanyContact: null,
-      });
-
-      await updateTableStatus(selectedHall.id, selectedTable.id, "occupied");
-      setTableStatus("occupied");
-      setOrderPrepared(true);
-
-      resetBillData();
-
-      toast.success(
-        `تم تحضير طلب الطاولة ${selectedTable.number} وفتح فاتورة جديدة`,
-      );
+      if (!isNewBillActive && invoiceResponse) {
+        setIsNewBillActive(true);
+        setIsEditingExistingInvoice(false);
+        resetBillData();
+      }
     } catch (error) {
       console.error("خطأ في تحضير الطلب:", error);
       toast.error("حدث خطأ في تحضير الطلب");
@@ -2950,18 +3019,39 @@ export default function Home() {
   };
 
   const shouldShowPrepareOrderButton = () => {
-    return (
-      isNewBillActive &&
-      currentBillData.billType === "dinein" &&
-      selectedTable &&
-      cart.length > 0 &&
-      !orderPrepared &&
-      !currentBillData.isPartialPaid
-    );
+    if (currentBillData.billType !== "dinein") {
+      return false;
+    }
+
+    if (!selectedTable) {
+      return false;
+    }
+
+    if (cart.length === 0) {
+      return false;
+    }
+
+    if (currentBillData.isPartialPaid) {
+      return false;
+    }
+
+    if (!isNewBillActive && currentBillData.isPending) {
+      return hasCartChanges && !orderPrepared;
+    }
+
+    if (isNewBillActive) {
+      return !orderPrepared;
+    }
+
+    return false;
   };
 
   const shouldShowCompleteBillButton = () => {
     if (!currentBillData) return false;
+
+    if (!isNewBillActive && currentBillData.isPending && !hasCartChanges) {
+      return true;
+    }
 
     if (currentBillData.isPartialPaid && currentBillData.remainingAmount > 0) {
       return true;
