@@ -146,6 +146,17 @@ export default function Home() {
   const [productsLoading, setProductsLoading] = useState(true);
   const isRefreshingRef = useRef(false);
 
+  // Loading states for buttons
+  const [isPreparingOrder, setIsPreparingOrder] = useState(false);
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const [isUpdatingCustomer, setIsUpdatingCustomer] = useState(false);
+  const [isRemovingTable, setIsRemovingTable] = useState(false);
+  const [isResettingBill, setIsResettingBill] = useState(false);
+  const [isReturningBill, setIsReturningBill] = useState(false);
+  const [isGoingToPreviousBill, setIsGoingToPreviousBill] = useState(false);
+  const [isGoingToNextBill, setIsGoingToNextBill] = useState(false);
+
   const DeliveryType = {
     Store: "store",
     Company: "company",
@@ -447,6 +458,7 @@ export default function Home() {
 
   const createCustomer = async () => {
     try {
+      setIsCreatingCustomer(true);
       const response = await axiosInstance.post("/api/Customers/Add", {
         name: customerFormData.name,
         phone: customerFormData.phone,
@@ -471,11 +483,14 @@ export default function Home() {
     } catch (error) {
       console.error("خطأ في إنشاء العميل:", error);
       toast.error("حدث خطأ في إنشاء العميل");
+    } finally {
+      setIsCreatingCustomer(false);
     }
   };
 
   const updateCustomer = async () => {
     try {
+      setIsUpdatingCustomer(true);
       const response = await axiosInstance.put(
         `/api/Customers/UpDate/${customerId}`,
         {
@@ -502,6 +517,8 @@ export default function Home() {
     } catch (error) {
       console.error("خطأ في تحديث العميل:", error);
       toast.error("حدث خطأ في تحديث العميل");
+    } finally {
+      setIsUpdatingCustomer(false);
     }
   };
 
@@ -1299,6 +1316,7 @@ export default function Home() {
 
   const applyDiscount = async (invoiceId, discountValue, discountType) => {
     try {
+      setIsApplyingDiscount(true);
       const response = await axiosInstance.put(
         `/api/Invoices/ApplyDiscount/${invoiceId}/discount`,
         {
@@ -1314,6 +1332,8 @@ export default function Home() {
     } catch (error) {
       console.error("خطأ في تطبيق الخصم:", error);
       throw error;
+    } finally {
+      setIsApplyingDiscount(false);
     }
   };
 
@@ -1726,6 +1746,7 @@ export default function Home() {
             <button
               onClick={async () => {
                 toast.dismiss();
+                setIsRemovingTable(true);
                 await updateTableStatus(
                   selectedHall.id,
                   selectedTable.id,
@@ -1742,6 +1763,7 @@ export default function Home() {
                     </p>
                   </div>,
                 );
+                setIsRemovingTable(false);
               }}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
             >
@@ -1762,6 +1784,7 @@ export default function Home() {
         },
       );
     } else {
+      setIsRemovingTable(true);
       await updateTableStatus(selectedHall.id, selectedTable.id, "available");
 
       setCurrentBillData({
@@ -1778,6 +1801,7 @@ export default function Home() {
       setOrderPrepared(false);
 
       toast.success("تم إزالة الطاولة وجعلها متاحة");
+      setIsRemovingTable(false);
     }
   };
 
@@ -2603,6 +2627,8 @@ export default function Home() {
   };
 
   const goToNextBill = async () => {
+    if (isGoingToNextBill) return;
+
     if (isNewBillActive) {
       if (cart.length === 0) {
         toast.error("الفاتورة فارغة، أضف منتجات أولاً");
@@ -2633,6 +2659,7 @@ export default function Home() {
       }
 
       try {
+        setIsGoingToNextBill(true);
         let invoiceResponse;
 
         if (isEditingExistingInvoice && currentBillData?.invoiceId) {
@@ -2673,41 +2700,55 @@ export default function Home() {
       } catch (error) {
         console.error("خطأ في إنشاء/تحديث الفاتورة المعلقة:", error);
         toast.error("حدث خطأ في إنشاء/تحديث الفاتورة المعلقة");
+      } finally {
+        setIsGoingToNextBill(false);
       }
     } else {
       if (currentInvoicePage < totalPages) {
+        setIsGoingToNextBill(true);
         const nextPage = currentInvoicePage + 1;
         await fetchInvoiceByPage(nextPage);
+        setIsGoingToNextBill(false);
       } else {
+        setIsGoingToNextBill(true);
         setIsNewBillActive(true);
         setIsEditingExistingInvoice(false);
         setCurrentInvoicePage(totalPages + 1);
         resetBillData();
         toast.info("فاتورة جديدة");
+        setIsGoingToNextBill(false);
       }
     }
   };
 
   const goToPreviousBill = async () => {
+    if (isGoingToPreviousBill) return;
+
     if (isNewBillActive) {
       if (totalPages > 0) {
+        setIsGoingToPreviousBill(true);
         await fetchInvoiceByPage(totalPages);
         setIsNewBillActive(false);
         setIsEditingExistingInvoice(true);
         setOrderPrepared(false);
+        setIsGoingToPreviousBill(false);
       } else {
         toast.warning("لا توجد فواتير سابقة");
       }
     } else {
       if (currentInvoicePage > 1) {
+        setIsGoingToPreviousBill(true);
         const prevPage = currentInvoicePage - 1;
         await fetchInvoiceByPage(prevPage);
+        setIsGoingToPreviousBill(false);
       } else {
+        setIsGoingToPreviousBill(true);
         setIsNewBillActive(true);
         setIsEditingExistingInvoice(false);
         setCurrentInvoicePage(0);
         resetBillData();
         toast.info("فاتورة جديدة");
+        setIsGoingToPreviousBill(false);
       }
     }
   };
@@ -2759,6 +2800,8 @@ export default function Home() {
     (currentBillData.billType === "delivery" && deliveryFee ? deliveryFee : 0);
 
   const handlePrepareOrder = async () => {
+    if (isPreparingOrder) return;
+
     if (cart.length === 0) {
       toast.error("الفاتورة فارغة");
       return;
@@ -2770,6 +2813,7 @@ export default function Home() {
     }
 
     try {
+      setIsPreparingOrder(true);
       let invoiceResponse;
 
       // تحديث الفاتورة الحالية بدلاً من إنشاء فاتورة جديدة
@@ -2871,6 +2915,8 @@ export default function Home() {
     } catch (error) {
       console.error("خطأ في تحضير الطلب:", error);
       toast.error("حدث خطأ في تحضير الطلب");
+    } finally {
+      setIsPreparingOrder(false);
     }
   };
 
@@ -2879,6 +2925,8 @@ export default function Home() {
   };
 
   const handleReturnBill = async () => {
+    if (isReturningBill) return;
+
     if (!currentBillData.completed) {
       toast.error("لا يمكن إرجاع فاتورة غير مكتملة");
       return;
@@ -2945,6 +2993,7 @@ export default function Home() {
     }
 
     try {
+      setIsReturningBill(true);
       if (currentBillData.invoiceNumber) {
         await createFullReturn(currentBillData.invoiceNumber);
       }
@@ -2982,6 +3031,8 @@ export default function Home() {
     } catch (error) {
       console.error("خطأ في إرجاع الفاتورة:", error);
       toast.error("حدث خطأ في إرجاع الفاتورة");
+    } finally {
+      setIsReturningBill(false);
     }
   };
 
@@ -2993,7 +3044,9 @@ export default function Home() {
     setShowInvoiceModal(true);
   };
 
-  const resetCart = () => {
+  const resetCart = async () => {
+    if (isResettingBill) return;
+
     if (currentBillData.completed) {
       toast.error("لا يمكن إعادة تعيين فاتورة مكتملة");
       return;
@@ -3009,8 +3062,10 @@ export default function Home() {
       return;
     }
 
+    setIsResettingBill(true);
     resetBillData();
     toast.info("تم إعادة تعيين الفاتورة");
+    setIsResettingBill(false);
   };
 
   const handleShiftClose = () => {
@@ -3505,16 +3560,22 @@ export default function Home() {
                 </button>
                 <button
                   onClick={handleApplyDiscount}
-                  className="flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors"
+                  disabled={isApplyingDiscount}
+                  className={`flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors ${
+                    isApplyingDiscount
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:opacity-90"
+                  }`}
                   style={{ backgroundColor: "#193F94" }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = "#0f2a6b";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = "#193F94";
-                  }}
                 >
-                  تطبيق الخصم
+                  {isApplyingDiscount ? (
+                    <span className="flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-1"></div>
+                      جاري التطبيق...
+                    </span>
+                  ) : (
+                    "تطبيق الخصم"
+                  )}
                 </button>
               </div>
             </div>
@@ -3744,32 +3805,48 @@ export default function Home() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
+                    disabled={isCreatingCustomer || isUpdatingCustomer}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm ${
+                      isCreatingCustomer || isUpdatingCustomer
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:opacity-90"
+                    }`}
                     style={{ backgroundColor: "#193F94" }}
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      {isEditingCustomer ? (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                        />
-                      ) : (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      )}
-                    </svg>
-                    {isEditingCustomer ? "حفظ التعديلات" : "إضافة عميل"}
+                    {isCreatingCustomer || isUpdatingCustomer ? (
+                      <span className="flex items-center justify-center">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-1"></div>
+                        {isEditingCustomer
+                          ? "جاري التحديث..."
+                          : "جاري الإضافة..."}
+                      </span>
+                    ) : (
+                      <>
+                        <svg
+                          className="w-4 h-4 ml-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          {isEditingCustomer ? (
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                            />
+                          ) : (
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                            />
+                          )}
+                        </svg>
+                        {isEditingCustomer ? "حفظ التعديلات" : "إضافة عميل"}
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -4464,14 +4541,14 @@ export default function Home() {
                   className={`flex-1 py-2 px-3 rounded-lg font-bold text-white transition-colors text-xs ${
                     (!isPartialPayment && payments.length === 0) ||
                     isProcessingPayment
-                      ? "opacity-50 cursor-not-allowed bg-gray-400"
-                      : "bg-blue-600 hover:bg-blue-700"
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:opacity-90"
                   }`}
                   style={{
                     backgroundColor:
                       (!isPartialPayment && payments.length === 0) ||
                       isProcessingPayment
-                        ? ""
+                        ? "#9CA3AF"
                         : "#193F94",
                   }}
                 >
@@ -4884,19 +4961,25 @@ export default function Home() {
                     <button
                       onClick={goToPreviousBill}
                       disabled={
-                        !isNewBillActive &&
-                        currentInvoicePage === 1 &&
-                        totalPages === 0
+                        isGoingToPreviousBill ||
+                        (!isNewBillActive &&
+                          currentInvoicePage === 1 &&
+                          totalPages === 0)
                       }
                       className={`px-2 py-1 rounded text-xs transition-all ${
-                        !isNewBillActive &&
-                        currentInvoicePage === 1 &&
-                        totalPages === 0
+                        isGoingToPreviousBill ||
+                        (!isNewBillActive &&
+                          currentInvoicePage === 1 &&
+                          totalPages === 0)
                           ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400"
                           : "bg-blue-100 text-blue-800 hover:bg-blue-200"
                       }`}
                     >
-                      السابق
+                      {isGoingToPreviousBill ? (
+                        <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        "السابق"
+                      )}
                     </button>
                     <div className="flex flex-col items-center">
                       <div className="flex items-center space-x-1 rtl:space-x-reverse">
@@ -4932,9 +5015,16 @@ export default function Home() {
                     </div>
                     <button
                       onClick={goToNextBill}
-                      className="px-2 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs transition-all"
+                      disabled={isGoingToNextBill}
+                      className={`px-2 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs transition-all ${
+                        isGoingToNextBill ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
                     >
-                      التالي
+                      {isGoingToNextBill ? (
+                        <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        "التالي"
+                      )}
                     </button>
                   </div>
                 </div>
@@ -5026,21 +5116,30 @@ export default function Home() {
                             {tableStatus === "occupied" && (
                               <button
                                 onClick={handleRemoveTable}
-                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200"
+                                disabled={isRemovingTable}
+                                className={`text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200 ${
+                                  isRemovingTable
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : ""
+                                }`}
                               >
-                                <svg
-                                  className="w-3 h-3 ml-1"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
+                                {isRemovingTable ? (
+                                  <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                ) : (
+                                  <svg
+                                    className="w-3 h-3 ml-1"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+                                )}
                                 إزالة
                               </button>
                             )}
@@ -5681,16 +5780,24 @@ export default function Home() {
                       onClick={openDiscountModal}
                       disabled={
                         currentBillData.completed ||
-                        currentBillData.isPartialPaid
+                        currentBillData.isPartialPaid ||
+                        isApplyingDiscount
                       }
                       className={`w-12 text-center px-1 py-1 border rounded mr-1.5 text-xs ${
                         currentBillData.completed ||
-                        currentBillData.isPartialPaid
+                        currentBillData.isPartialPaid ||
+                        isApplyingDiscount
                           ? "bg-gray-100 cursor-not-allowed"
                           : "bg-blue-50 hover:bg-blue-100 cursor-pointer border-blue-200"
                       }`}
                     >
-                      {discount === "" ? 0 : discount}
+                      {isApplyingDiscount ? (
+                        <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                      ) : discount === "" ? (
+                        0
+                      ) : (
+                        discount
+                      )}
                     </button>
                     <span className="font-bold">
                       {discountAmountCalc.toFixed(2)} ج.م
@@ -5751,10 +5858,14 @@ export default function Home() {
               <button
                 onClick={resetCart}
                 disabled={
-                  currentBillData.completed || currentBillData.isPartialPaid
+                  currentBillData.completed ||
+                  currentBillData.isPartialPaid ||
+                  isResettingBill
                 }
                 className={`py-2.5 px-3 rounded-lg font-medium border transition-all text-xs flex-1 ${
-                  currentBillData.completed || currentBillData.isPartialPaid
+                  currentBillData.completed ||
+                  currentBillData.isPartialPaid ||
+                  isResettingBill
                     ? "opacity-50 cursor-not-allowed"
                     : ""
                 }`}
@@ -5762,7 +5873,8 @@ export default function Home() {
                 onMouseEnter={(e) => {
                   if (
                     !currentBillData.completed &&
-                    !currentBillData.isPartialPaid
+                    !currentBillData.isPartialPaid &&
+                    !isResettingBill
                   ) {
                     e.target.style.backgroundColor = "#193F94";
                     e.target.style.color = "white";
@@ -5771,14 +5883,22 @@ export default function Home() {
                 onMouseLeave={(e) => {
                   if (
                     !currentBillData.completed &&
-                    !currentBillData.isPartialPaid
+                    !currentBillData.isPartialPaid &&
+                    !isResettingBill
                   ) {
                     e.target.style.backgroundColor = "transparent";
                     e.target.style.color = "#193F94";
                   }
                 }}
               >
-                إعادة تعيين
+                {isResettingBill ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                    جاري...
+                  </div>
+                ) : (
+                  "إعادة تعيين"
+                )}
               </button>
 
               {!isNewBillActive &&
@@ -5786,16 +5906,32 @@ export default function Home() {
               !currentBillData.isReturned ? (
                 <button
                   onClick={handleReturnBill}
-                  className="py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 hover:scale-[1.02] active:scale-[0.98]"
+                  disabled={isReturningBill}
+                  className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 ${
+                    isReturningBill
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:scale-[1.02] active:scale-[0.98]"
+                  }`}
                   style={{ backgroundColor: "#EF4444" }}
                   onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = "#DC2626";
+                    if (!isReturningBill) {
+                      e.target.style.backgroundColor = "#DC2626";
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = "#EF4444";
+                    if (!isReturningBill) {
+                      e.target.style.backgroundColor = "#EF4444";
+                    }
                   }}
                 >
-                  ارتجاع
+                  {isReturningBill ? (
+                    <div className="flex items-center justify-center">
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin ml-1"></div>
+                      جاري الارتجاع...
+                    </div>
+                  ) : (
+                    "ارتجاع"
+                  )}
                 </button>
               ) : !isNewBillActive &&
                 currentBillData.invoiceStatus === InvoiceStatus.Returned ? (
@@ -5815,16 +5951,32 @@ export default function Home() {
               ) : shouldShowPrepareOrderButton() ? (
                 <button
                   onClick={handlePrepareOrder}
-                  className="py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 hover:scale-[1.02] active:scale-[0.98]"
+                  disabled={isPreparingOrder}
+                  className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 ${
+                    isPreparingOrder
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:scale-[1.02] active:scale-[0.98]"
+                  }`}
                   style={{ backgroundColor: "#F59E0B" }}
                   onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = "#D97706";
+                    if (!isPreparingOrder) {
+                      e.target.style.backgroundColor = "#D97706";
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = "#F59E0B";
+                    if (!isPreparingOrder) {
+                      e.target.style.backgroundColor = "#F59E0B";
+                    }
                   }}
                 >
-                  تحضير الطلب
+                  {isPreparingOrder ? (
+                    <div className="flex items-center justify-center">
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin ml-1"></div>
+                      جاري التحضير...
+                    </div>
+                  ) : (
+                    "تحضير الطلب"
+                  )}
                 </button>
               ) : shouldShowCompleteBillButton() ? (
                 <button
