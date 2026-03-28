@@ -1781,13 +1781,17 @@ export default function Home() {
       setIsRemovingTable(true);
       try {
         await updateTableStatus(selectedHall.id, selectedTable.id, "available");
-
-        // Refresh all data to trigger a full update
         hallsFetchedRef.current = false;
         tablesFetchedRef.current = false;
         shiftFetchedRef.current = false;
+        invoicesFetchedRef.current = false;
 
-        await Promise.all([fetchShiftDetails(), fetchHalls(), fetchTables()]);
+        await Promise.all([
+          fetchShiftDetails(),
+          fetchHalls(),
+          fetchTables(),
+          fetchLastInvoice(),
+        ]);
 
         if (hasProducts) {
           resetBillData();
@@ -1804,6 +1808,9 @@ export default function Home() {
           setShowTableInfo(false);
           setOrderPrepared(false);
         }
+
+        setIsNewBillActive(true);
+        setIsEditingExistingInvoice(false);
 
         toast.success("تم إزالة الطاولة وجعلها متاحة");
       } catch (error) {
