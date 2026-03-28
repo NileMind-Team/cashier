@@ -5,6 +5,7 @@ import { loginUser, logout, clearError } from "../redux/slices/loginSlice";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axiosInstance from "../api/axiosInstance";
+import { User, Lock, LogIn, LogOut, Play, Loader2 } from "lucide-react";
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -12,6 +13,8 @@ export default function Login() {
     password: "",
   });
   const [isOpeningShift, setIsOpeningShift] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -43,6 +46,14 @@ export default function Login() {
     }
   };
 
+  const handleFocus = (fieldName) => {
+    setFocusedField(fieldName);
+  };
+
+  const handleBlur = () => {
+    setFocusedField(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.username && formData.password) {
@@ -60,14 +71,22 @@ export default function Login() {
     }
   };
 
-  const handleLogout = () => {
-    dispatch(logout());
-    toast.info("تم تسجيل الخروج بنجاح");
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      dispatch(logout());
+      toast.info("تم تسجيل الخروج بنجاح");
 
-    setFormData({
-      username: "",
-      password: "",
-    });
+      setFormData({
+        username: "",
+        password: "",
+      });
+    } catch (error) {
+      console.error("Logout failed:", error);
+      toast.error("حدث خطأ أثناء تسجيل الخروج");
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   const handleStartShift = async () => {
@@ -118,21 +137,7 @@ export default function Login() {
                     className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
                     style={{ backgroundColor: "#E8F4FC" }}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-10 w-10"
-                      style={{ color: "#193F94" }}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
+                    <User className="h-10 w-10" style={{ color: "#193F94" }} />
                   </div>
                   <h2
                     className="text-2xl font-bold"
@@ -154,7 +159,7 @@ export default function Login() {
                       isOpeningShift
                         ? "opacity-50 cursor-not-allowed"
                         : "hover:scale-[1.02] active:scale-[0.98]"
-                    } shadow-md`}
+                    } shadow-md flex items-center justify-center`}
                     style={{ backgroundColor: "#20A4D4" }}
                     onMouseEnter={(e) => {
                       if (!isOpeningShift) {
@@ -168,53 +173,51 @@ export default function Login() {
                     }}
                   >
                     {isOpeningShift ? (
-                      <span className="flex items-center justify-center">
-                        <svg
-                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
+                      <>
+                        <Loader2 className="animate-spin ml-2 h-5 w-5 text-white" />
                         جاري بدء الوردية...
-                      </span>
+                      </>
                     ) : (
-                      "بداية الوردية"
+                      <>
+                        <Play className="h-5 w-5 ml-2" />
+                        بداية الوردية
+                      </>
                     )}
                   </button>
 
                   <button
                     onClick={handleLogout}
-                    disabled={isOpeningShift}
-                    className="w-full py-3 px-4 rounded-lg font-medium border transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isLoggingOut}
+                    className={`w-full py-3 px-4 rounded-lg font-medium border transition-all duration-300 transform ${
+                      isLoggingOut
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:scale-[1.02] active:scale-[0.98]"
+                    } flex items-center justify-center`}
                     style={{ borderColor: "#193F94", color: "#193F94" }}
                     onMouseEnter={(e) => {
-                      if (!isOpeningShift) {
+                      if (!isLoggingOut) {
                         e.target.style.backgroundColor = "#193F94";
                         e.target.style.color = "white";
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (!isOpeningShift) {
+                      if (!isLoggingOut) {
                         e.target.style.backgroundColor = "transparent";
                         e.target.style.color = "#193F94";
                       }
                     }}
                   >
-                    تسجيل الخروج
+                    {isLoggingOut ? (
+                      <>
+                        <Loader2 className="animate-spin ml-2 h-5 w-5" />
+                        جاري تسجيل الخروج...
+                      </>
+                    ) : (
+                      <>
+                        <LogOut className="h-5 w-5 ml-2" />
+                        تسجيل الخروج
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -264,57 +267,77 @@ export default function Login() {
 
             <form onSubmit={handleSubmit}>
               <div className="mb-6">
-                <label
-                  htmlFor="username"
-                  className="block text-gray-700 font-medium mb-2 text-right"
-                >
-                  اسم المستخدم
-                </label>
-                <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-right"
-                  placeholder="أدخل اسم المستخدم"
-                  required
-                  dir="rtl"
-                  disabled={isLoading}
-                  autoComplete="username"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    onFocus={() => handleFocus("username")}
+                    onBlur={handleBlur}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white text-right"
+                    required
+                    dir="rtl"
+                    disabled={isLoading}
+                    autoComplete="username"
+                  />
+                  <label
+                    htmlFor="username"
+                    className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                      focusedField === "username" || formData.username
+                        ? "-top-2.5 text-xs text-blue-500 font-medium"
+                        : "top-3 text-gray-400 text-sm"
+                    }`}
+                  >
+                    <span className="flex items-center">
+                      <User className="w-4 h-4 ml-1" />
+                      اسم المستخدم *
+                    </span>
+                  </label>
+                </div>
               </div>
 
               <div className="mb-8">
-                <label
-                  htmlFor="password"
-                  className="block text-gray-700 font-medium mb-2 text-right"
-                >
-                  كلمة المرور
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-right"
-                  placeholder="أدخل كلمة المرور"
-                  required
-                  dir="rtl"
-                  disabled={isLoading}
-                  autoComplete="current-password"
-                />
+                <div className="relative">
+                  <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    onFocus={() => handleFocus("password")}
+                    onBlur={handleBlur}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white text-right"
+                    required
+                    dir="rtl"
+                    disabled={isLoading}
+                    autoComplete="current-password"
+                  />
+                  <label
+                    htmlFor="password"
+                    className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
+                      focusedField === "password" || formData.password
+                        ? "-top-2.5 text-xs text-blue-500 font-medium"
+                        : "top-3 text-gray-400 text-sm"
+                    }`}
+                  >
+                    <span className="flex items-center">
+                      <Lock className="w-4 h-4 ml-1" />
+                      كلمة المرور *
+                    </span>
+                  </label>
+                </div>
               </div>
 
               <button
                 type="submit"
                 disabled={isLoginDisabled}
-                className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform ${
+                className={`w-full py-3 px-4 rounded-xl font-bold text-white transition-all duration-300 transform ${
                   isLoginDisabled
                     ? "opacity-50 cursor-not-allowed"
                     : "hover:scale-[1.02] active:scale-[0.98]"
-                }`}
+                } shadow-md flex items-center justify-center`}
                 style={{ backgroundColor: "#193F94" }}
                 onMouseEnter={(e) => {
                   if (!isLoginDisabled) {
@@ -328,31 +351,15 @@ export default function Login() {
                 }}
               >
                 {isLoading ? (
-                  <span className="flex items-center justify-center">
-                    <svg
-                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
+                  <>
+                    <Loader2 className="animate-spin ml-2 h-5 w-5 text-white" />
                     جاري تسجيل الدخول...
-                  </span>
+                  </>
                 ) : (
-                  "تسجيل الدخول"
+                  <>
+                    <LogIn className="h-5 w-5 ml-2" />
+                    تسجيل الدخول
+                  </>
                 )}
               </button>
             </form>
