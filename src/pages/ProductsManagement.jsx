@@ -25,6 +25,7 @@ import {
   FolderTree,
   Grid3X3,
 } from "lucide-react";
+import { FaSpinner, FaUsers } from "react-icons/fa";
 
 export default function ProductsManagement() {
   const navigate = useNavigate();
@@ -653,8 +654,8 @@ export default function ProductsManagement() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
-                <span className="text-white font-bold">$</span>
+              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center mr-3">
+                <FaUsers className="text-white text-lg" />
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير - إدارة المنتجات
@@ -786,7 +787,7 @@ export default function ProductsManagement() {
               >
                 {isAddingTax ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                    <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                     جاري الإضافة...
                   </>
                 ) : (
@@ -803,7 +804,7 @@ export default function ProductsManagement() {
               >
                 {isAddingProduct ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                    <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                     جاري الإضافة...
                   </>
                 ) : (
@@ -823,7 +824,7 @@ export default function ProductsManagement() {
         >
           {isFetchingProducts || categoriesLoading ? (
             <div className="p-8 flex flex-col items-center justify-center">
-              <div className="w-16 h-16 border-t-4 border-blue-600 border-solid rounded-full animate-spin mb-4"></div>
+              <FaSpinner className="w-16 h-16 text-blue-600 animate-spin mb-4" />
               <p className="text-gray-600">جاري تحميل المنتجات...</p>
             </div>
           ) : (
@@ -985,7 +986,7 @@ export default function ProductsManagement() {
                                 }`}
                               >
                                 {isTogglingProduct ? (
-                                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-1"></div>
+                                  <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                                 ) : product.isAvailable ? (
                                   <PowerOff className="h-3 w-3 ml-1" />
                                 ) : (
@@ -1003,7 +1004,7 @@ export default function ProductsManagement() {
                                 className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {isDeletingProduct ? (
-                                  <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                  <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                                 ) : (
                                   <Trash2 className="h-3 w-3 ml-1" />
                                 )}
@@ -1257,7 +1258,7 @@ export default function ProductsManagement() {
                   >
                     {isAddingTax ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                         جاري الإضافة...
                       </>
                     ) : (
@@ -1503,7 +1504,7 @@ export default function ProductsManagement() {
                   >
                     {isAddingProduct || isEditingProduct ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                         {editingProduct ? "جاري التحديث..." : "جاري الإضافة..."}
                       </>
                     ) : (

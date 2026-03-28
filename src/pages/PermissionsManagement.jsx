@@ -16,6 +16,7 @@ import {
   CreditCard,
   BarChart3,
 } from "lucide-react";
+import { FaSpinner } from "react-icons/fa";
 
 export default function PermissionsManagement() {
   const navigate = useNavigate();
@@ -434,7 +435,7 @@ export default function PermissionsManagement() {
                 >
                   {isResettingPermissions ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                      <FaSpinner className="w-4 h-4 ml-1 animate-spin" />
                       جاري...
                     </>
                   ) : (
@@ -456,7 +457,7 @@ export default function PermissionsManagement() {
                   >
                     {isCopyingPermissions ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        <FaSpinner className="w-4 h-4 ml-1 animate-spin" />
                         جاري...
                       </>
                     ) : (
@@ -543,7 +544,7 @@ export default function PermissionsManagement() {
                         className="text-xs bg-green-50 hover:bg-green-100 text-green-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSelectingAll ? (
-                          <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                          <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                         ) : (
                           <Check className="w-3 h-3 ml-1" />
                         )}
@@ -557,7 +558,7 @@ export default function PermissionsManagement() {
                         className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isClearingAll ? (
-                          <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                          <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                         ) : (
                           <X className="w-3 h-3 ml-1" />
                         )}
@@ -635,7 +636,7 @@ export default function PermissionsManagement() {
               >
                 {isSavingPermissions ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                    <FaSpinner className="w-5 h-5 ml-2 animate-spin" />
                     جاري الحفظ...
                   </>
                 ) : (

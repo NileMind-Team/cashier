@@ -12,6 +12,7 @@ import {
   Printer,
   PieChart,
 } from "lucide-react";
+import { FaSpinner, FaUsers } from "react-icons/fa";
 
 export default function PaymentMethodsReport() {
   const navigate = useNavigate();
@@ -301,7 +302,7 @@ export default function PaymentMethodsReport() {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
-                <span className="text-white font-bold">$</span>
+                <FaUsers className="text-white text-lg" />
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير - تقارير طرق الدفع
@@ -446,7 +447,7 @@ export default function PaymentMethodsReport() {
                   >
                     {loading ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
                         جاري التحميل...
                       </>
                     ) : (
@@ -469,7 +470,7 @@ export default function PaymentMethodsReport() {
                     >
                       {isPrinting ? (
                         <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                          <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
                           جاري الطباعة...
                         </>
                       ) : (

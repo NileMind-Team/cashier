@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Trash2,
 } from "lucide-react";
+import { FaSpinner, FaUsers } from "react-icons/fa";
 
 export default function CustomersReports() {
   const navigate = useNavigate();
@@ -840,7 +841,7 @@ export default function CustomersReports() {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
-                <span className="text-white font-bold">$</span>
+                <FaUsers className="text-white text-lg" />
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير - تقارير العملاء
@@ -998,7 +999,7 @@ export default function CustomersReports() {
                       className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {searchLoading ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <FaSpinner className="h-5 w-5 animate-spin" />
                       ) : (
                         <Search className="h-5 w-5" />
                       )}
@@ -1084,7 +1085,7 @@ export default function CustomersReports() {
                   >
                     {loading ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
                         جاري التحميل...
                       </>
                     ) : (
@@ -1121,7 +1122,7 @@ export default function CustomersReports() {
                     >
                       {isPrinting ? (
                         <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                          <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
                           جاري الطباعة...
                         </>
                       ) : (
@@ -1220,8 +1221,8 @@ export default function CustomersReports() {
 
                   {ledgerLoading ? (
                     <div className="bg-gray-50 rounded-xl p-8 flex flex-col items-center justify-center">
-                      <div className="w-12 h-12 border-t-2 border-blue-600 rounded-full animate-spin mb-3"></div>
-                      <p className="text-gray-500">جاري تحميل البيانات...</p>
+                      <FaSpinner className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+                      <p className="text-gray-600">جاري تحميل البيانات...</p>
                     </div>
                   ) : Object.keys(groupedData).length > 0 ? (
                     <div className="space-y-4">
@@ -1870,7 +1871,7 @@ export default function CustomersReports() {
 
                 {paymentMethodsLoading ? (
                   <div className="text-center py-4">
-                    <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <FaSpinner className="w-6 h-6 text-blue-600 animate-spin mx-auto" />
                     <p className="text-[10px] text-gray-500 mt-1">
                       جاري تحميل طرق الدفع...
                     </p>
@@ -1943,7 +1944,7 @@ export default function CustomersReports() {
                 >
                   {isProcessingPayment ? (
                     <span className="flex items-center justify-center">
-                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin ml-1"></div>
+                      <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                       جاري تأكيد الدفع...
                     </span>
                   ) : (

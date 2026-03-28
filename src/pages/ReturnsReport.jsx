@@ -16,7 +16,7 @@ import {
   FaAngleDoubleRight,
   FaSpinner,
   FaExchangeAlt,
-  FaSyncAlt,
+  FaUsers,
 } from "react-icons/fa";
 
 export default function ReturnsReport() {
@@ -241,7 +241,7 @@ export default function ReturnsReport() {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
-                <FaSyncAlt className="text-white text-lg" />
+                <FaUsers className="text-white text-lg" />
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير - تقارير المرتجعات

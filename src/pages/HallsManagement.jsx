@@ -15,7 +15,7 @@ import {
   Save,
   Table as TableIcon,
 } from "lucide-react";
-import { FaChair } from "react-icons/fa6";
+import { FaSpinner, FaUsers } from "react-icons/fa";
 
 export default function HallsManagement() {
   const navigate = useNavigate();
@@ -557,10 +557,8 @@ export default function HallsManagement() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
-                <span className="text-white font-bold">
-                  <FaChair className="h-5 w-5" />
-                </span>
+              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center mr-3">
+                <FaUsers className="text-white text-lg" />
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير - إدارة الصالات والطاولات
@@ -606,7 +604,7 @@ export default function HallsManagement() {
               >
                 {isAddingHall ? (
                   <div className="flex items-center">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                    <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                     جاري الإضافة...
                   </div>
                 ) : (
@@ -620,13 +618,13 @@ export default function HallsManagement() {
 
             {loading ? (
               <div className="p-8 flex flex-col items-center justify-center">
-                <div className="w-12 h-12 border-t-4 border-blue-600 border-solid rounded-full animate-spin"></div>
-                <p className="text-gray-600 mt-4">جاري تحميل الصالات...</p>
+                <FaSpinner className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+                <p className="text-gray-600">جاري تحميل الصالات...</p>
               </div>
             ) : halls.length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-gray-400 mb-3">
-                  <FaChair className="h-16 w-16 mx-auto opacity-50" />
+                  <FaUsers className="h-16 w-16 mx-auto opacity-50" />
                 </div>
                 <p className="text-gray-500">لا توجد صالات</p>
                 <p className="text-sm text-gray-400 mt-1">
@@ -701,7 +699,7 @@ export default function HallsManagement() {
                           className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {isDeletingHall ? (
-                            <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                            <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                           ) : (
                             <Trash2 className="h-3 w-3 ml-1" />
                           )}
@@ -748,7 +746,7 @@ export default function HallsManagement() {
                 >
                   {isAddingTable ? (
                     <div className="flex items-center">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                      <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                       جاري الإضافة...
                     </div>
                   ) : (
@@ -763,8 +761,8 @@ export default function HallsManagement() {
 
             {loading ? (
               <div className="p-8 flex flex-col items-center justify-center">
-                <div className="w-12 h-12 border-t-4 border-green-600 border-solid rounded-full animate-spin"></div>
-                <p className="text-gray-600 mt-4">جاري تحميل الطاولات...</p>
+                <FaSpinner className="w-12 h-12 text-green-600 animate-spin mb-4" />
+                <p className="text-gray-600">جاري تحميل الطاولات...</p>
               </div>
             ) : (
               <>
@@ -835,7 +833,7 @@ export default function HallsManagement() {
                                   className="text-xs bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-amber-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {isTogglingTable ? (
-                                    <div className="w-3 h-3 border-2 border-amber-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                    <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                                   ) : (
                                     <PowerOff className="h-3 w-3 ml-1" />
                                   )}
@@ -849,7 +847,7 @@ export default function HallsManagement() {
                                   className="text-xs bg-green-50 hover:bg-green-100 text-green-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {isTogglingTable ? (
-                                    <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                    <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                                   ) : (
                                     <Power className="h-3 w-3 ml-1" />
                                   )}
@@ -864,7 +862,7 @@ export default function HallsManagement() {
                                 className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {isDeletingTable ? (
-                                  <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                  <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                                 ) : (
                                   <Trash2 className="h-3 w-3 ml-1" />
                                 )}
@@ -948,7 +946,7 @@ export default function HallsManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <FaChair className="w-4 h-4 ml-1" />
+                        <FaUsers className="w-4 h-4 ml-1" />
                         اسم الصالة *
                       </span>
                     </label>
@@ -973,7 +971,7 @@ export default function HallsManagement() {
                   >
                     {isAddingHall || isEditingHall ? (
                       <div className="flex items-center">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                         {editingHall ? "جاري التحديث..." : "جاري الإضافة..."}
                       </div>
                     ) : (
@@ -1047,7 +1045,7 @@ export default function HallsManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <FaChair className="w-4 h-4 ml-1" />
+                        <FaUsers className="w-4 h-4 ml-1" />
                         الصالة *
                       </span>
                     </label>
@@ -1158,7 +1156,7 @@ export default function HallsManagement() {
                   >
                     {isEditingTable ? (
                       <div className="flex items-center">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                         جاري التحديث...
                       </div>
                     ) : (

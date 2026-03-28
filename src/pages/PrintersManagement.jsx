@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import Swal from "sweetalert2";
-import { Printer, Save, Edit, Plus, X, ArrowLeft, Loader2 } from "lucide-react";
+import { Save, Edit, Plus, X, ArrowLeft } from "lucide-react";
+import { FaSpinner, FaPrint } from "react-icons/fa";
 import axiosInstance from "../api/axiosInstance";
 
 export default function PrintersManagement() {
@@ -139,8 +139,8 @@ export default function PrintersManagement() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-purple-900 flex items-center justify-center ml-3">
-                <Printer className="text-white text-xl" />
+              <div className="w-10 h-10 rounded-full bg-purple-900 flex items-center justify-center mr-3">
+                <FaPrint className="text-white text-lg" />
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#6B21A8" }}>
                 نظام الكاشير - إدارة الطابعات
@@ -183,7 +183,7 @@ export default function PrintersManagement() {
         {/* SubCategories List */}
         {loading ? (
           <div className="bg-white rounded-2xl shadow-lg p-12 flex flex-col items-center justify-center">
-            <Loader2 className="w-16 h-16 text-purple-600 animate-spin" />
+            <FaSpinner className="w-16 h-16 text-purple-600 animate-spin mb-4" />
             <p className="text-gray-600 mt-4 text-lg">جاري تحميل الفئات...</p>
           </div>
         ) : (
@@ -214,7 +214,7 @@ export default function PrintersManagement() {
                     <tr>
                       <td colSpan="5" className="px-6 py-12 text-center">
                         <div className="text-gray-400 mb-3">
-                          <Printer className="h-16 w-16 mx-auto" />
+                          <FaPrint className="h-16 w-16 mx-auto" />
                         </div>
                         <p className="text-gray-500 text-lg">
                           لا توجد فئات فرعية
@@ -360,7 +360,7 @@ export default function PrintersManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <Printer className="h-4 w-4 ml-1" />
+                        <FaPrint className="h-4 w-4 ml-1" />
                         عنوان IP الطابعة *
                       </span>
                     </label>
@@ -385,7 +385,7 @@ export default function PrintersManagement() {
                   >
                     {isSaving ? (
                       <>
-                        <Loader2 className="h-4 w-4 ml-2 animate-spin" />
+                        <FaSpinner className="h-4 w-4 ml-2 animate-spin" />
                         جاري الحفظ...
                       </>
                     ) : (

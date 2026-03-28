@@ -15,6 +15,7 @@ import {
   FolderPlus,
   Save,
 } from "lucide-react";
+import { FaSpinner, FaUsers } from "react-icons/fa";
 
 export default function CategoriesManagement() {
   const navigate = useNavigate();
@@ -538,7 +539,7 @@ export default function CategoriesManagement() {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center mr-3">
-                <span className="text-white font-bold">$</span>
+                <FaUsers className="text-white text-lg" />
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير - إدارة الفئات
@@ -584,7 +585,7 @@ export default function CategoriesManagement() {
               >
                 {isAddingMainCategory ? (
                   <div className="flex items-center">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                    <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                     جاري الإضافة...
                   </div>
                 ) : (
@@ -598,8 +599,8 @@ export default function CategoriesManagement() {
 
             {loading ? (
               <div className="p-8 flex flex-col items-center justify-center">
-                <div className="w-12 h-12 border-t-4 border-blue-600 border-solid rounded-full animate-spin"></div>
-                <p className="text-gray-600 mt-4">جاري تحميل الفئات...</p>
+                <FaSpinner className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+                <p className="text-gray-600">جاري تحميل الفئات...</p>
               </div>
             ) : mainCategories.length === 0 ? (
               <div className="text-center py-8">
@@ -683,7 +684,7 @@ export default function CategoriesManagement() {
                         }`}
                       >
                         {isTogglingMainCategory ? (
-                          <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-1"></div>
+                          <FaSpinner className="h-3 w-3 ml-1 animate-spin" />
                         ) : category.isActive ? (
                           <PowerOff className="h-3 w-3 ml-1" />
                         ) : (
@@ -704,7 +705,7 @@ export default function CategoriesManagement() {
                         className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isDeletingMainCategory ? (
-                          <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                          <FaSpinner className="h-3 w-3 ml-1 animate-spin" />
                         ) : (
                           <Trash2 className="h-3 w-3 ml-1" />
                         )}
@@ -744,7 +745,7 @@ export default function CategoriesManagement() {
               >
                 {isAddingSubCategory ? (
                   <div className="flex items-center">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                    <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                     جاري الإضافة...
                   </div>
                 ) : (
@@ -758,10 +759,8 @@ export default function CategoriesManagement() {
 
             {loading ? (
               <div className="p-8 flex flex-col items-center justify-center">
-                <div className="w-12 h-12 border-t-4 border-green-600 border-solid rounded-full animate-spin"></div>
-                <p className="text-gray-600 mt-4">
-                  جاري تحميل الفئات الفرعية...
-                </p>
+                <FaSpinner className="w-12 h-12 text-green-600 animate-spin mb-4" />
+                <p className="text-gray-600">جاري تحميل الفئات الفرعية...</p>
               </div>
             ) : (
               <>
@@ -853,7 +852,7 @@ export default function CategoriesManagement() {
                                 }`}
                               >
                                 {isTogglingSubCategory ? (
-                                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-1"></div>
+                                  <FaSpinner className="h-3 w-3 ml-1 animate-spin" />
                                 ) : subCategory.isActive ? (
                                   <PowerOff className="h-3 w-3 ml-1" />
                                 ) : (
@@ -873,7 +872,7 @@ export default function CategoriesManagement() {
                                 className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {isDeletingSubCategory ? (
-                                  <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                  <FaSpinner className="h-3 w-3 ml-1 animate-spin" />
                                 ) : (
                                   <Trash2 className="h-3 w-3 ml-1" />
                                 )}
@@ -980,7 +979,7 @@ export default function CategoriesManagement() {
                   >
                     {isAddingMainCategory || isEditingMainCategory ? (
                       <div className="flex items-center">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                         {editingMainCategory
                           ? "جاري التحديث..."
                           : "جاري الإضافة..."}
@@ -1116,7 +1115,7 @@ export default function CategoriesManagement() {
                   >
                     {isAddingSubCategory || isEditingSubCategory ? (
                       <div className="flex items-center">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                         {editingSubCategory
                           ? "جاري التحديث..."
                           : "جاري الإضافة..."}

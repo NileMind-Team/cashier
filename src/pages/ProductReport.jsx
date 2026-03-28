@@ -17,6 +17,7 @@ import {
   PieChart,
   Settings,
 } from "lucide-react";
+import { FaSpinner } from "react-icons/fa";
 
 export default function ProductsReports() {
   const navigate = useNavigate();
@@ -361,7 +362,7 @@ export default function ProductsReports() {
                   >
                     {isGeneratingReport ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        <FaSpinner className="w-5 h-5 ml-2 animate-spin" />
                         جاري التحميل...
                       </>
                     ) : (
@@ -594,7 +595,7 @@ export default function ProductsReports() {
                           <tr>
                             <td colSpan="5" className="py-8 text-center">
                               <div className="flex flex-col items-center justify-center">
-                                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                                <FaSpinner className="w-12 h-12 text-blue-600 animate-spin mb-4" />
                                 <p className="text-gray-500">
                                   جاري تحميل البيانات...
                                 </p>

@@ -5,7 +5,6 @@ import Swal from "sweetalert2";
 import axiosInstance from "../api/axiosInstance";
 import {
   ArrowLeft,
-  Truck,
   CheckCircle,
   XCircle,
   Plus,
@@ -21,8 +20,8 @@ import {
   Building2,
   Receipt,
   Image,
-  Loader2,
 } from "lucide-react";
+import { FaSpinner, FaTruck } from "react-icons/fa";
 
 export default function ShippingCompaniesManagement() {
   const navigate = useNavigate();
@@ -375,7 +374,7 @@ export default function ShippingCompaniesManagement() {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center mr-3">
-                <span className="text-white font-bold">🚚</span>
+                <FaTruck className="text-white text-lg" />
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير - إدارة شركات التوصيل
@@ -426,7 +425,7 @@ export default function ShippingCompaniesManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
-                <Truck className="h-7 w-7 text-white" />
+                <FaTruck className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -529,7 +528,7 @@ export default function ShippingCompaniesManagement() {
             >
               {isAddingCompany ? (
                 <>
-                  <Loader2 className="h-5 w-5 ml-2 animate-spin" />
+                  <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
                   جاري الإضافة...
                 </>
               ) : (
@@ -546,7 +545,7 @@ export default function ShippingCompaniesManagement() {
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           {loading ? (
             <div className="p-8 flex flex-col items-center justify-center">
-              <div className="w-16 h-16 border-t-4 border-blue-600 border-solid rounded-full animate-spin mb-4"></div>
+              <FaSpinner className="w-16 h-16 text-blue-600 animate-spin mb-4" />
               <p className="text-gray-600">
                 جاري تحميل بيانات شركات التوصيل...
               </p>
@@ -585,7 +584,7 @@ export default function ShippingCompaniesManagement() {
                           className="py-8 px-4 text-center text-gray-500"
                         >
                           <div className="flex flex-col items-center justify-center">
-                            <Truck className="h-12 w-12 text-gray-300 mb-3" />
+                            <FaTruck className="h-12 w-12 text-gray-300 mb-3" />
                             <p className="text-lg font-medium text-gray-400">
                               لا يوجد شركات توصيل
                             </p>
@@ -711,7 +710,7 @@ export default function ShippingCompaniesManagement() {
                                 }`}
                               >
                                 {isTogglingCompany ? (
-                                  <Loader2 className="h-3 w-3 ml-1 animate-spin" />
+                                  <FaSpinner className="h-3 w-3 ml-1 animate-spin" />
                                 ) : company.isActive ? (
                                   <PowerOff className="h-3 w-3 ml-1" />
                                 ) : (
@@ -729,7 +728,7 @@ export default function ShippingCompaniesManagement() {
                                 className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {isDeletingCompany ? (
-                                  <Loader2 className="h-3 w-3 ml-1 animate-spin" />
+                                  <FaSpinner className="h-3 w-3 ml-1 animate-spin" />
                                 ) : (
                                   <Trash2 className="h-3 w-3 ml-1" />
                                 )}
@@ -1017,7 +1016,7 @@ export default function ShippingCompaniesManagement() {
                   >
                     {isAddingCompany || isEditingCompany ? (
                       <>
-                        <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                        <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                         {editingCompany ? "جاري التحديث..." : "جاري الإضافة..."}
                       </>
                     ) : (

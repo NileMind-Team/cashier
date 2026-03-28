@@ -12,6 +12,7 @@ import {
   FaArrowLeft,
   FaSave,
   FaTimes,
+  FaSpinner,
 } from "react-icons/fa";
 
 export default function DiscountsManagement() {
@@ -368,7 +369,7 @@ export default function DiscountsManagement() {
                   title="إلغاء الخصم"
                 >
                   {isRemovingDiscount ? (
-                    <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    <FaSpinner className="w-4 h-4 animate-spin" />
                   ) : (
                     <FaTrash className="h-4 w-4" />
                   )}
@@ -423,7 +424,7 @@ export default function DiscountsManagement() {
                   title="إلغاء الخصم"
                 >
                   {isRemovingDiscount ? (
-                    <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    <FaSpinner className="w-4 h-4 animate-spin" />
                   ) : (
                     <FaTrash className="h-4 w-4" />
                   )}
@@ -506,7 +507,7 @@ export default function DiscountsManagement() {
                   title="إلغاء الخصم"
                 >
                   {isRemovingDiscount ? (
-                    <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    <FaSpinner className="w-4 h-4 animate-spin" />
                   ) : (
                     <FaTrash className="h-4 w-4" />
                   )}
@@ -665,7 +666,7 @@ export default function DiscountsManagement() {
           <div className="p-4">
             {loading ? (
               <div className="p-8 flex flex-col items-center justify-center">
-                <div className="w-16 h-16 border-t-4 border-purple-600 border-solid rounded-full animate-spin mb-4"></div>
+                <FaSpinner className="w-16 h-16 text-purple-600 animate-spin mb-4" />
                 <p className="text-gray-600">جاري تحميل البيانات...</p>
               </div>
             ) : (
@@ -903,7 +904,7 @@ export default function DiscountsManagement() {
                   >
                     {isSavingDiscount ? (
                       <div className="flex items-center">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                         جاري الحفظ...
                       </div>
                     ) : (

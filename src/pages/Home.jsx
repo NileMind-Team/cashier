@@ -171,8 +171,7 @@ export default function Home() {
   const [currentBillIndex, setCurrentBillIndex] = useState(0);
   const [productsLoading, setProductsLoading] = useState(true);
   const isRefreshingRef = useRef(false);
-
-  // Loading states for buttons
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const [isPreparingOrder, setIsPreparingOrder] = useState(false);
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
@@ -1394,19 +1393,31 @@ export default function Home() {
     initializedRef.current = true;
 
     const initializeData = async () => {
-      const shiftData = await fetchShiftDetails();
+      setIsPageLoading(true);
 
-      if (!shiftData) {
-        navigate("/login");
-        return;
+      try {
+        const shiftData = await fetchShiftDetails();
+
+        if (!shiftData) {
+          navigate("/login");
+          return;
+        }
+
+        await Promise.all([
+          fetchHalls(),
+          fetchTables(),
+          fetchMainCategories(),
+          fetchPaymentMethods(),
+          fetchDeliveryCompanies(),
+        ]);
+
+        resetBillData();
+      } catch (error) {
+        console.error("خطأ في تحميل البيانات:", error);
+        toast.error("حدث خطأ في تحميل البيانات");
+      } finally {
+        setIsPageLoading(false);
       }
-
-      await fetchHalls();
-      await fetchTables();
-      await fetchMainCategories();
-      await fetchPaymentMethods();
-      await fetchDeliveryCompanies();
-      resetBillData();
     };
 
     initializeData();
@@ -3146,6 +3157,19 @@ export default function Home() {
     }
     return "إتمام البيع";
   };
+
+  if (isPageLoading) {
+    return (
+      <div
+        dir="rtl"
+        className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-l from-gray-50 to-gray-100"
+      >
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

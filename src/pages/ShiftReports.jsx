@@ -22,6 +22,7 @@ import {
   RotateCcw,
   Coins,
 } from "lucide-react";
+import { FaSpinner } from "react-icons/fa";
 
 export default function ShiftReports() {
   const navigate = useNavigate();
@@ -285,7 +286,7 @@ export default function ShiftReports() {
                   >
                     {isGeneratingReport ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        <FaSpinner className="w-5 h-5 ml-2 animate-spin" />
                         جاري التحميل...
                       </>
                     ) : (
@@ -590,7 +591,7 @@ export default function ShiftReports() {
                 </p>
                 {fetchingShifts ? (
                   <div className="flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin ml-2"></div>
+                    <FaSpinner className="w-6 h-6 ml-2 animate-spin text-blue-600" />
                     <span>جاري تحميل الورديات...</span>
                   </div>
                 ) : (

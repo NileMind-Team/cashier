@@ -15,6 +15,7 @@ import {
   Wallet,
   PieChart,
 } from "lucide-react";
+import { FaSpinner, FaChartLine } from "react-icons/fa";
 
 export default function SalesReports() {
   const navigate = useNavigate();
@@ -122,7 +123,7 @@ export default function SalesReports() {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
-                <span className="text-white font-bold">$</span>
+                <FaChartLine className="text-white text-lg" />
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير - تقارير المبيعات
@@ -212,7 +213,7 @@ export default function SalesReports() {
                   >
                     {isGeneratingReport ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        <FaSpinner className="w-5 h-5 ml-2 animate-spin" />
                         جاري التحميل...
                       </>
                     ) : (

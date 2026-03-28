@@ -5,7 +5,8 @@ import { loginUser, logout, clearError } from "../redux/slices/loginSlice";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axiosInstance from "../api/axiosInstance";
-import { User, Lock, LogIn, LogOut, Play, Loader2 } from "lucide-react";
+import { User, Lock, LogIn, LogOut, Play } from "lucide-react";
+import { FaSpinner } from "react-icons/fa";
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -174,7 +175,7 @@ export default function Login() {
                   >
                     {isOpeningShift ? (
                       <>
-                        <Loader2 className="animate-spin ml-2 h-5 w-5 text-white" />
+                        <FaSpinner className="animate-spin ml-2 h-5 w-5 text-white" />
                         جاري بدء الوردية...
                       </>
                     ) : (
@@ -209,7 +210,7 @@ export default function Login() {
                   >
                     {isLoggingOut ? (
                       <>
-                        <Loader2 className="animate-spin ml-2 h-5 w-5" />
+                        <FaSpinner className="animate-spin ml-2 h-5 w-5" />
                         جاري تسجيل الخروج...
                       </>
                     ) : (
@@ -352,7 +353,7 @@ export default function Login() {
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="animate-spin ml-2 h-5 w-5 text-white" />
+                    <FaSpinner className="animate-spin ml-2 h-5 w-5 text-white" />
                     جاري تسجيل الدخول...
                   </>
                 ) : (
