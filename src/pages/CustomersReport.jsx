@@ -45,6 +45,13 @@ export default function CustomersReports() {
 
   const [isPrinting, setIsPrinting] = useState(false);
 
+  const addTwoHours = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    date.setHours(date.getHours() + 2);
+    return date;
+  };
+
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
     const thirtyDaysAgo = new Date();
@@ -298,7 +305,7 @@ export default function CustomersReports() {
 
   const formatDateTime = (dateString) => {
     if (!dateString) return "";
-    const date = new Date(dateString);
+    const date = addTwoHours(dateString);
     return date.toLocaleDateString("ar-EG", {
       year: "numeric",
       month: "short",
@@ -573,9 +580,8 @@ export default function CustomersReports() {
 
     const allTransactions = [];
 
-    // Add all invoices
     customerInvoices.forEach((invoice) => {
-      const invoiceDate = new Date(invoice.date);
+      const invoiceDate = addTwoHours(invoice.date);
       const formattedDateTime = invoiceDate.toLocaleDateString("ar-EG", {
         year: "numeric",
         month: "2-digit",
@@ -596,9 +602,8 @@ export default function CustomersReports() {
       });
     });
 
-    // Add all payments
     customerTransactions.forEach((transaction) => {
-      const transactionDate = new Date(transaction.date);
+      const transactionDate = addTwoHours(transaction.date);
       const formattedDateTime = transactionDate.toLocaleDateString("ar-EG", {
         year: "numeric",
         month: "2-digit",
@@ -624,7 +629,7 @@ export default function CustomersReports() {
       });
     });
 
-    allTransactions.sort((a, b) => b.date - a.date);
+    allTransactions.sort((a, b) => a.date - b.date);
 
     return allTransactions;
   };
@@ -1216,6 +1221,58 @@ export default function CustomersReports() {
                     className="text-lg font-bold mb-4"
                     style={{ color: "#193F94" }}
                   >
+                    تفاصيل العميل
+                  </h3>
+                  <div className="bg-gradient-to-r from-gray-50 to-white rounded-xl p-5 border border-gray-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-center mb-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center ml-2">
+                            <Users className="h-5 w-5 text-blue-700" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-lg">
+                              {reportData.customer.analytics.customerName}
+                            </p>
+                            <p className="text-sm text-gray-600">العميل</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">الهاتف:</span>
+                            <span className="font-medium">
+                              {reportData.customer.analytics.phone}
+                            </span>
+                          </div>
+                          {reportData.customer.address && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">العنوان:</span>
+                              <span className="font-medium">
+                                {reportData.customer.address}
+                              </span>
+                            </div>
+                          )}
+                          {reportData.customer.nationalId && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">
+                                الرقم القومي:
+                              </span>
+                              <span className="font-medium">
+                                {reportData.customer.nationalId}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-6 print:hidden">
+                  <h3
+                    className="text-lg font-bold mb-4"
+                    style={{ color: "#193F94" }}
+                  >
                     سجل الحركات
                   </h3>
 
@@ -1584,148 +1641,6 @@ export default function CustomersReports() {
                       </p>
                     </div>
                   )}
-                </div>
-
-                <div className="mb-6 print:hidden">
-                  <h3
-                    className="text-lg font-bold mb-4"
-                    style={{ color: "#193F94" }}
-                  >
-                    تفاصيل العميل
-                  </h3>
-                  <div className="bg-gradient-to-r from-gray-50 to-white rounded-xl p-5 border border-gray-200">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <div className="flex items-center mb-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center ml-2">
-                            <Users className="h-5 w-5 text-blue-700" />
-                          </div>
-                          <div>
-                            <p className="font-bold text-lg">
-                              {reportData.customer.analytics.customerName}
-                            </p>
-                            <p className="text-sm text-gray-600">العميل</p>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">الهاتف:</span>
-                            <span className="font-medium">
-                              {reportData.customer.analytics.phone}
-                            </span>
-                          </div>
-                          {reportData.customer.address && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">العنوان:</span>
-                              <span className="font-medium">
-                                {reportData.customer.address}
-                              </span>
-                            </div>
-                          )}
-                          {reportData.customer.nationalId && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">
-                                الرقم القومي:
-                              </span>
-                              <span className="font-medium">
-                                {reportData.customer.nationalId}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <h4 className="font-bold mb-3 text-gray-800">
-                          إحصائيات الفترة
-                        </h4>
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">
-                              إجمالي الفواتير:
-                            </span>
-                            <span className="font-bold">
-                              {customerInvoices.length}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">
-                              إجمالي المبيعات:
-                            </span>
-                            <span className="font-bold text-blue-700">
-                              {formatCurrency(totals.totalInvoicesAmount)} ج.م
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">
-                              إجمالي المدفوعات:
-                            </span>
-                            <span className="font-bold text-green-600">
-                              {formatCurrency(totals.totalPaid)} ج.م
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">المتبقي:</span>
-                            <span
-                              className={`font-bold ${totals.totalRemaining > 0 ? "text-red-600" : "text-green-600"}`}
-                            >
-                              {formatCurrency(totals.totalRemaining)} ج.م
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-200 print:hidden">
-                  <h4
-                    className="font-bold mb-4 text-gray-800"
-                    style={{ color: "#193F94" }}
-                  >
-                    ملخص تقرير العميل
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <div
-                        className="text-2xl font-bold"
-                        style={{ color: "#193F94" }}
-                      >
-                        {customerInvoices.length}
-                      </div>
-                      <div className="text-sm text-gray-600">عدد الفواتير</div>
-                    </div>
-                    <div className="text-center">
-                      <div
-                        className="text-2xl font-bold"
-                        style={{ color: "#10B981" }}
-                      >
-                        {formatCurrency(totals.totalInvoicesAmount)}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        إجمالي المبيعات
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div
-                        className="text-2xl font-bold"
-                        style={{ color: "#3B82F6" }}
-                      >
-                        {formatCurrency(totals.totalPaid)}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        إجمالي المدفوع
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div
-                        className={`text-2xl font-bold ${totals.totalRemaining > 0 ? "text-red-600" : "text-green-600"}`}
-                      >
-                        {formatCurrency(totals.totalRemaining)}
-                      </div>
-                      <div className="text-sm text-gray-600">المتبقي</div>
-                    </div>
-                  </div>
                 </div>
               </div>
             ) : (
