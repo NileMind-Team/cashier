@@ -30,6 +30,7 @@ import {
   DollarSign,
   Save,
 } from "lucide-react";
+import { FaSpinner } from "react-icons/fa";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -2844,13 +2845,10 @@ export default function Home() {
       setIsPreparingOrder(true);
       let invoiceResponse;
 
-      // تحديث الفاتورة الحالية بدلاً من إنشاء فاتورة جديدة
       if (isEditingExistingInvoice && currentBillData?.invoiceId) {
-        // تحديث الفاتورة الحالية مع جعلها معلقة
         invoiceResponse = await updateExistingInvoice(true, []);
 
         if (invoiceResponse) {
-          // تحديث حالة الفاتورة الحالية
           setCurrentBillData({
             ...currentBillData,
             invoiceStatus: InvoiceStatus.Open,
@@ -2861,7 +2859,6 @@ export default function Home() {
             completedDate: null,
           });
 
-          // تحديث حالة الطاولة إلى مشغولة
           await updateTableStatus(
             selectedHall.id,
             selectedTable.id,
@@ -2869,7 +2866,6 @@ export default function Home() {
           );
           setTableStatus("occupied");
 
-          // تعيين أن الطلب تم تحضيره
           setOrderPrepared(true);
           setHasCartChanges(false);
           setOriginalCart(JSON.parse(JSON.stringify(cart)));
@@ -2877,7 +2873,6 @@ export default function Home() {
           toast.success(`تم تحضير طلب الطاولة ${selectedTable.number} بنجاح`);
         }
       } else if (isNewBillActive) {
-        // للفاتورة الجديدة: إنشاء فاتورة جديدة
         invoiceResponse = await createInvoice(true, []);
 
         if (invoiceResponse) {
@@ -3165,7 +3160,7 @@ export default function Home() {
         className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-l from-gray-50 to-gray-100"
       >
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <FaSpinner className="w-16 h-16 text-blue-600 animate-spin mb-4" />
         </div>
       </div>
     );
@@ -3314,7 +3309,7 @@ export default function Home() {
                     <div className="border border-gray-200 rounded-lg p-2 bg-gray-50 w-full mx-6 min-h-[120px]">
                       {optionsLoading ? (
                         <div className="flex items-center justify-center h-20">
-                          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                          <FaSpinner className="w-6 h-6 text-blue-600 animate-spin" />
                         </div>
                       ) : (
                         <div className="grid grid-cols-4 gap-1">
@@ -3578,7 +3573,7 @@ export default function Home() {
                 <button
                   onClick={handleApplyDiscount}
                   disabled={isApplyingDiscount}
-                  className={`flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors ${
+                  className={`flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors flex items-center justify-center ${
                     isApplyingDiscount
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:opacity-90"
@@ -3586,10 +3581,10 @@ export default function Home() {
                   style={{ backgroundColor: "#193F94" }}
                 >
                   {isApplyingDiscount ? (
-                    <span className="flex items-center justify-center">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-1"></div>
+                    <>
+                      <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                       جاري التطبيق...
-                    </span>
+                    </>
                   ) : (
                     "تطبيق الخصم"
                   )}
@@ -3765,12 +3760,12 @@ export default function Home() {
                     style={{ backgroundColor: "#193F94" }}
                   >
                     {isCreatingCustomer || isUpdatingCustomer ? (
-                      <span className="flex items-center justify-center">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-1"></div>
+                      <>
+                        <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
                         {isEditingCustomer
                           ? "جاري التحديث..."
                           : "جاري الإضافة..."}
-                      </span>
+                      </>
                     ) : (
                       <>
                         <Save size={16} className="ml-2" />
@@ -3887,7 +3882,7 @@ export default function Home() {
               <div className="max-h-[400px] overflow-y-auto pr-1">
                 {deliveryCompaniesLoading ? (
                   <div className="text-center py-8">
-                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <FaSpinner className="w-8 h-8 text-blue-600 animate-spin mx-auto" />
                     <p className="text-xs text-gray-500 mt-2">
                       جاري تحميل الشركات...
                     </p>
@@ -3986,6 +3981,7 @@ export default function Home() {
                 <div className="overflow-y-auto h-full">
                   {hallsLoading ? (
                     <div className="p-4 text-center text-gray-500">
+                      <FaSpinner className="w-6 h-6 text-blue-600 animate-spin mx-auto mb-2" />
                       جاري تحميل الصالات...
                     </div>
                   ) : halls.length === 0 ? (
@@ -4043,6 +4039,7 @@ export default function Home() {
                     </div>
                     {tablesLoading ? (
                       <div className="text-center py-8 text-gray-500">
+                        <FaSpinner className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
                         جاري تحميل الطاولات...
                       </div>
                     ) : (
@@ -4315,7 +4312,7 @@ export default function Home() {
                   <>
                     {paymentMethodsLoading ? (
                       <div className="text-center py-4">
-                        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                        <FaSpinner className="w-6 h-6 text-blue-600 animate-spin mx-auto" />
                         <p className="text-[10px] text-gray-500 mt-1">
                           جاري تحميل طرق الدفع...
                         </p>
@@ -4414,7 +4411,7 @@ export default function Home() {
                     (!isPartialPayment && payments.length === 0) ||
                     isProcessingPayment
                   }
-                  className={`flex-1 py-2 px-3 rounded-lg font-bold text-white transition-colors text-xs ${
+                  className={`flex-1 py-2 px-3 rounded-lg font-bold text-white transition-colors text-xs flex items-center justify-center ${
                     (!isPartialPayment && payments.length === 0) ||
                     isProcessingPayment
                       ? "opacity-50 cursor-not-allowed"
@@ -4429,10 +4426,10 @@ export default function Home() {
                   }}
                 >
                   {isProcessingPayment ? (
-                    <span className="flex items-center justify-center">
-                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin ml-1"></div>
+                    <>
+                      <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                       جاري تأكيد الدفع...
-                    </span>
+                    </>
                   ) : isPartialPayment ? (
                     "تأكيد التأجيل"
                   ) : (
@@ -4663,7 +4660,7 @@ export default function Home() {
             <div className="bg-white rounded-2xl shadow-lg p-4 h-full overflow-hidden flex flex-col">
               {loading || shiftLoading || productsLoading ? (
                 <div className="h-full flex items-center justify-center">
-                  <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <FaSpinner className="w-12 h-12 text-blue-600 animate-spin" />
                 </div>
               ) : (
                 <>
@@ -4852,7 +4849,7 @@ export default function Home() {
                       }`}
                     >
                       {isGoingToPreviousBill ? (
-                        <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                       ) : (
                         <>
                           <ArrowRight size={12} className="ml-1" />
@@ -4900,7 +4897,7 @@ export default function Home() {
                       }`}
                     >
                       {isGoingToNextBill ? (
-                        <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                       ) : (
                         <>
                           التالي
@@ -4991,7 +4988,7 @@ export default function Home() {
                                 }`}
                               >
                                 {isRemovingTable ? (
-                                  <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                  <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                                 ) : (
                                   <>
                                     <Trash2 size={12} className="ml-1" />
@@ -5074,7 +5071,7 @@ export default function Home() {
                       </label>
                       {isSearchingCustomer && (
                         <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                          <FaSpinner className="w-4 h-4 text-blue-600 animate-spin" />
                         </div>
                       )}
                     </div>
@@ -5540,7 +5537,7 @@ export default function Home() {
                       }`}
                     >
                       {isApplyingDiscount ? (
-                        <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                        <FaSpinner className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
                       ) : discount === "" ? (
                         0
                       ) : (
@@ -5640,10 +5637,7 @@ export default function Home() {
                 }}
               >
                 {isResettingBill ? (
-                  <div className="flex items-center justify-center">
-                    <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin ml-1"></div>
-                    جاري...
-                  </div>
+                  <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                 ) : (
                   <>
                     <RefreshCw size={12} className="ml-1" />
@@ -5676,10 +5670,7 @@ export default function Home() {
                   }}
                 >
                   {isReturningBill ? (
-                    <div className="flex items-center justify-center">
-                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin ml-1"></div>
-                      جاري الارتجاع...
-                    </div>
+                    <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                   ) : (
                     <>
                       <ArrowLeft size={12} className="ml-1" />
@@ -5725,10 +5716,7 @@ export default function Home() {
                   }}
                 >
                   {isPreparingOrder ? (
-                    <div className="flex items-center justify-center">
-                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin ml-1"></div>
-                      جاري التحضير...
-                    </div>
+                    <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
                   ) : (
                     <>
                       <Check size={12} className="ml-1" />
