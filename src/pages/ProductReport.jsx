@@ -2,6 +2,21 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axiosInstance from "../api/axiosInstance";
+import {
+  ArrowLeft,
+  Calendar,
+  TrendingUp,
+  Package,
+  DollarSign,
+  ChevronDown,
+  FileText,
+  ChevronRight,
+  ChevronLeft,
+  ChevronsRight,
+  ChevronsLeft,
+  PieChart,
+  Settings,
+} from "lucide-react";
 
 export default function ProductsReports() {
   const navigate = useNavigate();
@@ -10,6 +25,7 @@ export default function ProductsReports() {
   const [orderBy, setOrderBy] = useState("mostSold");
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     pageSize: 10,
@@ -40,6 +56,7 @@ export default function ProductsReports() {
       return;
     }
 
+    setIsGeneratingReport(true);
     setLoading(true);
 
     try {
@@ -125,6 +142,7 @@ export default function ProductsReports() {
       }
     } finally {
       setLoading(false);
+      setIsGeneratingReport(false);
     }
   };
 
@@ -248,20 +266,7 @@ export default function ProductsReports() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <ArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -291,19 +296,7 @@ export default function ProductsReports() {
                   />
                   <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
                     <span className="flex items-center">
-                      <svg
-                        className="w-4 h-4 ml-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
+                      <Calendar className="w-4 h-4 ml-1" />
                       التاريخ من
                     </span>
                   </label>
@@ -320,19 +313,7 @@ export default function ProductsReports() {
                   />
                   <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
                     <span className="flex items-center">
-                      <svg
-                        className="w-4 h-4 ml-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
+                      <Calendar className="w-4 h-4 ml-1" />
                       التاريخ إلى
                     </span>
                   </label>
@@ -353,74 +334,39 @@ export default function ProductsReports() {
                   </select>
                   <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
                     <span className="flex items-center">
-                      <svg
-                        className="w-4 h-4 ml-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
-                        />
-                      </svg>
+                      <Settings className="w-4 h-4 ml-1" />
                       ترتيب حسب
                     </span>
                   </label>
                   <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                    <svg
-                      className="w-5 h-5 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
+                    <ChevronDown className="w-5 h-5 text-gray-400" />
                   </div>
                 </div>
 
                 <div className="pt-4">
                   <button
                     onClick={() => generateReport(1)}
-                    disabled={loading || !startDate || !endDate}
+                    disabled={isGeneratingReport || !startDate || !endDate}
                     className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
-                      loading || !startDate || !endDate
+                      isGeneratingReport || !startDate || !endDate
                         ? "opacity-50 cursor-not-allowed bg-gray-400"
                         : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                     }`}
                     style={{
                       backgroundColor:
-                        loading || !startDate || !endDate ? "" : "#193F94",
+                        isGeneratingReport || !startDate || !endDate
+                          ? ""
+                          : "#193F94",
                     }}
                   >
-                    {loading ? (
+                    {isGeneratingReport ? (
                       <>
-                        <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin ml-2"></div>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
                         جاري التحميل...
                       </>
                     ) : (
                       <>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 ml-2"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                          />
-                        </svg>
+                        <FileText className="h-5 w-5 ml-2" />
                         عرض التقرير
                       </>
                     )}
@@ -490,20 +436,7 @@ export default function ProductsReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-blue-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
+                        <DollarSign className="h-6 w-6 text-blue-700" />
                       </div>
                     </div>
                   </div>
@@ -522,20 +455,7 @@ export default function ProductsReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-green-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                          />
-                        </svg>
+                        <TrendingUp className="h-6 w-6 text-green-700" />
                       </div>
                     </div>
                   </div>
@@ -553,20 +473,7 @@ export default function ProductsReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-purple-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                          />
-                        </svg>
+                        <Package className="h-6 w-6 text-purple-700" />
                       </div>
                     </div>
                   </div>
@@ -683,83 +590,99 @@ export default function ProductsReports() {
                         </tr>
                       </thead>
                       <tbody>
-                        {reportData.products.map((product) => {
-                          const categoryColor = getCategoryColor(
-                            product.subCategoryName || "غير مصنف",
-                          );
+                        {loading ? (
+                          <tr>
+                            <td colSpan="5" className="py-8 text-center">
+                              <div className="flex flex-col items-center justify-center">
+                                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                                <p className="text-gray-500">
+                                  جاري تحميل البيانات...
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          reportData.products.map((product) => {
+                            const categoryColor = getCategoryColor(
+                              product.subCategoryName || "غير مصنف",
+                            );
 
-                          return (
-                            <tr
-                              key={product.productId}
-                              className="hover:bg-gray-50 transition-colors border-b border-gray-100"
-                            >
-                              <td className="py-3 px-4 text-right">
-                                <div className="font-medium text-gray-900">
-                                  {product.productName}
-                                </div>
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                <span
-                                  className="px-3 py-1 rounded-full text-xs font-medium"
-                                  style={{
-                                    backgroundColor: categoryColor.bg,
-                                    color: categoryColor.text,
-                                  }}
-                                >
-                                  {product.subCategoryName || "غير مصنف"}
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                <div className="font-bold">
-                                  {formatCurrency(product.price)} ج.م
-                                </div>
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                <div className="font-bold text-blue-900 text-lg">
-                                  {product.quantitySold}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  وحدة
-                                </div>
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                <div
-                                  className="font-bold text-lg"
-                                  style={{ color: "#193F94" }}
-                                >
-                                  {formatCurrency(product.revenue)} ج.م
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {product.quantitySold > 0
-                                    ? `${formatCurrency(product.revenue / product.quantitySold)} ج.م/وحدة`
-                                    : "لا توجد مبيعات"}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                            return (
+                              <tr
+                                key={product.productId}
+                                className="hover:bg-gray-50 transition-colors border-b border-gray-100"
+                              >
+                                <td className="py-3 px-4 text-right">
+                                  <div className="font-medium text-gray-900">
+                                    {product.productName}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  <span
+                                    className="px-3 py-1 rounded-full text-xs font-medium"
+                                    style={{
+                                      backgroundColor: categoryColor.bg,
+                                      color: categoryColor.text,
+                                    }}
+                                  >
+                                    {product.subCategoryName || "غير مصنف"}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  <div className="font-bold">
+                                    {formatCurrency(product.price)} ج.م
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  <div className="font-bold text-blue-900 text-lg">
+                                    {product.quantitySold}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    وحدة
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  <div
+                                    className="font-bold text-lg"
+                                    style={{ color: "#193F94" }}
+                                  >
+                                    {formatCurrency(product.revenue)} ج.م
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {product.quantitySold > 0
+                                      ? `${formatCurrency(product.revenue / product.quantitySold)} ج.م/وحدة`
+                                      : "لا توجد مبيعات"}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
                       </tbody>
-                      <tfoot>
-                        <tr className="bg-gray-50 font-bold">
-                          <td colSpan="3" className="py-4 px-4 text-right">
-                            الإجمالي العام:
-                          </td>
-                          <td className="py-4 px-4 text-right text-blue-900">
-                            {reportData.stats.totalQuantitySold} وحدة
-                          </td>
-                          <td
-                            className="py-4 px-4 text-right"
-                            style={{ color: "#193F94" }}
-                          >
-                            {formatCurrency(reportData.stats.totalRevenue)} ج.م
-                          </td>
-                        </tr>
-                      </tfoot>
+                      {!loading && reportData.products.length > 0 && (
+                        <tfoot>
+                          <tr className="bg-gray-50 font-bold">
+                            <td colSpan="3" className="py-4 px-4 text-right">
+                              الإجمالي العام:
+                            </td>
+                            <td className="py-4 px-4 text-right text-blue-900">
+                              {reportData.stats.totalQuantitySold} وحدة
+                            </td>
+                            <td
+                              className="py-4 px-4 text-right"
+                              style={{ color: "#193F94" }}
+                            >
+                              {formatCurrency(reportData.stats.totalRevenue)}{" "}
+                              ج.م
+                            </td>
+                          </tr>
+                        </tfoot>
+                      )}
                     </table>
                   </div>
 
                   {/* Pagination Controls */}
-                  {pagination.totalPages > 0 && (
+                  {pagination.totalPages > 0 && !loading && (
                     <div className="px-4 py-4 border-t border-gray-200 bg-gray-50 mt-4">
                       <div className="flex justify-end">
                         <div className="flex items-center gap-2">
@@ -774,19 +697,7 @@ export default function ProductsReports() {
                             }`}
                             title="الصفحة الأولى"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                              />
-                            </svg>
+                            <ChevronsRight className="w-5 h-5" />
                           </button>
 
                           {/* Previous Page Button */}
@@ -802,19 +713,7 @@ export default function ProductsReports() {
                             }`}
                             title="الصفحة السابقة"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 5l7 7-7 7"
-                              />
-                            </svg>
+                            <ChevronRight className="w-5 h-5" />
                           </button>
 
                           {/* Page Numbers */}
@@ -856,19 +755,7 @@ export default function ProductsReports() {
                             }`}
                             title="الصفحة التالية"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 19l-7-7 7-7"
-                              />
-                            </svg>
+                            <ChevronLeft className="w-5 h-5" />
                           </button>
 
                           {/* Last Page Button */}
@@ -884,19 +771,7 @@ export default function ProductsReports() {
                             }`}
                             title="الصفحة الأخيرة"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                              />
-                            </svg>
+                            <ChevronsLeft className="w-5 h-5" />
                           </button>
                         </div>
                       </div>
@@ -972,20 +847,7 @@ export default function ProductsReports() {
             ) : (
               <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center min-h-[400px]">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center mb-6">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-12 w-12 text-green-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                    />
-                  </svg>
+                  <PieChart className="h-12 w-12 text-green-600" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-700 mb-2">
                   تقارير أداء المنتجات
@@ -996,37 +858,11 @@ export default function ProductsReports() {
                 </p>
                 <div className="text-center space-y-3">
                   <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 ml-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
+                    <Calendar className="h-5 w-5 ml-2" />
                     اختر التاريخ من وإلى
                   </div>
                   <div className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 ml-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
-                      />
-                    </svg>
+                    <Settings className="h-5 w-5 ml-2" />
                     اختر طريقة الترتيب
                   </div>
                 </div>

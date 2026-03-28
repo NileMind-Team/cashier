@@ -4,6 +4,32 @@ import Swal from "sweetalert2";
 import Navbar from "../components/layout/Navbar.jsx";
 import axiosInstance from "../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
+import {
+  X,
+  Plus,
+  Minus,
+  Edit2,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  User,
+  Phone,
+  MapPin,
+  CreditCard,
+  ShoppingBag,
+  RefreshCw,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  AlertCircle,
+  Clock,
+  Truck,
+  Store,
+  Table,
+  FileText,
+  DollarSign,
+  Save,
+} from "lucide-react";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -1448,9 +1474,9 @@ export default function Home() {
   };
 
   const billTypes = [
-    { value: "takeaway", label: "سفري", icon: "" },
-    { value: "dinein", label: "طاولة", icon: "" },
-    { value: "delivery", label: "دليفري", icon: "" },
+    { value: "takeaway", label: "سفري", icon: "takeaway" },
+    { value: "dinein", label: "طاولة", icon: "dinein" },
+    { value: "delivery", label: "دليفري", icon: "delivery" },
   ];
 
   const getBillTypeLabel = (type) => {
@@ -1731,77 +1757,61 @@ export default function Home() {
 
     const hasProducts = cart.length > 0;
     const productCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const tableNumber = selectedTable.number;
+    const hallName = selectedHall.name;
 
-    if (hasProducts) {
-      toast.info(
-        <div className="p-3">
-          <p className="font-bold mb-2">هل أنت متأكد من إزالة الطاولة؟</p>
-          <p className="text-sm text-gray-600 mb-2">
-            الطاولة: {selectedTable.number} ({selectedHall.name})
-          </p>
-          <p className="text-sm text-gray-600 mb-3">
-            سيتم إزالة {productCount} منتج من الفاتورة
-          </p>
-          <div className="flex justify-end space-x-2 rtl:space-x-reverse mt-3">
-            <button
-              onClick={async () => {
-                toast.dismiss();
-                setIsRemovingTable(true);
-                await updateTableStatus(
-                  selectedHall.id,
-                  selectedTable.id,
-                  "available",
-                );
+    const result = await Swal.fire({
+      title: "هل أنت متأكد من إزالة الطاولة؟",
+      html: `
+        <div class="text-right">
+          <p class="font-bold mb-2">الطاولة: ${tableNumber} (${hallName})</p>
+          ${hasProducts ? `<p class="text-sm text-gray-600 mb-3">سيتم إزالة ${productCount} منتج من الفاتورة</p>` : ""}
+        </div>
+      `,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "نعم، إزالة",
+      cancelButtonText: "إلغاء",
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      reverseButtons: true,
+    });
 
-                resetBillData();
-
-                toast.success(
-                  <div>
-                    <p className="font-bold">تم إزالة الطاولة</p>
-                    <p className="text-sm mt-1">
-                      تم إزالة جميع المنتجات من الفاتورة
-                    </p>
-                  </div>,
-                );
-                setIsRemovingTable(false);
-              }}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-            >
-              نعم، إزالة
-            </button>
-            <button
-              onClick={() => toast.dismiss()}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm"
-            >
-              إلغاء
-            </button>
-          </div>
-        </div>,
-        {
-          autoClose: false,
-          closeOnClick: false,
-          draggable: false,
-        },
-      );
-    } else {
+    if (result.isConfirmed) {
       setIsRemovingTable(true);
-      await updateTableStatus(selectedHall.id, selectedTable.id, "available");
+      try {
+        await updateTableStatus(selectedHall.id, selectedTable.id, "available");
 
-      setCurrentBillData({
-        ...currentBillData,
-        tableId: null,
-        tableName: null,
-        billType: "takeaway",
-      });
+        // Refresh all data to trigger a full update
+        hallsFetchedRef.current = false;
+        tablesFetchedRef.current = false;
+        shiftFetchedRef.current = false;
 
-      setTableStatus("available");
-      setSelectedTable(null);
-      setSelectedHall(null);
-      setShowTableInfo(false);
-      setOrderPrepared(false);
+        await Promise.all([fetchShiftDetails(), fetchHalls(), fetchTables()]);
 
-      toast.success("تم إزالة الطاولة وجعلها متاحة");
-      setIsRemovingTable(false);
+        if (hasProducts) {
+          resetBillData();
+        } else {
+          setCurrentBillData({
+            ...currentBillData,
+            tableId: null,
+            tableName: null,
+            billType: "takeaway",
+          });
+          setTableStatus("available");
+          setSelectedTable(null);
+          setSelectedHall(null);
+          setShowTableInfo(false);
+          setOrderPrepared(false);
+        }
+
+        toast.success("تم إزالة الطاولة وجعلها متاحة");
+      } catch (error) {
+        console.error("خطأ في إزالة الطاولة:", error);
+        toast.error("حدث خطأ في إزالة الطاولة");
+      } finally {
+        setIsRemovingTable(false);
+      }
     }
   };
 
@@ -3151,9 +3161,9 @@ export default function Home() {
                 </h3>
                 <button
                   onClick={() => setShowProductModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-gray-500 hover:text-gray-700"
                 >
-                  ×
+                  <X size={24} />
                 </button>
               </div>
 
@@ -3214,7 +3224,7 @@ export default function Home() {
                     }
                     className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold"
                   >
-                    -
+                    <Minus size={18} />
                   </button>
                   <input
                     type="text"
@@ -3243,7 +3253,7 @@ export default function Home() {
                     onClick={() => setProductQuantity(productQuantity + 1)}
                     className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold"
                   >
-                    +
+                    <Plus size={18} />
                   </button>
                 </div>
               </div>
@@ -3267,19 +3277,7 @@ export default function Home() {
                       }`}
                       style={{ transform: "translateX(50%)" }}
                     >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
+                      <ChevronRight size={18} />
                     </button>
 
                     <div className="border border-gray-200 rounded-lg p-2 bg-gray-50 w-full mx-6 min-h-[120px]">
@@ -3345,19 +3343,7 @@ export default function Home() {
                       }`}
                       style={{ transform: "translateX(-50%)" }}
                     >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 19l-7-7 7-7"
-                        />
-                      </svg>
+                      <ChevronLeft size={18} />
                     </button>
                   </div>
                 </div>
@@ -3439,9 +3425,9 @@ export default function Home() {
                 </h3>
                 <button
                   onClick={closeDiscountModal}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-gray-500 hover:text-gray-700"
                 >
-                  ×
+                  <X size={24} />
                 </button>
               </div>
 
@@ -3605,9 +3591,9 @@ export default function Home() {
                 </div>
                 <button
                   onClick={() => setShowCustomerModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  ×
+                  <X size={28} />
                 </button>
               </div>
 
@@ -3642,19 +3628,7 @@ export default function Home() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                          />
-                        </svg>
+                        <User size={16} className="ml-1" />
                         اسم العميل *
                       </span>
                     </label>
@@ -3680,19 +3654,7 @@ export default function Home() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                          />
-                        </svg>
+                        <Phone size={16} className="ml-1" />
                         رقم الهاتف *
                       </span>
                     </label>
@@ -3719,25 +3681,7 @@ export default function Home() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                        </svg>
+                        <MapPin size={16} className="ml-1" />
                         العنوان
                       </span>
                     </label>
@@ -3763,19 +3707,7 @@ export default function Home() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
-                          />
-                        </svg>
+                        <CreditCard size={16} className="ml-1" />
                         الرقم القومي
                       </span>
                     </label>
@@ -3788,19 +3720,7 @@ export default function Home() {
                     onClick={() => setShowCustomerModal(false)}
                     className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <X size={16} className="ml-2" />
                     إلغاء
                   </button>
                   <button
@@ -3822,28 +3742,7 @@ export default function Home() {
                       </span>
                     ) : (
                       <>
-                        <svg
-                          className="w-4 h-4 ml-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          {isEditingCustomer ? (
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                            />
-                          ) : (
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                            />
-                          )}
-                        </svg>
+                        <Save size={16} className="ml-2" />
                         {isEditingCustomer ? "حفظ التعديلات" : "إضافة عميل"}
                       </>
                     )}
@@ -3873,9 +3772,9 @@ export default function Home() {
                 </div>
                 <button
                   onClick={handleCloseDeliveryTypeModal}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  ×
+                  <X size={28} />
                 </button>
               </div>
 
@@ -3886,9 +3785,7 @@ export default function Home() {
                 >
                   <div className="flex items-center">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-50 rounded-lg flex items-center justify-center border border-blue-300">
-                      <span className="text-blue-700 font-bold text-xl">
-                        🏪
-                      </span>
+                      <Store size={24} className="text-blue-700" />
                     </div>
                     <div className="mr-3 text-right">
                       <h4 className="font-bold text-gray-800">دليفري المحل</h4>
@@ -3897,19 +3794,7 @@ export default function Home() {
                       </p>
                     </div>
                   </div>
-                  <svg
-                    className="w-5 h-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+                  <ChevronLeft size={20} className="text-gray-400" />
                 </button>
 
                 <button
@@ -3918,9 +3803,7 @@ export default function Home() {
                 >
                   <div className="flex items-center">
                     <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-50 rounded-lg flex items-center justify-center border border-purple-300">
-                      <span className="text-purple-700 font-bold text-xl">
-                        🚚
-                      </span>
+                      <Truck size={24} className="text-purple-700" />
                     </div>
                     <div className="mr-3 text-right">
                       <h4 className="font-bold text-gray-800">شركة توصيل</h4>
@@ -3929,19 +3812,7 @@ export default function Home() {
                       </p>
                     </div>
                   </div>
-                  <svg
-                    className="w-5 h-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+                  <ChevronLeft size={20} className="text-gray-400" />
                 </button>
               </div>
 
@@ -3976,9 +3847,9 @@ export default function Home() {
                 </div>
                 <button
                   onClick={() => setShowDeliveryCompanyModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  ×
+                  <X size={28} />
                 </button>
               </div>
 
@@ -4008,9 +3879,7 @@ export default function Home() {
                       >
                         <div className="flex items-center">
                           <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-purple-50 rounded-lg flex items-center justify-center border border-purple-300">
-                            <span className="text-purple-700 font-bold text-base">
-                              🚚
-                            </span>
+                            <Truck size={20} className="text-purple-700" />
                           </div>
                           <div className="mr-2 text-right">
                             <h4 className="font-bold text-gray-800 text-sm">
@@ -4036,7 +3905,7 @@ export default function Home() {
                           }`}
                         >
                           {selectedDeliveryCompany?.id === company.id && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
+                            <Check size={12} className="text-white" />
                           )}
                         </div>
                       </button>
@@ -4068,9 +3937,9 @@ export default function Home() {
                 </h3>
                 <button
                   onClick={handleCloseTableSelection}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-gray-500 hover:text-gray-700"
                 >
-                  ×
+                  <X size={24} />
                 </button>
               </div>
               <p className="text-gray-600 mt-1">
@@ -4239,9 +4108,9 @@ export default function Home() {
                 <button
                   onClick={closePaymentModal}
                   disabled={isProcessingPayment}
-                  className="text-gray-500 hover:text-gray-700 text-2xl disabled:opacity-50"
+                  className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
                 >
-                  ×
+                  <X size={20} />
                 </button>
               </div>
 
@@ -4335,19 +4204,7 @@ export default function Home() {
                             disabled={isProcessingPayment}
                             className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                           >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       );
@@ -4360,7 +4217,7 @@ export default function Home() {
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                          <span className="text-yellow-600 text-lg">⏰</span>
+                          <Clock size={20} className="text-yellow-600" />
                         </div>
                         <div>
                           <p className="text-sm font-bold text-yellow-800">
@@ -4475,7 +4332,7 @@ export default function Home() {
                                   }`}
                                 >
                                   {isSelected && (
-                                    <div className="w-2 h-2 rounded-full bg-white"></div>
+                                    <Check size={10} className="text-white" />
                                   )}
                                 </div>
                               </button>
@@ -4493,19 +4350,7 @@ export default function Home() {
                       disabled={isProcessingPayment}
                       className="w-full py-2 px-3 rounded-lg border-2 border-yellow-400 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 font-medium transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                      <Clock size={14} />
                       تأجيل المبلغ كاملاً (آجل)
                     </button>
                   </div>
@@ -4588,9 +4433,9 @@ export default function Home() {
                 </div>
                 <button
                   onClick={() => setShowInvoiceModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  ×
+                  <X size={24} />
                 </button>
               </div>
 
@@ -4864,7 +4709,7 @@ export default function Home() {
                   <div className="flex-1 overflow-y-auto pr-2">
                     {filteredProducts.length === 0 ? (
                       <div className="h-full flex flex-col items-center justify-center text-gray-400 py-8">
-                        <div className="text-4xl mb-4">📦</div>
+                        <ShoppingBag size={48} className="mb-4" />
                         <p className="text-sm">لا توجد منتجات في هذه الفئة</p>
                         <p className="text-xs mt-1">
                           اختر فئة أخرى لعرض المنتجات
@@ -4966,7 +4811,7 @@ export default function Home() {
                           currentInvoicePage === 1 &&
                           totalPages === 0)
                       }
-                      className={`px-2 py-1 rounded text-xs transition-all ${
+                      className={`px-2 py-1 rounded text-xs transition-all flex items-center ${
                         isGoingToPreviousBill ||
                         (!isNewBillActive &&
                           currentInvoicePage === 1 &&
@@ -4978,7 +4823,10 @@ export default function Home() {
                       {isGoingToPreviousBill ? (
                         <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                       ) : (
-                        "السابق"
+                        <>
+                          <ArrowRight size={12} className="ml-1" />
+                          السابق
+                        </>
                       )}
                     </button>
                     <div className="flex flex-col items-center">
@@ -5016,14 +4864,17 @@ export default function Home() {
                     <button
                       onClick={goToNextBill}
                       disabled={isGoingToNextBill}
-                      className={`px-2 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs transition-all ${
+                      className={`px-2 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs transition-all flex items-center ${
                         isGoingToNextBill ? "opacity-50 cursor-not-allowed" : ""
                       }`}
                     >
                       {isGoingToNextBill ? (
                         <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                       ) : (
-                        "التالي"
+                        <>
+                          التالي
+                          <ArrowLeft size={12} className="mr-1" />
+                        </>
                       )}
                     </button>
                   </div>
@@ -5045,6 +4896,15 @@ export default function Home() {
                             : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
                         } ${currentBillData.completed || currentBillData.isPartialPaid ? "opacity-70 cursor-not-allowed" : ""}`}
                       >
+                        {type.value === "takeaway" && (
+                          <ShoppingBag size={12} className="ml-1" />
+                        )}
+                        {type.value === "dinein" && (
+                          <Table size={12} className="ml-1" />
+                        )}
+                        {type.value === "delivery" && (
+                          <Truck size={12} className="ml-1" />
+                        )}
                         <span>{type.label}</span>
                       </button>
                     ))}
@@ -5056,9 +4916,7 @@ export default function Home() {
                     <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-white p-3 rounded-xl border border-blue-200 shadow-sm">
                       <div className="flex items-center space-x-3 rtl:space-x-reverse">
                         <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-50 rounded-lg flex items-center justify-center border border-blue-300">
-                          <span className="text-blue-700 font-bold text-lg">
-                            {selectedTable.number}
-                          </span>
+                          <Table size={20} className="text-blue-700" />
                         </div>
                         <div>
                           <div className="flex items-center mb-1">
@@ -5076,17 +4934,7 @@ export default function Home() {
                             </div>
                           </div>
                           <div className="text-xs text-blue-600 flex items-center">
-                            <svg
-                              className="w-3 h-3 ml-1"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
+                            <MapPin size={10} className="ml-1" />
                             طاولة رقم {selectedTable.number}
                           </div>
                         </div>
@@ -5098,19 +4946,7 @@ export default function Home() {
                               onClick={handleOpenTableSelection}
                               className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-gray-300"
                             >
-                              <svg
-                                className="w-3 h-3 ml-1"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                />
-                              </svg>
+                              <Edit2 size={12} className="ml-1" />
                               تغيير
                             </button>
                             {tableStatus === "occupied" && (
@@ -5126,21 +4962,11 @@ export default function Home() {
                                 {isRemovingTable ? (
                                   <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
                                 ) : (
-                                  <svg
-                                    className="w-3 h-3 ml-1"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                    />
-                                  </svg>
+                                  <>
+                                    <Trash2 size={12} className="ml-1" />
+                                    إزالة
+                                  </>
                                 )}
-                                إزالة
                               </button>
                             )}
                           </div>
@@ -5153,9 +4979,11 @@ export default function Home() {
                   <div className="mb-2">
                     <div className="flex items-center justify-between bg-gradient-to-r from-amber-50 to-white py-2 px-2 rounded-lg border border-amber-200 shadow-sm">
                       <div className="flex items-center">
-                        <span className="text-amber-700 text-xs ml-1">
-                          {deliveryType === DeliveryType.Store ? "🏪" : "🚚"}
-                        </span>
+                        {deliveryType === DeliveryType.Store ? (
+                          <Store size={14} className="text-amber-700 ml-1" />
+                        ) : (
+                          <Truck size={14} className="text-amber-700 ml-1" />
+                        )}
                         <span className="text-amber-800 font-medium text-[13px]">
                           {deliveryType === DeliveryType.Store
                             ? "دليفري المحل"
@@ -5171,32 +4999,14 @@ export default function Home() {
                             onClick={() => setShowDeliveryTypeModal(true)}
                             className="text-[9px] bg-amber-100 hover:bg-amber-200 text-amber-700 px-1 py-1 rounded transition-colors flex items-center"
                           >
-                            <svg
-                              className="w-3 h-3 ml-0.5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                              />
-                            </svg>
+                            <Edit2 size={12} />
                           </button>
                         )}
                     </div>
                     {deliveryType === DeliveryType.Company &&
                       selectedDeliveryCompany?.contactNumber && (
                         <div className="text-[8px] text-amber-600 mt-0.5 mr-5 flex items-center">
-                          <svg
-                            className="w-2 h-2 ml-0.5"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                          </svg>
+                          <Phone size={8} className="ml-0.5" />
                           {selectedDeliveryCompany.contactNumber}
                         </div>
                       )}
@@ -5227,19 +5037,7 @@ export default function Home() {
                         }`}
                       >
                         <span className="flex items-center">
-                          <svg
-                            className="w-4 h-4 ml-1"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                            />
-                          </svg>
+                          <Phone size={14} className="ml-1" />
                           رقم الهاتف
                         </span>
                       </label>
@@ -5273,19 +5071,7 @@ export default function Home() {
                             className="p-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 transition-all border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="تعديل بيانات العميل"
                           >
-                            <svg
-                              className="w-3.5 h-3.5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
+                            <Edit2 size={12} />
                           </button>
                         </div>
                       </div>
@@ -5303,19 +5089,11 @@ export default function Home() {
                           className="p-2 rounded-xl bg-green-50 hover:bg-green-100 text-green-700 transition-all border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="إضافة عميل جديد"
                         >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                            />
-                          </svg>
+                          <User size={16} />
+                          <Plus
+                            size={12}
+                            className="absolute bottom-0 right-0"
+                          />
                         </button>
                       )}
                   </div>
@@ -5363,19 +5141,7 @@ export default function Home() {
                                   onClick={startEditingGeneralNote}
                                   className="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded-md transition-colors flex items-center border border-blue-300 mr-2"
                                 >
-                                  <svg
-                                    className="w-2.5 h-2.5 ml-1"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                    />
-                                  </svg>
+                                  <Edit2 size={10} className="ml-1" />
                                   تعديل
                                 </button>
                               )}
@@ -5396,19 +5162,7 @@ export default function Home() {
                           }`}
                         >
                           <span>إضافة ملاحظة عامة للفاتورة...</span>
-                          <svg
-                            className="w-3 h-3 text-gray-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                            />
-                          </svg>
+                          <Edit2 size={12} className="text-gray-400" />
                         </button>
                       )}
                     </div>
@@ -5437,7 +5191,7 @@ export default function Home() {
               <div className="flex-1 overflow-y-auto mb-3 pr-2 min-h-0">
                 {cart.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-gray-400 py-4">
-                    <div className="text-5xl mb-4">🛒</div>
+                    <ShoppingBag size={48} className="mb-4" />
                     <p className="text-sm">لا توجد منتجات</p>
                     <p className="text-xs mt-1">قم بإضافة منتجات من القائمة</p>
                   </div>
@@ -5557,7 +5311,7 @@ export default function Home() {
                                           : "bg-gray-200 hover:bg-gray-300 text-gray-700"
                                       }`}
                                     >
-                                      -
+                                      <Minus size={12} />
                                     </button>
                                     <span className="mx-1.5 font-bold text-sm min-w-[20px] text-center">
                                       {item.quantity}
@@ -5603,7 +5357,7 @@ export default function Home() {
                                           : "bg-gray-200 hover:bg-gray-300 text-gray-700"
                                       }`}
                                     >
-                                      +
+                                      <Plus size={12} />
                                     </button>
                                   </div>
 
@@ -5621,19 +5375,10 @@ export default function Home() {
                                               }
                                               className="text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded-md transition-colors flex items-center border border-blue-200"
                                             >
-                                              <svg
-                                                className="w-2.5 h-2.5 ml-1"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                              >
-                                                <path
-                                                  strokeLinecap="round"
-                                                  strokeLinejoin="round"
-                                                  strokeWidth={2}
-                                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                                />
-                                              </svg>
+                                              <Edit2
+                                                size={10}
+                                                className="ml-1"
+                                              />
                                               ملاحظة
                                             </button>
                                           ) : (
@@ -5646,19 +5391,10 @@ export default function Home() {
                                               }
                                               className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md transition-colors flex items-center border border-gray-300"
                                             >
-                                              <svg
-                                                className="w-2.5 h-2.5 ml-1"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                              >
-                                                <path
-                                                  strokeLinecap="round"
-                                                  strokeLinejoin="round"
-                                                  strokeWidth={2}
-                                                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                                />
-                                              </svg>
+                                              <Edit2
+                                                size={10}
+                                                className="ml-1"
+                                              />
                                               ملاحظة
                                             </button>
                                           )}
@@ -5674,19 +5410,7 @@ export default function Home() {
                                           }
                                           className="text-[10px] bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-md transition-colors flex items-center border border-red-200"
                                         >
-                                          <svg
-                                            className="w-2.5 h-2.5 ml-1"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                            />
-                                          </svg>
+                                          <Trash2 size={10} className="ml-1" />
                                           حذف
                                         </button>
                                       )}
@@ -5734,17 +5458,10 @@ export default function Home() {
                                   item.note.trim() && (
                                     <div className="mt-1.5 pt-1.5 border-t border-gray-200">
                                       <div className="flex items-start">
-                                        <svg
-                                          className="w-2.5 h-2.5 text-blue-500 mt-0.5 ml-1 flex-shrink-0"
-                                          fill="currentColor"
-                                          viewBox="0 0 20 20"
-                                        >
-                                          <path
-                                            fillRule="evenodd"
-                                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                            clipRule="evenodd"
-                                          />
-                                        </svg>
+                                        <AlertCircle
+                                          size={10}
+                                          className="text-blue-500 mt-0.5 ml-1 flex-shrink-0"
+                                        />
                                         <p className="text-xs text-blue-800 flex-1 line-clamp-2">
                                           {item.note}
                                         </p>
@@ -5862,7 +5579,7 @@ export default function Home() {
                   currentBillData.isPartialPaid ||
                   isResettingBill
                 }
-                className={`py-2.5 px-3 rounded-lg font-medium border transition-all text-xs flex-1 ${
+                className={`py-2.5 px-3 rounded-lg font-medium border transition-all text-xs flex-1 flex items-center justify-center ${
                   currentBillData.completed ||
                   currentBillData.isPartialPaid ||
                   isResettingBill
@@ -5897,7 +5614,10 @@ export default function Home() {
                     جاري...
                   </div>
                 ) : (
-                  "إعادة تعيين"
+                  <>
+                    <RefreshCw size={12} className="ml-1" />
+                    إعادة تعيين
+                  </>
                 )}
               </button>
 
@@ -5907,7 +5627,7 @@ export default function Home() {
                 <button
                   onClick={handleReturnBill}
                   disabled={isReturningBill}
-                  className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 ${
+                  className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 flex items-center justify-center ${
                     isReturningBill
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:scale-[1.02] active:scale-[0.98]"
@@ -5930,14 +5650,17 @@ export default function Home() {
                       جاري الارتجاع...
                     </div>
                   ) : (
-                    "ارتجاع"
+                    <>
+                      <ArrowLeft size={12} className="ml-1" />
+                      ارتجاع
+                    </>
                   )}
                 </button>
               ) : !isNewBillActive &&
                 currentBillData.invoiceStatus === InvoiceStatus.Returned ? (
                 <button
                   onClick={handleReprintBill}
-                  className="py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 hover:scale-[1.02] active:scale-[0.98]"
+                  className="py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 flex items-center justify-center hover:scale-[1.02] active:scale-[0.98]"
                   style={{ backgroundColor: "#10B981" }}
                   onMouseEnter={(e) => {
                     e.target.style.backgroundColor = "#059669";
@@ -5946,13 +5669,14 @@ export default function Home() {
                     e.target.style.backgroundColor = "#10B981";
                   }}
                 >
+                  <FileText size={12} className="ml-1" />
                   عرض الفاتورة
                 </button>
               ) : shouldShowPrepareOrderButton() ? (
                 <button
                   onClick={handlePrepareOrder}
                   disabled={isPreparingOrder}
-                  className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 ${
+                  className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 flex items-center justify-center ${
                     isPreparingOrder
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:scale-[1.02] active:scale-[0.98]"
@@ -5975,14 +5699,17 @@ export default function Home() {
                       جاري التحضير...
                     </div>
                   ) : (
-                    "تحضير الطلب"
+                    <>
+                      <Check size={12} className="ml-1" />
+                      تحضير الطلب
+                    </>
                   )}
                 </button>
               ) : shouldShowCompleteBillButton() ? (
                 <button
                   onClick={handleCompleteBill}
                   disabled={isProcessingPayment}
-                  className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 ${
+                  className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 flex items-center justify-center ${
                     isProcessingPayment
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:scale-[1.02] active:scale-[0.98]"
@@ -5999,6 +5726,7 @@ export default function Home() {
                     }
                   }}
                 >
+                  <DollarSign size={12} className="ml-1" />
                   {getCompleteBillButtonText()}
                 </button>
               ) : null}

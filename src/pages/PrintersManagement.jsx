@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
-import { FaPrint, FaSave, FaEdit, FaPlus, FaTimes } from "react-icons/fa";
+import { Printer, Save, Edit, Plus, X, ArrowLeft, Loader2 } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
 
 export default function PrintersManagement() {
@@ -13,6 +13,7 @@ export default function PrintersManagement() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
   const hasFetched = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [editForm, setEditForm] = useState({
     id: "",
@@ -93,6 +94,8 @@ export default function PrintersManagement() {
       return;
     }
 
+    setIsSaving(true);
+
     try {
       const response = await axiosInstance.post(
         `/api/SubCategories/Print/${editForm.id}/Print`,
@@ -121,6 +124,8 @@ export default function PrintersManagement() {
       } else {
         toast.error("حدث خطأ في تحديث عنوان IP الطابعة");
       }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -135,7 +140,7 @@ export default function PrintersManagement() {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-purple-900 flex items-center justify-center ml-3">
-                <FaPrint className="text-white text-xl" />
+                <Printer className="text-white text-xl" />
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#6B21A8" }}>
                 نظام الكاشير - إدارة الطابعات
@@ -154,20 +159,7 @@ export default function PrintersManagement() {
                 e.target.style.color = "#6B21A8";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <ArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -191,7 +183,7 @@ export default function PrintersManagement() {
         {/* SubCategories List */}
         {loading ? (
           <div className="bg-white rounded-2xl shadow-lg p-12 flex flex-col items-center justify-center">
-            <div className="w-16 h-16 border-t-4 border-purple-600 border-solid rounded-full animate-spin"></div>
+            <Loader2 className="w-16 h-16 text-purple-600 animate-spin" />
             <p className="text-gray-600 mt-4 text-lg">جاري تحميل الفئات...</p>
           </div>
         ) : (
@@ -220,9 +212,9 @@ export default function PrintersManagement() {
                 <tbody className="divide-y divide-gray-200">
                   {subCategories.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center">
+                      <td colSpan="5" className="px-6 py-12 text-center">
                         <div className="text-gray-400 mb-3">
-                          <FaPrint className="h-16 w-16 mx-auto" />
+                          <Printer className="h-16 w-16 mx-auto" />
                         </div>
                         <p className="text-gray-500 text-lg">
                           لا توجد فئات فرعية
@@ -281,11 +273,12 @@ export default function PrintersManagement() {
                           <div className="flex justify-center">
                             <button
                               onClick={() => handleEditClick(subCategory)}
+                              disabled={isSaving}
                               className={`p-2 rounded-lg transition-colors border ${
                                 subCategory.printIP
                                   ? "bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200"
                                   : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                              }`}
+                              } disabled:opacity-50 disabled:cursor-not-allowed`}
                               title={
                                 subCategory.printIP
                                   ? "تعديل عنوان IP"
@@ -293,9 +286,9 @@ export default function PrintersManagement() {
                               }
                             >
                               {subCategory.printIP ? (
-                                <FaEdit className="h-4 w-4" />
+                                <Edit className="h-4 w-4" />
                               ) : (
-                                <FaPlus className="h-4 w-4" />
+                                <Plus className="h-4 w-4" />
                               )}
                             </button>
                           </div>
@@ -336,9 +329,10 @@ export default function PrintersManagement() {
                 </div>
                 <button
                   onClick={() => setShowEditModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                  disabled={isSaving}
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors disabled:opacity-50"
                 >
-                  ×
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
@@ -356,6 +350,7 @@ export default function PrintersManagement() {
                       placeholder="مثال: 192.168.1.100"
                       required
                       dir="ltr"
+                      disabled={isSaving}
                     />
                     <label
                       className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
@@ -365,7 +360,7 @@ export default function PrintersManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <FaPrint className="ml-1" />
+                        <Printer className="h-4 w-4 ml-1" />
                         عنوان IP الطابعة *
                       </span>
                     </label>
@@ -376,20 +371,31 @@ export default function PrintersManagement() {
                   <button
                     type="button"
                     onClick={() => setShowEditModal(false)}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                    disabled={isSaving}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <FaTimes className="ml-2" />
+                    <X className="h-4 w-4 ml-2" />
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
+                    disabled={isSaving}
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ backgroundColor: "#6B21A8" }}
                   >
-                    <FaSave className="ml-2" />
-                    {editingSubCategory.printIP
-                      ? "حفظ التعديل"
-                      : "إضافة العنوان"}
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 ml-2 animate-spin" />
+                        جاري الحفظ...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 ml-2" />
+                        {editingSubCategory.printIP
+                          ? "حفظ التعديل"
+                          : "إضافة العنوان"}
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

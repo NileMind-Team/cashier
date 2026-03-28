@@ -3,6 +3,25 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import axiosInstance from "../api/axiosInstance";
+import {
+  FaArrowLeft,
+  FaUsers,
+  FaUserPlus,
+  FaUserShield,
+  FaKey,
+  FaTrash,
+  FaUserCheck,
+  FaEye,
+  FaEyeSlash,
+  FaCheckCircle,
+  FaSpinner,
+  FaTimes,
+  FaSave,
+  FaUser,
+  FaUserCog,
+  FaChartPie,
+  FaLock,
+} from "react-icons/fa";
 
 export default function UsersManagement() {
   const navigate = useNavigate();
@@ -20,6 +39,12 @@ export default function UsersManagement() {
   const hasReorderedUsers = useRef(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isAddingUser, setIsAddingUser] = useState(false);
+  const [isChangingRole, setIsChangingRole] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const [isOpeningRoleModal, setIsOpeningRoleModal] = useState(false);
+  const [isOpeningAddModal, setIsOpeningAddModal] = useState(false);
 
   const [formData, setFormData] = useState({
     userName: "",
@@ -128,6 +153,7 @@ export default function UsersManagement() {
   };
 
   const handleAddUser = () => {
+    setIsOpeningAddModal(true);
     setShowAddModal(true);
     setFormData({
       userName: "",
@@ -138,12 +164,15 @@ export default function UsersManagement() {
     setShowPassword(false);
     setShowConfirmPassword(false);
     setFocusedField(null);
+    setTimeout(() => setIsOpeningAddModal(false), 100);
   };
 
   const handleOpenRoleModal = (user) => {
+    setIsOpeningRoleModal(true);
     setSelectedUserForRole(user);
     setSelectedRoles([...user.roles]);
     setShowRoleModal(true);
+    setTimeout(() => setIsOpeningRoleModal(false), 100);
   };
 
   const handleFormChange = (e) => {
@@ -200,6 +229,8 @@ export default function UsersManagement() {
       return;
     }
 
+    setIsAddingUser(true);
+
     try {
       const userData = {
         userName: formData.userName,
@@ -244,11 +275,15 @@ export default function UsersManagement() {
     } catch (error) {
       console.error("خطأ في حفظ الموظف:", error);
       toast.error("حدث خطأ في حفظ الموظف");
+    } finally {
+      setIsAddingUser(false);
     }
   };
 
   const handleChangeRole = async () => {
     if (!selectedUserForRole || selectedRoles.length === 0) return;
+
+    setIsChangingRole(true);
 
     try {
       const response = await axiosInstance.put(
@@ -278,6 +313,8 @@ export default function UsersManagement() {
     } catch (error) {
       console.error("خطأ في تغيير صلاحيات الموظف:", error);
       toast.error("حدث خطأ في تغيير صلاحيات الموظف");
+    } finally {
+      setIsChangingRole(false);
     }
   };
 
@@ -305,6 +342,7 @@ export default function UsersManagement() {
 
     if (result.isConfirmed) {
       const newPassword = result.value;
+      setIsResettingPassword(true);
 
       try {
         const response = await axiosInstance.put(
@@ -325,6 +363,8 @@ export default function UsersManagement() {
       } catch (error) {
         console.error("خطأ في تغيير كلمة المرور:", error);
         toast.error("حدث خطأ في تغيير كلمة المرور");
+      } finally {
+        setIsResettingPassword(false);
       }
     }
   };
@@ -343,6 +383,7 @@ export default function UsersManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsDeletingUser(true);
       try {
         const response = await axiosInstance.delete(
           `/api/Users/Delete/${userId}`,
@@ -369,6 +410,8 @@ export default function UsersManagement() {
       } catch (error) {
         console.error("خطأ في حذف الموظف:", error);
         toast.error("حدث خطأ في حذف الموظف");
+      } finally {
+        setIsDeletingUser(false);
       }
     }
   };
@@ -399,7 +442,7 @@ export default function UsersManagement() {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center mr-3">
-                <span className="text-white font-bold">$</span>
+                <FaUsers className="text-white text-lg" />
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير - إدارة الموظفين
@@ -419,20 +462,7 @@ export default function UsersManagement() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <FaArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -454,20 +484,7 @@ export default function UsersManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                  />
-                </svg>
+                <FaUsers className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -497,20 +514,7 @@ export default function UsersManagement() {
                 </div>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
+                <FaChartPie className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -528,23 +532,15 @@ export default function UsersManagement() {
             </div>
             <button
               onClick={handleAddUser}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-colors flex items-center whitespace-nowrap"
+              disabled={isOpeningAddModal}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-colors flex items-center whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: "#193F94" }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
+              {isOpeningAddModal ? (
+                <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
+              ) : (
+                <FaUserPlus className="h-5 w-5 ml-2" />
+              )}
               إضافة موظف جديد
             </button>
           </div>
@@ -553,7 +549,7 @@ export default function UsersManagement() {
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           {loading ? (
             <div className="p-8 flex flex-col items-center justify-center">
-              <div className="w-16 h-16 border-t-4 border-blue-600 border-solid rounded-full animate-spin mb-4"></div>
+              <FaSpinner className="w-16 h-16 text-blue-600 animate-spin mb-4" />
               <p className="text-gray-600">جاري تحميل بيانات الموظفين...</p>
             </div>
           ) : (
@@ -581,20 +577,7 @@ export default function UsersManagement() {
                           className="py-8 px-4 text-center text-gray-500"
                         >
                           <div className="flex flex-col items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-12 w-12 text-gray-300 mb-3"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1}
-                                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5 0h-6m3.5 0a3.5 3.5 0 11-7 0 3.5 3.5 0 017 0z"
-                              />
-                            </svg>
+                            <FaUsers className="h-12 w-12 text-gray-300 mb-3" />
                             <p className="text-lg font-medium text-gray-400">
                               لا يوجد موظفين
                             </p>
@@ -626,18 +609,7 @@ export default function UsersManagement() {
                                   </span>
                                   {isCurrentEmployee && (
                                     <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                                      <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="h-2 w-2 text-white"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                      >
-                                        <path
-                                          fillRule="evenodd"
-                                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                          clipRule="evenodd"
-                                        />
-                                      </svg>
+                                      <FaCheckCircle className="h-2 w-2 text-white" />
                                     </div>
                                   )}
                                 </div>
@@ -645,7 +617,8 @@ export default function UsersManagement() {
                                   <div className="font-bold text-gray-900 flex items-center gap-2">
                                     {user.username}
                                     {isCurrentEmployee && (
-                                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full whitespace-nowrap border border-green-200">
+                                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full whitespace-nowrap border border-green-200 flex items-center">
+                                        <FaUserCheck className="h-2 w-2 ml-1" />
                                         مسجل حالياً
                                       </span>
                                     )}
@@ -676,62 +649,38 @@ export default function UsersManagement() {
                               <div className="flex flex-col space-y-2">
                                 <button
                                   onClick={() => handleOpenRoleModal(user)}
-                                  className="text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-purple-200"
+                                  disabled={isOpeningRoleModal}
+                                  className="text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-3 w-3 ml-1"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                    />
-                                  </svg>
+                                  {isOpeningRoleModal ? (
+                                    <FaSpinner className="h-3 w-3 ml-1 animate-spin" />
+                                  ) : (
+                                    <FaUserCog className="h-3 w-3 ml-1" />
+                                  )}
                                   الصلاحيات
                                 </button>
                                 <button
                                   onClick={() => handleResetPassword(user.id)}
-                                  className="text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-gray-300"
+                                  disabled={isResettingPassword}
+                                  className="text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-3 w-3 ml-1"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                                    />
-                                  </svg>
+                                  {isResettingPassword ? (
+                                    <FaSpinner className="h-3 w-3 ml-1 animate-spin" />
+                                  ) : (
+                                    <FaKey className="h-3 w-3 ml-1" />
+                                  )}
                                   كلمة المرور
                                 </button>
                                 <button
                                   onClick={() => handleDeleteUser(user.id)}
-                                  className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200"
+                                  disabled={isDeletingUser}
+                                  className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-3 w-3 ml-1"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                    />
-                                  </svg>
+                                  {isDeletingUser ? (
+                                    <FaSpinner className="h-3 w-3 ml-1 animate-spin" />
+                                  ) : (
+                                    <FaTrash className="h-3 w-3 ml-1" />
+                                  )}
                                   حذف
                                 </button>
                               </div>
@@ -832,9 +781,10 @@ export default function UsersManagement() {
                 </div>
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                  disabled={isAddingUser}
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors disabled:opacity-50"
                 >
-                  ×
+                  <FaTimes className="h-6 w-6" />
                 </button>
               </div>
 
@@ -860,19 +810,7 @@ export default function UsersManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                          />
-                        </svg>
+                        <FaUser className="w-4 h-4 ml-1" />
                         اسم الموظف *
                       </span>
                     </label>
@@ -900,19 +838,7 @@ export default function UsersManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                          />
-                        </svg>
+                        <FaLock className="w-4 h-4 ml-1" />
                         كلمة المرور *
                       </span>
                     </label>
@@ -922,41 +848,9 @@ export default function UsersManagement() {
                       className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
                     >
                       {showPassword ? (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                          />
-                        </svg>
+                        <FaEyeSlash className="h-5 w-5" />
                       ) : (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                          />
-                        </svg>
+                        <FaEye className="h-5 w-5" />
                       )}
                     </button>
                   </div>
@@ -982,19 +876,7 @@ export default function UsersManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                          />
-                        </svg>
+                        <FaUserShield className="w-4 h-4 ml-1" />
                         تأكيد كلمة المرور *
                       </span>
                     </label>
@@ -1006,41 +888,9 @@ export default function UsersManagement() {
                       className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
                     >
                       {showConfirmPassword ? (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                          />
-                        </svg>
+                        <FaEyeSlash className="h-5 w-5" />
                       ) : (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                          />
-                        </svg>
+                        <FaEye className="h-5 w-5" />
                       )}
                     </button>
                   </div>
@@ -1079,18 +929,7 @@ export default function UsersManagement() {
                           </span>
                           {formData.roles.includes(role.id) && (
                             <div className="mr-auto bg-blue-500 rounded-full p-0.5">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-3 w-3 text-white"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
+                              <FaCheckCircle className="h-3 w-3 text-white" />
                             </div>
                           )}
                         </div>
@@ -1103,42 +942,29 @@ export default function UsersManagement() {
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                    disabled={isAddingUser}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <FaTimes className="w-4 h-4 ml-2" />
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
+                    disabled={isAddingUser}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
                     style={{ backgroundColor: "#193F94" }}
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                      />
-                    </svg>
-                    إضافة موظف
+                    {isAddingUser ? (
+                      <>
+                        <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
+                        جاري الإضافة...
+                      </>
+                    ) : (
+                      <>
+                        <FaUserPlus className="w-4 h-4 ml-2" />
+                        إضافة موظف
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -1162,9 +988,10 @@ export default function UsersManagement() {
                     setSelectedUserForRole(null);
                     setSelectedRoles([]);
                   }}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                  disabled={isChangingRole}
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors disabled:opacity-50"
                 >
-                  ×
+                  <FaTimes className="h-6 w-6" />
                 </button>
               </div>
 
@@ -1216,18 +1043,7 @@ export default function UsersManagement() {
                         <span className="font-medium text-sm">{role.name}</span>
                         {selectedRoles.includes(role.id) && (
                           <div className="mr-auto bg-purple-500 rounded-full p-0.5">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-3 w-3 text-white"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
+                            <FaCheckCircle className="h-3 w-3 text-white" />
                           </div>
                         )}
                       </div>
@@ -1244,50 +1060,34 @@ export default function UsersManagement() {
                     setSelectedUserForRole(null);
                     setSelectedRoles([]);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                  disabled={isChangingRole}
+                  className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <svg
-                    className="w-4 h-4 ml-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  <FaTimes className="w-4 h-4 ml-2" />
                   إلغاء
                 </button>
                 <button
                   type="button"
                   onClick={handleChangeRole}
-                  disabled={!selectedRoles.length}
-                  className={`flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm ${
-                    !selectedRoles.length
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : ""
-                  }`}
+                  disabled={!selectedRoles.length || isChangingRole}
+                  className={`flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
                   style={
-                    selectedRoles.length ? { backgroundColor: "#193F94" } : {}
+                    selectedRoles.length && !isChangingRole
+                      ? { backgroundColor: "#193F94" }
+                      : {}
                   }
                 >
-                  <svg
-                    className="w-4 h-4 ml-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  حفظ التغييرات
+                  {isChangingRole ? (
+                    <>
+                      <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
+                      جاري الحفظ...
+                    </>
+                  ) : (
+                    <>
+                      <FaSave className="w-4 h-4 ml-2" />
+                      حفظ التغييرات
+                    </>
+                  )}
                 </button>
               </div>
             </div>

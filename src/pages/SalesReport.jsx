@@ -2,13 +2,26 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axiosInstance from "../api/axiosInstance";
+import {
+  ArrowLeft,
+  Calendar,
+  BarChart3,
+  DollarSign,
+  Percent,
+  Receipt,
+  TrendingUp,
+  CreditCard,
+  TrendingDown,
+  Wallet,
+  PieChart,
+} from "lucide-react";
 
 export default function SalesReports() {
   const navigate = useNavigate();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reportData, setReportData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -31,7 +44,7 @@ export default function SalesReports() {
       return;
     }
 
-    setLoading(true);
+    setIsGeneratingReport(true);
 
     try {
       const response = await axiosInstance.get("/api/Reports/SalesReport", {
@@ -68,7 +81,7 @@ export default function SalesReports() {
         toast.error("حدث خطأ في جلب تقرير المبيعات");
       }
     } finally {
-      setLoading(false);
+      setIsGeneratingReport(false);
     }
   };
 
@@ -128,20 +141,7 @@ export default function SalesReports() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <ArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -171,19 +171,7 @@ export default function SalesReports() {
                   />
                   <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
                     <span className="flex items-center">
-                      <svg
-                        className="w-4 h-4 ml-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
+                      <Calendar className="w-4 h-4 ml-1" />
                       التاريخ من
                     </span>
                   </label>
@@ -200,19 +188,7 @@ export default function SalesReports() {
                   />
                   <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
                     <span className="flex items-center">
-                      <svg
-                        className="w-4 h-4 ml-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
+                      <Calendar className="w-4 h-4 ml-1" />
                       التاريخ إلى
                     </span>
                   </label>
@@ -221,38 +197,27 @@ export default function SalesReports() {
                 <div className="pt-4">
                   <button
                     onClick={generateReport}
-                    disabled={loading || !startDate || !endDate}
-                    className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
-                      loading || !startDate || !endDate
-                        ? "opacity-50 cursor-not-allowed bg-gray-400"
+                    disabled={isGeneratingReport || !startDate || !endDate}
+                    className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+                      isGeneratingReport || !startDate || !endDate
+                        ? "bg-gray-400"
                         : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                     }`}
                     style={{
                       backgroundColor:
-                        loading || !startDate || !endDate ? "" : "#193F94",
+                        isGeneratingReport || !startDate || !endDate
+                          ? ""
+                          : "#193F94",
                     }}
                   >
-                    {loading ? (
+                    {isGeneratingReport ? (
                       <>
-                        <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin ml-2"></div>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
                         جاري التحميل...
                       </>
                     ) : (
                       <>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 ml-2"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                          />
-                        </svg>
+                        <BarChart3 className="h-5 w-5 ml-2" />
                         عرض التقرير
                       </>
                     )}
@@ -288,10 +253,12 @@ export default function SalesReports() {
                     </p>
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse print:hidden">
-                    <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+                    <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium flex items-center">
+                      <Receipt className="w-3 h-3 ml-1" />
                       {reportData.totalInvoicesCount || 0} فاتورة
                     </div>
-                    <div className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
+                    <div className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium flex items-center">
+                      <DollarSign className="w-3 h-3 ml-1" />
                       {formatCurrency(reportData.totalSales || 0)} ج.م
                     </div>
                   </div>
@@ -307,20 +274,7 @@ export default function SalesReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-blue-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
+                        <DollarSign className="h-6 w-6 text-blue-700" />
                       </div>
                     </div>
                   </div>
@@ -346,20 +300,7 @@ export default function SalesReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-purple-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"
-                          />
-                        </svg>
+                        <Percent className="h-6 w-6 text-purple-700" />
                       </div>
                     </div>
                   </div>
@@ -373,20 +314,7 @@ export default function SalesReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-amber-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                          />
-                        </svg>
+                        <TrendingUp className="h-6 w-6 text-amber-700" />
                       </div>
                     </div>
                   </div>
@@ -405,20 +333,7 @@ export default function SalesReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-green-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                          />
-                        </svg>
+                        <Wallet className="h-6 w-6 text-green-700" />
                       </div>
                     </div>
                   </div>
@@ -432,20 +347,7 @@ export default function SalesReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-red-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-red-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 3v6a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V15z"
-                          />
-                        </svg>
+                        <TrendingDown className="h-6 w-6 text-red-700" />
                       </div>
                     </div>
                   </div>
@@ -459,20 +361,7 @@ export default function SalesReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-teal-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-teal-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
-                          />
-                        </svg>
+                        <Percent className="h-6 w-6 text-teal-700" />
                       </div>
                     </div>
                   </div>
@@ -495,25 +384,13 @@ export default function SalesReports() {
                           >
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center">
+                                <CreditCard className="h-4 w-4 ml-1 text-gray-500" />
                                 <span className="font-medium">
                                   {payment.paymentMethodName}
                                 </span>
                               </div>
                               <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full flex items-center">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                  />
-                                </svg>
+                                <Receipt className="h-3 w-3 ml-1" />
                                 {payment.count || 0} فاتورة
                               </span>
                             </div>
@@ -541,6 +418,7 @@ export default function SalesReports() {
 
                 {(!reportData.payments || reportData.payments.length === 0) && (
                   <div className="mb-6 p-8 text-center bg-gray-50 rounded-xl border border-gray-200">
+                    <CreditCard className="h-12 w-12 mx-auto text-gray-400 mb-2" />
                     <p className="text-gray-500">
                       لا توجد مدفوعات في هذه الفترة
                     </p>
@@ -549,9 +427,10 @@ export default function SalesReports() {
 
                 <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-200">
                   <h4
-                    className="font-bold mb-4 text-gray-800"
+                    className="font-bold mb-4 text-gray-800 flex items-center"
                     style={{ color: "#193F94" }}
                   >
+                    <PieChart className="h-5 w-5 ml-2" />
                     ملخص التقرير
                   </h4>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -614,20 +493,7 @@ export default function SalesReports() {
             ) : (
               <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center min-h-[400px]">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center mb-6">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-12 w-12 text-green-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                    />
-                  </svg>
+                  <BarChart3 className="h-12 w-12 text-green-600" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-700 mb-2">
                   تقارير المبيعات
@@ -637,20 +503,7 @@ export default function SalesReports() {
                 </p>
                 <div className="text-center space-y-3">
                   <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 ml-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
+                    <Calendar className="h-5 w-5 ml-2" />
                     اختر التاريخ من وإلى
                   </div>
                 </div>

@@ -2,6 +2,22 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axiosInstance from "../api/axiosInstance";
+import {
+  FaArrowLeft,
+  FaSearch,
+  FaCalendarAlt,
+  FaMoneyBillWave,
+  FaChartLine,
+  FaEye,
+  FaTimes,
+  FaChevronLeft,
+  FaChevronRight,
+  FaAngleDoubleLeft,
+  FaAngleDoubleRight,
+  FaSpinner,
+  FaExchangeAlt,
+  FaSyncAlt,
+} from "react-icons/fa";
 
 export default function ReturnsReport() {
   const navigate = useNavigate();
@@ -11,6 +27,8 @@ export default function ReturnsReport() {
   const [loading, setLoading] = useState(false);
   const [selectedBill, setSelectedBill] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [isViewingBill, setIsViewingBill] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     pageSize: 10,
@@ -43,6 +61,7 @@ export default function ReturnsReport() {
       return;
     }
 
+    setIsSearching(true);
     setLoading(true);
     try {
       const response = await axiosInstance.post(
@@ -105,11 +124,12 @@ export default function ReturnsReport() {
       }
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
   };
 
   const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= pagination.totalPages) {
+    if (newPage >= 1 && newPage <= pagination.totalPages && !loading) {
       handleSearch(newPage);
 
       const tableElement = document.getElementById("returns-table-container");
@@ -195,8 +215,10 @@ export default function ReturnsReport() {
   };
 
   const handleViewReturnDetails = (bill) => {
+    setIsViewingBill(true);
     setSelectedBill(bill);
     setShowDetailsModal(true);
+    setTimeout(() => setIsViewingBill(false), 100);
   };
 
   const closeModal = () => {
@@ -219,7 +241,7 @@ export default function ReturnsReport() {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
-                <span className="text-white font-bold">$</span>
+                <FaSyncAlt className="text-white text-lg" />
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير - تقارير المرتجعات
@@ -238,20 +260,7 @@ export default function ReturnsReport() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <FaArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -281,19 +290,7 @@ export default function ReturnsReport() {
                   />
                   <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
                     <span className="flex items-center">
-                      <svg
-                        className="w-4 h-4 ml-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
+                      <FaCalendarAlt className="w-4 h-4 ml-1" />
                       التاريخ من
                     </span>
                   </label>
@@ -310,19 +307,7 @@ export default function ReturnsReport() {
                   />
                   <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
                     <span className="flex items-center">
-                      <svg
-                        className="w-4 h-4 ml-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
+                      <FaCalendarAlt className="w-4 h-4 ml-1" />
                       التاريخ إلى
                     </span>
                   </label>
@@ -331,37 +316,22 @@ export default function ReturnsReport() {
                 <div className="pt-4">
                   <button
                     onClick={() => handleSearch(1)}
-                    disabled={loading}
+                    disabled={isSearching || loading}
                     className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
-                      loading
-                        ? "opacity-50 cursor-not-allowed bg-gray-400"
-                        : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                      isSearching || loading
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:opacity-90"
                     }`}
-                    style={{
-                      backgroundColor: loading ? "" : "#193F94",
-                    }}
+                    style={{ backgroundColor: "#193F94" }}
                   >
-                    {loading ? (
+                    {isSearching || loading ? (
                       <>
-                        <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin ml-2"></div>
+                        <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
                         جاري التحميل...
                       </>
                     ) : (
                       <>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 ml-2"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                          />
-                        </svg>
+                        <FaSearch className="h-5 w-5 ml-2" />
                         بحث وتطبيق الفلترة
                       </>
                     )}
@@ -375,20 +345,7 @@ export default function ReturnsReport() {
             {loading ? (
               <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center min-h-[400px]">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mb-6">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-12 w-12 text-blue-600 animate-spin"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
+                  <FaSpinner className="h-12 w-12 text-blue-600 animate-spin" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-700 mb-2">
                   جاري تحميل تقارير المرتجعات
@@ -417,10 +374,12 @@ export default function ReturnsReport() {
                     </p>
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse print:hidden">
-                    <div className="px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">
+                    <div className="px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium flex items-center">
+                      <FaExchangeAlt className="h-3 w-3 ml-1" />
                       {pagination.totalReturnedInvoices} مرتجعة
                     </div>
-                    <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+                    <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium flex items-center">
+                      <FaMoneyBillWave className="h-3 w-3 ml-1" />
                       {formatCurrency(pagination.totalReturnedAmount)} ج.م
                     </div>
                   </div>
@@ -441,7 +400,7 @@ export default function ReturnsReport() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-red-200 rounded-full flex items-center justify-center">
-                        <span className="text-red-700 font-bold">🔄</span>
+                        <FaExchangeAlt className="h-6 w-6 text-red-700" />
                       </div>
                     </div>
                   </div>
@@ -457,7 +416,7 @@ export default function ReturnsReport() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                        <span className="text-blue-700 font-bold">💸</span>
+                        <FaMoneyBillWave className="h-6 w-6 text-blue-700" />
                       </div>
                     </div>
                   </div>
@@ -476,7 +435,7 @@ export default function ReturnsReport() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                        <span className="text-purple-700 font-bold">📊</span>
+                        <FaChartLine className="h-6 w-6 text-purple-700" />
                       </div>
                     </div>
                   </div>
@@ -549,8 +508,14 @@ export default function ReturnsReport() {
                             <td className="py-3 px-4 text-center print:hidden">
                               <button
                                 onClick={() => handleViewReturnDetails(bill)}
-                                className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg transition-colors"
+                                disabled={isViewingBill}
+                                className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
                               >
+                                {isViewingBill ? (
+                                  <FaSpinner className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <FaEye className="h-3 w-3" />
+                                )}
                                 عرض التفاصيل
                               </button>
                             </td>
@@ -565,7 +530,7 @@ export default function ReturnsReport() {
                           <td className="py-4 px-4 text-center text-red-600">
                             {formatCurrency(pagination.totalReturnedAmount)} ج.م
                           </td>
-                          <td className="print:hidden"></td>
+                          <td className="print:hidden"> </td>
                         </tr>
                       </tfoot>
                     </table>
@@ -579,27 +544,15 @@ export default function ReturnsReport() {
                           {/* First Page Button */}
                           <button
                             onClick={() => handlePageChange(1)}
-                            disabled={!pagination.hasPreviousPage}
+                            disabled={!pagination.hasPreviousPage || loading}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasPreviousPage
+                              pagination.hasPreviousPage && !loading
                                 ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                                 : "text-gray-300 cursor-not-allowed"
                             }`}
                             title="الصفحة الأولى"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                              />
-                            </svg>
+                            <FaAngleDoubleLeft className="h-5 w-5" />
                           </button>
 
                           {/* Previous Page Button */}
@@ -607,27 +560,15 @@ export default function ReturnsReport() {
                             onClick={() =>
                               handlePageChange(pagination.currentPage - 1)
                             }
-                            disabled={!pagination.hasPreviousPage}
+                            disabled={!pagination.hasPreviousPage || loading}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasPreviousPage
+                              pagination.hasPreviousPage && !loading
                                 ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                                 : "text-gray-300 cursor-not-allowed"
                             }`}
                             title="الصفحة السابقة"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 5l7 7-7 7"
-                              />
-                            </svg>
+                            <FaChevronRight className="h-5 w-5" />
                           </button>
 
                           {/* Page Numbers */}
@@ -644,11 +585,12 @@ export default function ReturnsReport() {
                                 <button
                                   key={page}
                                   onClick={() => handlePageChange(page)}
+                                  disabled={loading}
                                   className={`min-w-[40px] h-10 rounded-lg text-sm font-medium transition-all ${
                                     pagination.currentPage === page
                                       ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:from-blue-700 hover:to-blue-800"
                                       : "text-gray-700 hover:bg-gray-200 hover:text-gray-900 border border-gray-200"
-                                  }`}
+                                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                                 >
                                   {page}
                                 </button>
@@ -661,27 +603,15 @@ export default function ReturnsReport() {
                             onClick={() =>
                               handlePageChange(pagination.currentPage + 1)
                             }
-                            disabled={!pagination.hasNextPage}
+                            disabled={!pagination.hasNextPage || loading}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasNextPage
+                              pagination.hasNextPage && !loading
                                 ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                                 : "text-gray-300 cursor-not-allowed"
                             }`}
                             title="الصفحة التالية"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 19l-7-7 7-7"
-                              />
-                            </svg>
+                            <FaChevronLeft className="h-5 w-5" />
                           </button>
 
                           {/* Last Page Button */}
@@ -689,27 +619,15 @@ export default function ReturnsReport() {
                             onClick={() =>
                               handlePageChange(pagination.totalPages)
                             }
-                            disabled={!pagination.hasNextPage}
+                            disabled={!pagination.hasNextPage || loading}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasNextPage
+                              pagination.hasNextPage && !loading
                                 ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                                 : "text-gray-300 cursor-not-allowed"
                             }`}
                             title="الصفحة الأخيرة"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                              />
-                            </svg>
+                            <FaAngleDoubleRight className="h-5 w-5" />
                           </button>
                         </div>
                       </div>
@@ -731,7 +649,8 @@ export default function ReturnsReport() {
                                 handlePageChange(page);
                               }
                             }}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={loading}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                           />
                           <span className="text-sm text-gray-600">
                             من {pagination.totalPages}
@@ -798,20 +717,7 @@ export default function ReturnsReport() {
             ) : (
               <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center min-h-[400px]">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mb-6">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-12 w-12 text-blue-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
+                  <FaSearch className="h-12 w-12 text-blue-600" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-700 mb-2">
                   تقارير المرتجعات
@@ -822,20 +728,7 @@ export default function ReturnsReport() {
                 </p>
                 <div className="text-center space-y-3">
                   <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 ml-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
+                    <FaCalendarAlt className="h-5 w-5 ml-2" />
                     اختر التاريخ من وإلى
                   </div>
                   <div className="text-sm text-gray-500">
@@ -868,19 +761,7 @@ export default function ReturnsReport() {
                     onClick={closeModal}
                     className="text-white hover:text-gray-200 transition-colors"
                   >
-                    <svg
-                      className="h-6 w-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <FaTimes className="h-6 w-6" />
                   </button>
                 </div>
               </div>
@@ -893,7 +774,8 @@ export default function ReturnsReport() {
                       {selectedBill.originalBillNumber}
                     </p>
                   </div>
-                  <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                  <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium flex items-center">
+                    <FaExchangeAlt className="h-3 w-3 ml-1" />
                     مرتجعة
                   </div>
                 </div>

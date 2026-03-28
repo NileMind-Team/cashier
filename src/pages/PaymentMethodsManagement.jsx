@@ -3,6 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import axiosInstance from "../api/axiosInstance";
+import {
+  ArrowLeft,
+  Plus,
+  Edit,
+  Power,
+  PowerOff,
+  Trash2,
+  X,
+  CreditCard,
+  BarChart3,
+  CheckCircle,
+  DollarSign,
+  Wallet,
+} from "lucide-react";
 
 export default function PaymentMethodsManagement() {
   const navigate = useNavigate();
@@ -12,6 +26,10 @@ export default function PaymentMethodsManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
   const hasFetched = useRef(false);
+  const [isAddingMethod, setIsAddingMethod] = useState(false);
+  const [isEditingMethod, setIsEditingMethod] = useState(false);
+  const [isTogglingMethod, setIsTogglingMethod] = useState(false);
+  const [isDeletingMethod, setIsDeletingMethod] = useState(false);
 
   const [stats, setStats] = useState({
     totalPaymentMethods: 0,
@@ -123,6 +141,7 @@ export default function PaymentMethodsManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsDeletingMethod(true);
       try {
         const response = await axiosInstance.delete(
           `/api/Payment/Delete/${methodId}`,
@@ -138,6 +157,8 @@ export default function PaymentMethodsManagement() {
       } catch (error) {
         console.error("خطأ في حذف طريقة الدفع:", error);
         toast.error("حدث خطأ في حذف طريقة الدفع");
+      } finally {
+        setIsDeletingMethod(false);
       }
     }
   };
@@ -161,6 +182,7 @@ export default function PaymentMethodsManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsTogglingMethod(true);
       try {
         const response = await axiosInstance.patch(
           `/api/Payment/ToggleActivation/${methodId}/toggle`,
@@ -182,6 +204,8 @@ export default function PaymentMethodsManagement() {
       } catch (error) {
         console.error(`خطأ في ${action} طريقة الدفع:`, error);
         toast.error(`حدث خطأ في ${action} طريقة الدفع`);
+      } finally {
+        setIsTogglingMethod(false);
       }
     }
   };
@@ -208,6 +232,12 @@ export default function PaymentMethodsManagement() {
     if (!formData.name.trim()) {
       toast.error("يرجى إدخال اسم طريقة الدفع");
       return;
+    }
+
+    if (editingMethod) {
+      setIsEditingMethod(true);
+    } else {
+      setIsAddingMethod(true);
     }
 
     try {
@@ -263,6 +293,9 @@ export default function PaymentMethodsManagement() {
     } catch (error) {
       console.error("خطأ في حفظ طريقة الدفع:", error);
       toast.error("حدث خطأ في حفظ طريقة الدفع");
+    } finally {
+      setIsAddingMethod(false);
+      setIsEditingMethod(false);
     }
   };
 
@@ -307,20 +340,7 @@ export default function PaymentMethodsManagement() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <ArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -351,20 +371,7 @@ export default function PaymentMethodsManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                  />
-                </svg>
+                <CreditCard className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -382,20 +389,7 @@ export default function PaymentMethodsManagement() {
                 <p className="text-xs text-gray-500 mt-2">جميع طرق الدفع</p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                  />
-                </svg>
+                <BarChart3 className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -415,20 +409,7 @@ export default function PaymentMethodsManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+                <CheckCircle className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -446,20 +427,7 @@ export default function PaymentMethodsManagement() {
                 <p className="text-xs text-gray-500 mt-2">جميع المعاملات</p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+                <DollarSign className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -477,24 +445,21 @@ export default function PaymentMethodsManagement() {
 
             <button
               onClick={handleAddMethod}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center whitespace-nowrap shadow-md"
+              disabled={isAddingMethod}
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center whitespace-nowrap shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               style={{ backgroundColor: "#193F94" }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-              إضافة طريقة دفع جديدة
+              {isAddingMethod ? (
+                <div className="flex items-center">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                  جاري الإضافة...
+                </div>
+              ) : (
+                <>
+                  <Plus className="h-5 w-5 ml-2" />
+                  إضافة طريقة دفع جديدة
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -534,20 +499,7 @@ export default function PaymentMethodsManagement() {
                           className="py-8 px-4 text-center text-gray-500"
                         >
                           <div className="flex flex-col items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-12 w-12 text-gray-300 mb-3"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1}
-                                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                              />
-                            </svg>
+                            <Wallet className="h-12 w-12 text-gray-300 mb-3" />
                             <p className="text-lg font-medium text-gray-400">
                               لا يوجد طرق دفع
                             </p>
@@ -625,78 +577,47 @@ export default function PaymentMethodsManagement() {
                             <div className="flex flex-col space-y-2">
                               <button
                                 onClick={() => handleEditMethod(method)}
-                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-blue-200"
+                                disabled={isEditingMethod}
+                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                  />
-                                </svg>
+                                <Edit className="h-3 w-3 ml-1" />
                                 تعديل
                               </button>
                               <button
                                 onClick={() =>
                                   handleToggleMethodStatus(method.id)
                                 }
-                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border ${
+                                disabled={isTogglingMethod}
+                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border disabled:opacity-50 disabled:cursor-not-allowed ${
                                   method.isActive
                                     ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
                                     : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                                 }`}
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  {method.isActive ? (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                    />
-                                  ) : (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                                    />
-                                  )}
-                                </svg>
-                                {method.isActive ? "تعطيل" : "تفعيل"}
+                                {isTogglingMethod ? (
+                                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-1"></div>
+                                ) : method.isActive ? (
+                                  <PowerOff className="h-3 w-3 ml-1" />
+                                ) : (
+                                  <Power className="h-3 w-3 ml-1" />
+                                )}
+                                {isTogglingMethod
+                                  ? "جاري..."
+                                  : method.isActive
+                                    ? "تعطيل"
+                                    : "تفعيل"}
                               </button>
                               <button
                                 onClick={() => handleDeleteMethod(method.id)}
-                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200"
+                                disabled={isDeletingMethod}
+                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                                حذف
+                                {isDeletingMethod ? (
+                                  <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                ) : (
+                                  <Trash2 className="h-3 w-3 ml-1" />
+                                )}
+                                {isDeletingMethod ? "جاري الحذف..." : "حذف"}
                               </button>
                             </div>
                           </td>
@@ -734,9 +655,9 @@ export default function PaymentMethodsManagement() {
                 </div>
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  ×
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
@@ -762,19 +683,7 @@ export default function PaymentMethodsManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                          />
-                        </svg>
+                        <CreditCard className="w-4 h-4 ml-1" />
                         اسم طريقة الدفع *
                       </span>
                     </label>
@@ -785,51 +694,33 @@ export default function PaymentMethodsManagement() {
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                    disabled={isAddingMethod || isEditingMethod}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <X className="w-4 h-4 ml-2" />
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
+                    disabled={isAddingMethod || isEditingMethod}
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ backgroundColor: "#193F94" }}
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      {editingMethod ? (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                        />
-                      ) : (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      )}
-                    </svg>
-                    {editingMethod ? "حفظ التعديلات" : "إضافة طريقة"}
+                    {isAddingMethod || isEditingMethod ? (
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        {editingMethod ? "جاري التحديث..." : "جاري الإضافة..."}
+                      </div>
+                    ) : (
+                      <>
+                        {editingMethod ? (
+                          <Edit className="w-4 h-4 ml-2" />
+                        ) : (
+                          <Plus className="w-4 h-4 ml-2" />
+                        )}
+                        {editingMethod ? "حفظ التعديلات" : "إضافة طريقة"}
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

@@ -2,6 +2,26 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axiosInstance from "../api/axiosInstance";
+import {
+  ArrowLeft,
+  Calendar,
+  ChevronDown,
+  FileText,
+  Clock,
+  Power,
+  PowerOff,
+  DollarSign,
+  FileCheck,
+  Receipt,
+  TrendingUp,
+  PieChart,
+  Wallet,
+  CheckCircle,
+  AlertCircle,
+  Percent,
+  RotateCcw,
+  Coins,
+} from "lucide-react";
 
 export default function ShiftReports() {
   const navigate = useNavigate();
@@ -9,8 +29,8 @@ export default function ShiftReports() {
   const [selectedDate, setSelectedDate] = useState("");
   const [shifts, setShifts] = useState([]);
   const [reportData, setReportData] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [fetchingShifts, setFetchingShifts] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -68,7 +88,7 @@ export default function ShiftReports() {
       return;
     }
 
-    setLoading(true);
+    setIsGeneratingReport(true);
     try {
       const shiftIdNumber = parseInt(selectedShift);
 
@@ -92,7 +112,7 @@ export default function ShiftReports() {
         toast.error("حدث خطأ في جلب تقرير الوردية");
       }
     } finally {
-      setLoading(false);
+      setIsGeneratingReport(false);
     }
   };
 
@@ -172,20 +192,7 @@ export default function ShiftReports() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <ArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -215,19 +222,7 @@ export default function ShiftReports() {
                   />
                   <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
                     <span className="flex items-center">
-                      <svg
-                        className="w-4 h-4 ml-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
+                      <Calendar className="w-4 h-4 ml-1" />
                       التاريخ
                     </span>
                   </label>
@@ -261,76 +256,41 @@ export default function ShiftReports() {
                   </select>
                   <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
                     <span className="flex items-center">
-                      <svg
-                        className="w-4 h-4 ml-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
+                      <Clock className="w-4 h-4 ml-1" />
                       اختيار الوردية
                     </span>
                   </label>
                   <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                    <svg
-                      className="w-5 h-5 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
+                    <ChevronDown className="w-5 h-5 text-gray-400" />
                   </div>
                 </div>
 
                 <div className="pt-4">
                   <button
                     onClick={generateReport}
-                    disabled={loading || !selectedShift || fetchingShifts}
+                    disabled={
+                      isGeneratingReport || !selectedShift || fetchingShifts
+                    }
                     className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
-                      loading || !selectedShift || fetchingShifts
+                      isGeneratingReport || !selectedShift || fetchingShifts
                         ? "opacity-50 cursor-not-allowed bg-gray-400"
                         : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                     }`}
                     style={{
                       backgroundColor:
-                        loading || !selectedShift || fetchingShifts
+                        isGeneratingReport || !selectedShift || fetchingShifts
                           ? ""
                           : "#193F94",
                     }}
                   >
-                    {loading ? (
+                    {isGeneratingReport ? (
                       <>
-                        <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin ml-2"></div>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
                         جاري التحميل...
                       </>
                     ) : (
                       <>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 ml-2"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
+                        <FileText className="h-5 w-5 ml-2" />
                         عرض التقرير
                       </>
                     )}
@@ -343,7 +303,7 @@ export default function ShiftReports() {
           <div className="lg:col-span-3">
             {reportData ? (
               <div className="bg-white rounded-2xl shadow-lg p-6">
-                <div className="flex justify-between items-start mb-6">
+                <div className="flex justify-between items-start mb-6 flex-wrap gap-4">
                   <div>
                     <h2
                       className="text-2xl font-bold"
@@ -362,20 +322,7 @@ export default function ShiftReports() {
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse flex-wrap gap-2">
                     <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium flex items-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-3 w-3 ml-1"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                      <Clock className="h-3 w-3 ml-1" />
                       مدة الوردية:{" "}
                       {calculateShiftDuration(
                         reportData.startTime,
@@ -389,29 +336,11 @@ export default function ShiftReports() {
                           : "bg-green-100 text-green-800"
                       }`}
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-3 w-3 ml-1"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        {reportData.endTime ? (
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                          />
-                        ) : (
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 10V3L4 14h7v7l9-11h-7z"
-                          />
-                        )}
-                      </svg>
+                      {reportData.endTime ? (
+                        <PowerOff className="h-3 w-3 ml-1" />
+                      ) : (
+                        <Power className="h-3 w-3 ml-1" />
+                      )}
                       {reportData.endTime ? "مغلقة" : "مفتوحة"}
                     </div>
                   </div>
@@ -428,20 +357,7 @@ export default function ShiftReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-blue-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
+                        <DollarSign className="h-6 w-6 text-blue-700" />
                       </div>
                     </div>
                   </div>
@@ -455,95 +371,30 @@ export default function ShiftReports() {
                         </p>
                         <div className="flex text-xs mt-1 flex-wrap gap-1">
                           <span className="text-green-600 ml-2 flex items-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-3 w-3 ml-1"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
+                            <CheckCircle className="h-3 w-3 ml-1" />
                             {reportData.doneInvoicesCount || 0} مكتملة
                           </span>
                           <span className="text-amber-600 ml-2 flex items-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-3 w-3 ml-1"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                              />
-                            </svg>
+                            <Clock className="h-3 w-3 ml-1" />
                             {reportData.suspendedInvoicesCount || 0} معلقة
                           </span>
                           {reportData.partailPaidInvoicesCount > 0 && (
                             <span className="text-orange-600 flex items-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-3 w-3 ml-1"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                                />
-                              </svg>
+                              <Receipt className="h-3 w-3 ml-1" />
                               {reportData.partailPaidInvoicesCount} مدفوعة
                               جزئياً
                             </span>
                           )}
                           {reportData.returnedInvoicesCount > 0 && (
                             <span className="text-red-600 flex items-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-3 w-3 ml-1"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 3v6a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V15z"
-                                />
-                              </svg>
+                              <RotateCcw className="h-3 w-3 ml-1" />
                               {reportData.returnedInvoicesCount} مرتجعة
                             </span>
                           )}
                         </div>
                       </div>
                       <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-green-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
+                        <FileCheck className="h-6 w-6 text-green-700" />
                       </div>
                     </div>
                   </div>
@@ -559,20 +410,7 @@ export default function ShiftReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-purple-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                          />
-                        </svg>
+                        <TrendingUp className="h-6 w-6 text-purple-700" />
                       </div>
                     </div>
                   </div>
@@ -592,26 +430,7 @@ export default function ShiftReports() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-amber-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"
-                          />
-                        </svg>
+                        <PieChart className="h-6 w-6 text-amber-700" />
                       </div>
                     </div>
                   </div>
@@ -633,25 +452,13 @@ export default function ShiftReports() {
                         >
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center">
+                              <Wallet className="h-4 w-4 ml-2 text-gray-600" />
                               <span className="font-medium">
                                 {payment.paymentMethodName}
                               </span>
                             </div>
                             <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full flex items-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-3 w-3 ml-1"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                />
-                              </svg>
+                              <FileText className="h-3 w-3 ml-1" />
                               {payment.count || 0} فاتورة
                             </span>
                           </div>
@@ -677,6 +484,7 @@ export default function ShiftReports() {
 
                 {(!reportData.payments || reportData.payments.length === 0) && (
                   <div className="mb-6 p-8 text-center bg-gray-50 rounded-xl border border-gray-200">
+                    <Wallet className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                     <p className="text-gray-500">
                       لا توجد مدفوعات في هذه الوردية
                     </p>
@@ -692,19 +500,26 @@ export default function ShiftReports() {
                   </h4>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                      <span className="text-gray-600">الإجمالي الفرعي:</span>
+                      <span className="text-gray-600 flex items-center">
+                        <Coins className="h-4 w-4 ml-2 text-gray-500" />
+                        الإجمالي الفرعي:
+                      </span>
                       <span className="font-bold">
                         {formatNumber(reportData.totalSubTotal)} ج.م
                       </span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                      <span className="text-gray-600">إجمالي المبيعات:</span>
+                      <span className="text-gray-600 flex items-center">
+                        <DollarSign className="h-4 w-4 ml-2 text-gray-500" />
+                        إجمالي المبيعات:
+                      </span>
                       <span className="font-bold">
                         {formatNumber(reportData.totalSales)} ج.م
                       </span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                      <span className="text-gray-600">
+                      <span className="text-gray-600 flex items-center">
+                        <Percent className="h-4 w-4 ml-2 text-gray-500" />
                         إجمالي الضرائب (
                         {reportData.totalSales > 0
                           ? (
@@ -719,7 +534,8 @@ export default function ShiftReports() {
                       </span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                      <span className="text-gray-600">
+                      <span className="text-gray-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 ml-2 text-gray-500" />
                         إجمالي الخصومات (
                         {reportData.totalSales > 0
                           ? (
@@ -735,14 +551,18 @@ export default function ShiftReports() {
                       </span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                      <span className="text-gray-600">إجمالي المرتجعات:</span>
+                      <span className="text-gray-600 flex items-center">
+                        <RotateCcw className="h-4 w-4 ml-2 text-gray-500" />
+                        إجمالي المرتجعات:
+                      </span>
                       <span className="font-bold text-red-600">
                         {formatNumber(reportData.totalReturns)} ج.م
                       </span>
                     </div>
                     <div className="pt-3 border-t border-gray-200">
                       <div className="flex justify-between items-center">
-                        <span className="font-bold text-gray-800">
+                        <span className="font-bold text-gray-800 flex items-center">
+                          <TrendingUp className="h-5 w-5 ml-2 text-green-600" />
                           صافي الإيرادات:
                         </span>
                         <span
@@ -759,20 +579,7 @@ export default function ShiftReports() {
             ) : (
               <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center min-h-[400px]">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mb-6">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-12 w-12 text-blue-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
+                  <FileText className="h-12 w-12 text-blue-600" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-700 mb-2">
                   تقارير الورديات
@@ -783,7 +590,7 @@ export default function ShiftReports() {
                 </p>
                 {fetchingShifts ? (
                   <div className="flex items-center justify-center">
-                    <div className="w-6 h-6 border-t-2 border-blue-600 rounded-full animate-spin ml-2"></div>
+                    <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin ml-2"></div>
                     <span>جاري تحميل الورديات...</span>
                   </div>
                 ) : (
@@ -793,20 +600,7 @@ export default function ShiftReports() {
                         {stats.totalShifts}
                       </div>
                       <div className="text-sm text-blue-600 flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 ml-1"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
+                        <Clock className="h-4 w-4 ml-1" />
                         ورديات
                       </div>
                     </div>
@@ -815,20 +609,7 @@ export default function ShiftReports() {
                         {stats.openShifts}
                       </div>
                       <div className="text-sm text-green-600 flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 ml-1"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 10V3L4 14h7v7l9-11h-7z"
-                          />
-                        </svg>
+                        <Power className="h-4 w-4 ml-1" />
                         مفتوحة
                       </div>
                     </div>
@@ -837,20 +618,7 @@ export default function ShiftReports() {
                         {stats.closedShifts}
                       </div>
                       <div className="text-sm text-purple-600 flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 ml-1"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                          />
-                        </svg>
+                        <PowerOff className="h-4 w-4 ml-1" />
                         مغلقة
                       </div>
                     </div>

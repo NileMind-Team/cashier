@@ -2,6 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axiosInstance from "../api/axiosInstance";
+import {
+  ArrowLeft,
+  Calendar,
+  BarChart3,
+  DollarSign,
+  FileText,
+  CreditCard,
+  Printer,
+  PieChart,
+} from "lucide-react";
 
 export default function PaymentMethodsReport() {
   const navigate = useNavigate();
@@ -9,6 +19,7 @@ export default function PaymentMethodsReport() {
   const [endDate, setEndDate] = useState("");
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -109,6 +120,176 @@ export default function PaymentMethodsReport() {
     }).format(amount);
   };
 
+  const handlePrint = () => {
+    setIsPrinting(true);
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "absolute";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "none";
+    document.body.appendChild(iframe);
+
+    const printContent = document.getElementById("printable-content");
+    if (!printContent) {
+      setIsPrinting(false);
+      return;
+    }
+
+    const iframeDoc = iframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html dir="rtl">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: white;
+            color: #333;
+          }
+          
+          .print-container {
+            max-width: 1200px;
+            margin: 0 auto;
+          }
+          
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #193F94;
+          }
+          
+          .header h1 {
+            color: #193F94;
+            margin-bottom: 10px;
+          }
+          
+          .header h3 {
+            color: #666;
+            font-size: 16px;
+          }
+          
+          .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+          }
+          
+          .summary-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+          }
+          
+          .summary-card .amount {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 5px;
+          }
+          
+          .summary-card.total .amount { color: #193F94; }
+          .summary-card.bills .amount { color: #28a745; }
+          .summary-card.methods .amount { color: #8B5CF6; }
+          
+          .methods-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          
+          .methods-table th {
+            border: 1px solid #dee2e6;
+            padding: 12px 10px;
+            text-align: right;
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #4a5568;
+            color: white;
+          }
+          
+          .methods-table td {
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            text-align: right;
+            font-size: 13px;
+          }
+          
+          .methods-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+          }
+          
+          .methods-table tfoot {
+            background-color: #f8f9fa;
+            font-weight: bold;
+          }
+          
+          .percentage-bar {
+            width: 100%;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+          }
+          
+          .percentage-fill {
+            height: 6px;
+            background-color: #193F94;
+            border-radius: 4px;
+          }
+          
+          .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+          }
+          
+          @media print {
+            body {
+              padding: 0;
+            }
+            .methods-table th {
+              background-color: #4a5568 !important;
+              color: white !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-container">
+          ${printContent.innerHTML}
+        </div>
+        <script>
+          window.onload = () => {
+            window.print();
+            window.onafterprint = () => {
+              window.parent.document.body.removeChild(window.frameElement);
+            };
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    iframeDoc.close();
+    setTimeout(() => setIsPrinting(false), 1000);
+  };
+
   return (
     <div
       dir="rtl"
@@ -139,24 +320,72 @@ export default function PaymentMethodsReport() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <ArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Hidden Printable Content */}
+      <div id="printable-content" style={{ display: "none" }}>
+        <div className="header">
+          <h1>تقرير طرق الدفع</h1>
+          <h3>
+            الفترة من {reportData?.dateRange.start} إلى{" "}
+            {reportData?.dateRange.end}
+          </h3>
+        </div>
+
+        <div className="summary-cards">
+          <div className="summary-card total">
+            <div>إجمالي المدفوعات</div>
+            <div className="amount">
+              {formatCurrency(reportData?.stats.totalAmount || 0)} ج.م
+            </div>
+          </div>
+          <div className="summary-card bills">
+            <div>عدد الفواتير</div>
+            <div className="amount">{reportData?.stats.totalBills || 0}</div>
+          </div>
+          <div className="summary-card methods">
+            <div>طرق الدفع</div>
+            <div className="amount">
+              {reportData?.stats.paymentMethodsCount || 0}
+            </div>
+          </div>
+        </div>
+
+        <table className="methods-table">
+          <thead>
+            <tr>
+              <th>طريقة الدفع</th>
+              <th>عدد الفواتير</th>
+              <th>إجمالي المدفوعات</th>
+              <th>النسبة المئوية</th>
+            </tr>
+          </thead>
+          <tbody>
+            {reportData?.paymentMethods.map((method, index) => (
+              <tr key={index}>
+                <td style={{ fontWeight: "bold" }}>
+                  {method.paymentMethodName}
+                </td>
+                <td>{method.count}</td>
+                <td>{formatCurrency(method.amount)} ج.م</td>
+                <td>{method.percentage.toFixed(1)}%</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>الإجمالي</td>
+              <td>{reportData?.stats.totalBills || 0}</td>
+              <td>{formatCurrency(reportData?.stats.totalAmount || 0)} ج.م</td>
+              <td>100%</td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
       <div className="container mx-auto px-4 py-6">
@@ -182,19 +411,7 @@ export default function PaymentMethodsReport() {
                   />
                   <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
                     <span className="flex items-center">
-                      <svg
-                        className="w-4 h-4 ml-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
+                      <Calendar className="w-4 h-4 ml-1" />
                       التاريخ من
                     </span>
                   </label>
@@ -211,25 +428,13 @@ export default function PaymentMethodsReport() {
                   />
                   <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
                     <span className="flex items-center">
-                      <svg
-                        className="w-4 h-4 ml-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
+                      <Calendar className="w-4 h-4 ml-1" />
                       التاريخ إلى
                     </span>
                   </label>
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-4 space-y-3">
                   <button
                     onClick={generateReport}
                     disabled={loading || !startDate || !endDate}
@@ -238,36 +443,43 @@ export default function PaymentMethodsReport() {
                         ? "opacity-50 cursor-not-allowed bg-gray-400"
                         : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                     }`}
-                    style={{
-                      backgroundColor:
-                        loading || !startDate || !endDate ? "" : "#193F94",
-                    }}
                   >
                     {loading ? (
                       <>
-                        <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin ml-2"></div>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
                         جاري التحميل...
                       </>
                     ) : (
                       <>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 ml-2"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                          />
-                        </svg>
+                        <BarChart3 className="h-5 w-5 ml-2" />
                         عرض التقرير
                       </>
                     )}
                   </button>
+
+                  {reportData && (
+                    <button
+                      onClick={handlePrint}
+                      disabled={isPrinting}
+                      className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
+                        isPrinting
+                          ? "opacity-50 cursor-not-allowed bg-gray-400"
+                          : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                      }`}
+                    >
+                      {isPrinting ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                          جاري الطباعة...
+                        </>
+                      ) : (
+                        <>
+                          <Printer className="h-5 w-5 ml-2" />
+                          طباعة التقرير PDF
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -324,20 +536,7 @@ export default function PaymentMethodsReport() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-blue-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
+                        <DollarSign className="h-6 w-6 text-blue-700" />
                       </div>
                     </div>
                   </div>
@@ -354,20 +553,7 @@ export default function PaymentMethodsReport() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-green-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
+                        <FileText className="h-6 w-6 text-green-700" />
                       </div>
                     </div>
                   </div>
@@ -382,20 +568,7 @@ export default function PaymentMethodsReport() {
                         <p className="text-xs text-purple-600 mt-1">مختلفة</p>
                       </div>
                       <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-purple-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                          />
-                        </svg>
+                        <CreditCard className="h-6 w-6 text-purple-700" />
                       </div>
                     </div>
                   </div>
@@ -573,20 +746,7 @@ export default function PaymentMethodsReport() {
             ) : (
               <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center min-h-[400px]">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center mb-6">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-12 w-12 text-green-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                    />
-                  </svg>
+                  <PieChart className="h-12 w-12 text-green-600" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-700 mb-2">
                   تقارير طرق الدفع
@@ -597,20 +757,7 @@ export default function PaymentMethodsReport() {
                 </p>
                 <div className="text-center space-y-3">
                   <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 ml-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
+                    <Calendar className="h-5 w-5 ml-2" />
                     اختر التاريخ من وإلى
                   </div>
                 </div>

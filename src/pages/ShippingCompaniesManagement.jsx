@@ -3,6 +3,26 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import axiosInstance from "../api/axiosInstance";
+import {
+  ArrowLeft,
+  Truck,
+  CheckCircle,
+  XCircle,
+  Plus,
+  Edit,
+  Trash2,
+  Power,
+  PowerOff,
+  X,
+  Phone,
+  Globe,
+  DollarSign,
+  Package,
+  Building2,
+  Receipt,
+  Image,
+  Loader2,
+} from "lucide-react";
 
 export default function ShippingCompaniesManagement() {
   const navigate = useNavigate();
@@ -12,6 +32,10 @@ export default function ShippingCompaniesManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
   const hasFetched = useRef(false);
+  const [isAddingCompany, setIsAddingCompany] = useState(false);
+  const [isEditingCompany, setIsEditingCompany] = useState(false);
+  const [isTogglingCompany, setIsTogglingCompany] = useState(false);
+  const [isDeletingCompany, setIsDeletingCompany] = useState(false);
 
   const [stats, setStats] = useState({
     totalCompanies: 0,
@@ -148,6 +172,7 @@ export default function ShippingCompaniesManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsDeletingCompany(true);
       try {
         const response = await axiosInstance.delete(
           `/api/DeliveryCompany/Delete/${companyId}`,
@@ -163,6 +188,8 @@ export default function ShippingCompaniesManagement() {
       } catch (error) {
         console.error("خطأ في حذف شركة التوصيل:", error);
         toast.error("حدث خطأ في حذف شركة التوصيل");
+      } finally {
+        setIsDeletingCompany(false);
       }
     }
   };
@@ -186,6 +213,7 @@ export default function ShippingCompaniesManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsTogglingCompany(true);
       try {
         const response = await axiosInstance.patch(
           `/api/DeliveryCompany/ToggleActivation/${companyId}/toggle`,
@@ -207,6 +235,8 @@ export default function ShippingCompaniesManagement() {
       } catch (error) {
         console.error(`خطأ في ${action} شركة التوصيل:`, error);
         toast.error(`حدث خطأ في ${action} شركة التوصيل`);
+      } finally {
+        setIsTogglingCompany(false);
       }
     }
   };
@@ -243,6 +273,12 @@ export default function ShippingCompaniesManagement() {
     if (!formData.contactNumber.trim()) {
       toast.error("يرجى إدخال رقم الهاتف");
       return;
+    }
+
+    if (editingCompany) {
+      setIsEditingCompany(true);
+    } else {
+      setIsAddingCompany(true);
     }
 
     try {
@@ -322,6 +358,9 @@ export default function ShippingCompaniesManagement() {
     } catch (error) {
       console.error("خطأ في حفظ شركة التوصيل:", error);
       toast.error("حدث خطأ في حفظ شركة التوصيل");
+    } finally {
+      setIsAddingCompany(false);
+      setIsEditingCompany(false);
     }
   };
 
@@ -356,20 +395,7 @@ export default function ShippingCompaniesManagement() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <ArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -400,20 +426,7 @@ export default function ShippingCompaniesManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM12 8h4l2 5h2a2 2 0 012 2v3a2 2 0 01-2 2h-2.5M7 14h.01M9.5 19H7a2 2 0 01-2-2v-3a2 2 0 012-2h2.5"
-                  />
-                </svg>
+                <Truck className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -441,20 +454,7 @@ export default function ShippingCompaniesManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
-                </svg>
+                <CheckCircle className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -483,20 +483,7 @@ export default function ShippingCompaniesManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-red-400 to-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                  />
-                </svg>
+                <XCircle className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -516,20 +503,7 @@ export default function ShippingCompaniesManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                  />
-                </svg>
+                <Package className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -549,24 +523,21 @@ export default function ShippingCompaniesManagement() {
 
             <button
               onClick={handleAddCompany}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center whitespace-nowrap shadow-md"
+              disabled={isAddingCompany}
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center whitespace-nowrap shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: "#193F94" }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-              إضافة شركة توصيل جديدة
+              {isAddingCompany ? (
+                <>
+                  <Loader2 className="h-5 w-5 ml-2 animate-spin" />
+                  جاري الإضافة...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-5 w-5 ml-2" />
+                  إضافة شركة توصيل جديدة
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -614,20 +585,7 @@ export default function ShippingCompaniesManagement() {
                           className="py-8 px-4 text-center text-gray-500"
                         >
                           <div className="flex flex-col items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-12 w-12 text-gray-300 mb-3"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1}
-                                d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM12 8h4l2 5h2a2 2 0 012 2v3a2 2 0 01-2 2h-2.5M7 14h.01M9.5 19H7a2 2 0 01-2-2v-3a2 2 0 012-2h2.5"
-                              />
-                            </svg>
+                            <Truck className="h-12 w-12 text-gray-300 mb-3" />
                             <p className="text-lg font-medium text-gray-400">
                               لا يوجد شركات توصيل
                             </p>
@@ -673,38 +631,12 @@ export default function ShippingCompaniesManagement() {
                           <td className="py-4 px-4 text-right">
                             <div className="space-y-1">
                               <div className="text-sm text-gray-800 flex items-center">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-4 w-4 ml-1 text-gray-500"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                                  />
-                                </svg>
+                                <Phone className="h-4 w-4 ml-1 text-gray-500" />
                                 {company.phone || "لا يوجد"}
                               </div>
                               {company.websiteUrl && (
                                 <div className="text-sm text-gray-800 flex items-center">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-4 w-4 ml-1 text-gray-500"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"
-                                    />
-                                  </svg>
+                                  <Globe className="h-4 w-4 ml-1 text-gray-500" />
                                   {company.websiteUrl}
                                 </div>
                               )}
@@ -761,78 +693,47 @@ export default function ShippingCompaniesManagement() {
                             <div className="flex flex-col space-y-2">
                               <button
                                 onClick={() => handleEditCompany(company)}
-                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-blue-200"
+                                disabled={isEditingCompany}
+                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                  />
-                                </svg>
+                                <Edit className="h-3 w-3 ml-1" />
                                 تعديل
                               </button>
                               <button
                                 onClick={() =>
                                   handleToggleCompanyStatus(company.id)
                                 }
-                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border ${
+                                disabled={isTogglingCompany}
+                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border disabled:opacity-50 disabled:cursor-not-allowed ${
                                   company.isActive
                                     ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
                                     : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                                 }`}
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  {company.isActive ? (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                    />
-                                  ) : (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                                    />
-                                  )}
-                                </svg>
-                                {company.isActive ? "تعطيل" : "تفعيل"}
+                                {isTogglingCompany ? (
+                                  <Loader2 className="h-3 w-3 ml-1 animate-spin" />
+                                ) : company.isActive ? (
+                                  <PowerOff className="h-3 w-3 ml-1" />
+                                ) : (
+                                  <Power className="h-3 w-3 ml-1" />
+                                )}
+                                {isTogglingCompany
+                                  ? "جاري..."
+                                  : company.isActive
+                                    ? "تعطيل"
+                                    : "تفعيل"}
                               </button>
                               <button
                                 onClick={() => handleDeleteCompany(company.id)}
-                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200"
+                                disabled={isDeletingCompany}
+                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                                حذف
+                                {isDeletingCompany ? (
+                                  <Loader2 className="h-3 w-3 ml-1 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3 w-3 ml-1" />
+                                )}
+                                {isDeletingCompany ? "جاري الحذف..." : "حذف"}
                               </button>
                             </div>
                           </td>
@@ -870,9 +771,9 @@ export default function ShippingCompaniesManagement() {
                 </div>
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  ×
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
@@ -898,19 +799,7 @@ export default function ShippingCompaniesManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                          />
-                        </svg>
+                        <Building2 className="w-4 h-4 ml-1" />
                         اسم الشركة *
                       </span>
                     </label>
@@ -937,19 +826,7 @@ export default function ShippingCompaniesManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                          />
-                        </svg>
+                        <Phone className="w-4 h-4 ml-1" />
                         رقم الهاتف *
                       </span>
                     </label>
@@ -978,19 +855,7 @@ export default function ShippingCompaniesManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
+                        <DollarSign className="w-4 h-4 ml-1" />
                         سعر التوصيل (ج.م)
                       </span>
                     </label>
@@ -1016,19 +881,7 @@ export default function ShippingCompaniesManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"
-                          />
-                        </svg>
+                        <Globe className="w-4 h-4 ml-1" />
                         الموقع الإلكتروني
                       </span>
                     </label>
@@ -1057,19 +910,7 @@ export default function ShippingCompaniesManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
+                        <Image className="w-4 h-4 ml-1" />
                         رابط الصورة
                       </span>
                     </label>
@@ -1119,19 +960,7 @@ export default function ShippingCompaniesManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
+                        <Receipt className="w-4 h-4 ml-1" />
                         رقم السجل التجاري
                       </span>
                     </label>
@@ -1157,19 +986,7 @@ export default function ShippingCompaniesManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"
-                          />
-                        </svg>
+                        <Receipt className="w-4 h-4 ml-1" />
                         الرقم الضريبي
                       </span>
                     </label>
@@ -1182,49 +999,37 @@ export default function ShippingCompaniesManagement() {
                     onClick={() => setShowAddModal(false)}
                     className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <X className="w-4 h-4 ml-2" />
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
-                    style={{ backgroundColor: "#193F94" }}
+                    disabled={isAddingCompany || isEditingCompany}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm ${
+                      isAddingCompany || isEditingCompany
+                        ? "opacity-50 cursor-not-allowed bg-gray-400"
+                        : ""
+                    }`}
+                    style={{
+                      backgroundColor:
+                        isAddingCompany || isEditingCompany ? "" : "#193F94",
+                    }}
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      {editingCompany ? (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                        />
-                      ) : (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      )}
-                    </svg>
-                    {editingCompany ? "حفظ التعديلات" : "إضافة شركة"}
+                    {isAddingCompany || isEditingCompany ? (
+                      <>
+                        <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                        {editingCompany ? "جاري التحديث..." : "جاري الإضافة..."}
+                      </>
+                    ) : (
+                      <>
+                        {editingCompany ? (
+                          <Edit className="w-4 h-4 ml-2" />
+                        ) : (
+                          <Plus className="w-4 h-4 ml-2" />
+                        )}
+                        {editingCompany ? "حفظ التعديلات" : "إضافة شركة"}
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

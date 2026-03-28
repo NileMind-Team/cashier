@@ -3,6 +3,27 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import axiosInstance from "../api/axiosInstance";
+import {
+  ArrowLeft,
+  Plus,
+  Edit,
+  Power,
+  PowerOff,
+  Trash2,
+  X,
+  Search,
+  Users,
+  Shield,
+  ShieldOff,
+  MapPin,
+  Phone,
+  User,
+  CreditCard,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 
 export default function CustomersManagement() {
   const navigate = useNavigate();
@@ -23,6 +44,13 @@ export default function CustomersManagement() {
   const hasFetched = useRef(false);
   const searchTimeout = useRef(null);
   const isFetchingCustomers = useRef(false);
+
+  // Loading states for buttons
+  const [isAddingCustomer, setIsAddingCustomer] = useState(false);
+  const [isEditingCustomer, setIsEditingCustomer] = useState(false);
+  const [isTogglingCustomer, setIsTogglingCustomer] = useState(false);
+  const [isDeletingCustomer, setIsDeletingCustomer] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -114,8 +142,8 @@ export default function CustomersManagement() {
       return;
     }
 
+    setIsSearching(true);
     try {
-      setLoading(true);
       const response = await axiosInstance.get(`/api/Customers/Search/${term}`);
 
       if (response.status === 200) {
@@ -153,7 +181,6 @@ export default function CustomersManagement() {
               customer.joinDate || new Date().toISOString().split("T")[0],
           }));
           setCustomers(formattedCustomers);
-          // Update pagination for search results
           setPagination((prev) => ({
             ...prev,
             totalCount: formattedCustomers.length,
@@ -175,7 +202,7 @@ export default function CustomersManagement() {
       setCustomers([]);
       toast.info("لا توجد نتائج للبحث");
     } finally {
-      setLoading(false);
+      setIsSearching(false);
     }
   };
 
@@ -226,6 +253,7 @@ export default function CustomersManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsTogglingCustomer(true);
       try {
         const response = await axiosInstance.put(
           `/api/Customers/ToggleActivation/toggle/${customerId}`,
@@ -237,21 +265,20 @@ export default function CustomersManagement() {
               c.id === customerId ? { ...c, isActive: newStatus } : c,
             ),
           );
-
           toast.success(`تم ${statusText} العميل بنجاح`);
         } else {
           toast.error(`فشل في ${statusText} العميل`);
         }
       } catch (error) {
         console.error(`خطأ في ${statusText} العميل:`, error);
-
         setCustomers(
           customers.map((c) =>
             c.id === customerId ? { ...c, isActive: newStatus } : c,
           ),
         );
-
         toast.success(`تم ${statusText} العميل`);
+      } finally {
+        setIsTogglingCustomer(false);
       }
     }
   };
@@ -277,6 +304,7 @@ export default function CustomersManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsDeletingCustomer(true);
       try {
         const response = await axiosInstance.delete(
           `/api/Customers/Delete/${customerId}`,
@@ -306,6 +334,8 @@ export default function CustomersManagement() {
       } catch (error) {
         console.error("خطأ في حذف العميل:", error);
         toast.error("حدث خطأ في حذف العميل");
+      } finally {
+        setIsDeletingCustomer(false);
       }
     }
   };
@@ -343,6 +373,12 @@ export default function CustomersManagement() {
     if (!phoneRegex.test(formData.phone)) {
       toast.error("يرجى إدخال رقم هاتف مصري صحيح (11 رقم)");
       return;
+    }
+
+    if (editingCustomer) {
+      setIsEditingCustomer(true);
+    } else {
+      setIsAddingCustomer(true);
     }
 
     try {
@@ -416,6 +452,9 @@ export default function CustomersManagement() {
     } catch (error) {
       console.error("خطأ في حفظ العميل:", error);
       toast.error("حدث خطأ في حفظ العميل");
+    } finally {
+      setIsAddingCustomer(false);
+      setIsEditingCustomer(false);
     }
   };
 
@@ -438,6 +477,7 @@ export default function CustomersManagement() {
 
   const handleClearSearch = () => {
     setSearchTerm("");
+    setIsSearching(false);
 
     if (searchTimeout.current) {
       clearTimeout(searchTimeout.current);
@@ -527,20 +567,7 @@ export default function CustomersManagement() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <ArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -571,20 +598,7 @@ export default function CustomersManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
+                <Users className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -613,20 +627,7 @@ export default function CustomersManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
-                </svg>
+                <Shield className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -655,20 +656,7 @@ export default function CustomersManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-red-400 to-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                  />
-                </svg>
+                <ShieldOff className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -698,40 +686,18 @@ export default function CustomersManagement() {
                     autoComplete="off"
                   />
                   <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
+                    {isSearching ? (
+                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <Search className="h-5 w-5" />
+                    )}
                   </div>
                   {searchTerm && (
                     <button
                       onClick={handleClearSearch}
                       className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
+                      <X className="h-5 w-5" />
                     </button>
                   )}
                 </div>
@@ -744,24 +710,21 @@ export default function CustomersManagement() {
 
               <button
                 onClick={handleAddCustomer}
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center whitespace-nowrap shadow-md"
+                disabled={isAddingCustomer}
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center whitespace-nowrap shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{ backgroundColor: "#193F94" }}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 ml-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
-                إضافة عميل جديد
+                {isAddingCustomer ? (
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                    جاري الإضافة...
+                  </div>
+                ) : (
+                  <>
+                    <Plus className="h-5 w-5 ml-2" />
+                    إضافة عميل جديد
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -808,20 +771,7 @@ export default function CustomersManagement() {
                           className="py-8 px-4 text-center text-gray-500"
                         >
                           <div className="flex flex-col items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-12 w-12 text-gray-300 mb-3"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1}
-                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                              />
-                            </svg>
+                            <Users className="h-12 w-12 text-gray-300 mb-3" />
                             <p className="text-lg font-medium text-gray-400">
                               {searchTerm
                                 ? "لا توجد نتائج للبحث"
@@ -850,19 +800,22 @@ export default function CustomersManagement() {
                                 <div className="font-bold text-gray-900">
                                   {customer.name}
                                 </div>
-                                <div className="text-sm text-gray-500">
+                                <div className="text-sm text-gray-500 flex items-center">
+                                  <Phone className="h-3 w-3 ml-1" />
                                   {customer.phone}
                                 </div>
                               </div>
                             </div>
                           </td>
                           <td className="py-4 px-4 text-right">
-                            <div className="text-sm text-gray-800 max-w-xs">
+                            <div className="text-sm text-gray-800 max-w-xs flex items-center">
+                              <MapPin className="h-3 w-3 ml-1 text-gray-400" />
                               {customer.address || "لا يوجد عنوان"}
                             </div>
                           </td>
                           <td className="py-4 px-4 text-right">
-                            <div className="text-sm text-gray-800">
+                            <div className="text-sm text-gray-800 flex items-center">
+                              <CreditCard className="h-3 w-3 ml-1 text-gray-400" />
                               {customer.nationalId || "غير مسجل"}
                             </div>
                           </td>
@@ -890,83 +843,51 @@ export default function CustomersManagement() {
                             <div className="flex flex-col space-y-2">
                               <button
                                 onClick={() => handleEditCustomer(customer)}
-                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-blue-200"
+                                disabled={isEditingCustomer}
+                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                  />
-                                </svg>
+                                <Edit className="h-3 w-3 ml-1" />
                                 تعديل
                               </button>
 
-                              {/* زر تبديل حالة التفعيل الجديد */}
                               <button
                                 onClick={() =>
                                   handleToggleActivation(customer.id)
                                 }
-                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border ${
+                                disabled={isTogglingCustomer}
+                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border disabled:opacity-50 disabled:cursor-not-allowed ${
                                   customer.isActive
                                     ? "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200"
                                     : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                                 }`}
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  {customer.isActive ? (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                    />
-                                  ) : (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                                    />
-                                  )}
-                                </svg>
-                                {customer.isActive ? "تعطيل" : "تفعيل"}
+                                {isTogglingCustomer ? (
+                                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-1"></div>
+                                ) : customer.isActive ? (
+                                  <PowerOff className="h-3 w-3 ml-1" />
+                                ) : (
+                                  <Power className="h-3 w-3 ml-1" />
+                                )}
+                                {isTogglingCustomer
+                                  ? "جاري..."
+                                  : customer.isActive
+                                    ? "تعطيل"
+                                    : "تفعيل"}
                               </button>
 
                               <button
                                 onClick={() =>
                                   handleDeleteCustomer(customer.id)
                                 }
-                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200"
+                                disabled={isDeletingCustomer}
+                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                                حذف
+                                {isDeletingCustomer ? (
+                                  <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                ) : (
+                                  <Trash2 className="h-3 w-3 ml-1" />
+                                )}
+                                {isDeletingCustomer ? "جاري الحذف..." : "حذف"}
                               </button>
                             </div>
                           </td>
@@ -978,172 +899,128 @@ export default function CustomersManagement() {
               </div>
 
               {/* Enhanced Pagination with Professional Design */}
-              {!searchTerm && pagination.totalPages > 0 && customers.length > 0 && (
-                <div className="px-4 py-4 border-t border-gray-200 bg-gray-50">
-                  <div className="flex justify-end">
-                    <div className="flex items-center gap-2">
-                      {/* First Page Button */}
-                      <button
-                        onClick={() => handlePageChange(1)}
-                        disabled={!pagination.hasPreviousPage}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                          pagination.hasPreviousPage
-                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                            : "text-gray-300 cursor-not-allowed"
-                        }`}
-                        title="الصفحة الأولى"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+              {!searchTerm &&
+                pagination.totalPages > 0 &&
+                customers.length > 0 && (
+                  <div className="px-4 py-4 border-t border-gray-200 bg-gray-50">
+                    <div className="flex justify-end">
+                      <div className="flex items-center gap-2">
+                        {/* First Page Button */}
+                        <button
+                          onClick={() => handlePageChange(1)}
+                          disabled={!pagination.hasPreviousPage}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            pagination.hasPreviousPage
+                              ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                              : "text-gray-300 cursor-not-allowed"
+                          }`}
+                          title="الصفحة الأولى"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                          />
-                        </svg>
-                      </button>
+                          <ChevronsRight className="w-5 h-5" />
+                        </button>
 
-                      {/* Previous Page Button */}
-                      <button
-                        onClick={() =>
-                          handlePageChange(pagination.currentPage - 1)
-                        }
-                        disabled={!pagination.hasPreviousPage}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                          pagination.hasPreviousPage
-                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                            : "text-gray-300 cursor-not-allowed"
-                        }`}
-                        title="الصفحة السابقة"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </button>
-
-                      {/* Page Numbers */}
-                      <div className="flex items-center gap-1">
-                        {getPageNumbers().map((page, index) =>
-                          page === "..." ? (
-                            <span
-                              key={`dots-${index}`}
-                              className="px-3 py-2 text-gray-500"
-                            >
-                              ...
-                            </span>
-                          ) : (
-                            <button
-                              key={page}
-                              onClick={() => handlePageChange(page)}
-                              className={`min-w-[40px] h-10 rounded-lg text-sm font-medium transition-all ${
-                                pagination.currentPage === page
-                                  ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:from-blue-700 hover:to-blue-800"
-                                  : "text-gray-700 hover:bg-gray-200 hover:text-gray-900 border border-gray-200"
-                              }`}
-                            >
-                              {page}
-                            </button>
-                          ),
-                        )}
-                      </div>
-
-                      {/* Next Page Button */}
-                      <button
-                        onClick={() =>
-                          handlePageChange(pagination.currentPage + 1)
-                        }
-                        disabled={!pagination.hasNextPage}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                          pagination.hasNextPage
-                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                            : "text-gray-300 cursor-not-allowed"
-                        }`}
-                        title="الصفحة التالية"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 19l-7-7 7-7"
-                          />
-                        </svg>
-                      </button>
-
-                      {/* Last Page Button */}
-                      <button
-                        onClick={() => handlePageChange(pagination.totalPages)}
-                        disabled={!pagination.hasNextPage}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                          pagination.hasNextPage
-                            ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                            : "text-gray-300 cursor-not-allowed"
-                        }`}
-                        title="الصفحة الأخيرة"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Quick Jump to Page (for large page counts) */}
-                  {pagination.totalPages > 10 && (
-                    <div className="mt-3 flex items-center justify-end gap-2">
-                      <span className="text-sm text-gray-600">
-                        انتقل إلى صفحة:
-                      </span>
-                      <input
-                        type="number"
-                        min="1"
-                        max={pagination.totalPages}
-                        value={pagination.currentPage}
-                        onChange={(e) => {
-                          const page = parseInt(e.target.value);
-                          if (page >= 1 && page <= pagination.totalPages) {
-                            handlePageChange(page);
+                        {/* Previous Page Button */}
+                        <button
+                          onClick={() =>
+                            handlePageChange(pagination.currentPage - 1)
                           }
-                        }}
-                        className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <span className="text-sm text-gray-600">
-                        من {pagination.totalPages}
-                      </span>
+                          disabled={!pagination.hasPreviousPage}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            pagination.hasPreviousPage
+                              ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                              : "text-gray-300 cursor-not-allowed"
+                          }`}
+                          title="الصفحة السابقة"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+
+                        {/* Page Numbers */}
+                        <div className="flex items-center gap-1">
+                          {getPageNumbers().map((page, index) =>
+                            page === "..." ? (
+                              <span
+                                key={`dots-${index}`}
+                                className="px-3 py-2 text-gray-500"
+                              >
+                                ...
+                              </span>
+                            ) : (
+                              <button
+                                key={page}
+                                onClick={() => handlePageChange(page)}
+                                className={`min-w-[40px] h-10 rounded-lg text-sm font-medium transition-all ${
+                                  pagination.currentPage === page
+                                    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:from-blue-700 hover:to-blue-800"
+                                    : "text-gray-700 hover:bg-gray-200 hover:text-gray-900 border border-gray-200"
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            ),
+                          )}
+                        </div>
+
+                        {/* Next Page Button */}
+                        <button
+                          onClick={() =>
+                            handlePageChange(pagination.currentPage + 1)
+                          }
+                          disabled={!pagination.hasNextPage}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            pagination.hasNextPage
+                              ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                              : "text-gray-300 cursor-not-allowed"
+                          }`}
+                          title="الصفحة التالية"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+
+                        {/* Last Page Button */}
+                        <button
+                          onClick={() =>
+                            handlePageChange(pagination.totalPages)
+                          }
+                          disabled={!pagination.hasNextPage}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            pagination.hasNextPage
+                              ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+                              : "text-gray-300 cursor-not-allowed"
+                          }`}
+                          title="الصفحة الأخيرة"
+                        >
+                          <ChevronsLeft className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </div>
-              )}
+
+                    {/* Quick Jump to Page (for large page counts) */}
+                    {pagination.totalPages > 10 && (
+                      <div className="mt-3 flex items-center justify-end gap-2">
+                        <span className="text-sm text-gray-600">
+                          انتقل إلى صفحة:
+                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          max={pagination.totalPages}
+                          value={pagination.currentPage}
+                          onChange={(e) => {
+                            const page = parseInt(e.target.value);
+                            if (page >= 1 && page <= pagination.totalPages) {
+                              handlePageChange(page);
+                            }
+                          }}
+                          className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <span className="text-sm text-gray-600">
+                          من {pagination.totalPages}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
             </>
           )}
         </div>
@@ -1171,9 +1048,9 @@ export default function CustomersManagement() {
                 </div>
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  ×
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
@@ -1199,19 +1076,7 @@ export default function CustomersManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                          />
-                        </svg>
+                        <User className="w-4 h-4 ml-1" />
                         اسم العميل *
                       </span>
                     </label>
@@ -1237,19 +1102,7 @@ export default function CustomersManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                          />
-                        </svg>
+                        <Phone className="w-4 h-4 ml-1" />
                         رقم الهاتف *
                       </span>
                     </label>
@@ -1276,25 +1129,7 @@ export default function CustomersManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                        </svg>
+                        <MapPin className="w-4 h-4 ml-1" />
                         العنوان
                       </span>
                     </label>
@@ -1319,19 +1154,7 @@ export default function CustomersManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
-                          />
-                        </svg>
+                        <CreditCard className="w-4 h-4 ml-1" />
                         الرقم القومي
                       </span>
                     </label>
@@ -1342,51 +1165,35 @@ export default function CustomersManagement() {
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                    disabled={isAddingCustomer || isEditingCustomer}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <X className="w-4 h-4 ml-2" />
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
+                    disabled={isAddingCustomer || isEditingCustomer}
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ backgroundColor: "#193F94" }}
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      {editingCustomer ? (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                        />
-                      ) : (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      )}
-                    </svg>
-                    {editingCustomer ? "حفظ التعديلات" : "إضافة عميل"}
+                    {isAddingCustomer || isEditingCustomer ? (
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        {editingCustomer
+                          ? "جاري التحديث..."
+                          : "جاري الإضافة..."}
+                      </div>
+                    ) : (
+                      <>
+                        {editingCustomer ? (
+                          <Edit className="w-4 h-4 ml-2" />
+                        ) : (
+                          <Plus className="w-4 h-4 ml-2" />
+                        )}
+                        {editingCustomer ? "حفظ التعديلات" : "إضافة عميل"}
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

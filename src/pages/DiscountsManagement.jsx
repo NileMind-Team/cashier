@@ -10,6 +10,8 @@ import {
   FaTag,
   FaTrash,
   FaArrowLeft,
+  FaSave,
+  FaTimes,
 } from "react-icons/fa";
 
 export default function DiscountsManagement() {
@@ -29,6 +31,10 @@ export default function DiscountsManagement() {
     isPercentage: true,
     currentDiscount: 0,
   });
+  const [isSavingDiscount, setIsSavingDiscount] = useState(false);
+  const [isRemovingDiscount, setIsRemovingDiscount] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [isEditingDiscount, setIsEditingDiscount] = useState(false);
 
   const isFirstRender = useRef(true);
   const isFetching = useRef(false);
@@ -106,7 +112,7 @@ export default function DiscountsManagement() {
     return () => {
       isFetching.current = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getMainCategoriesWithDiscount = () => {
@@ -184,8 +190,9 @@ export default function DiscountsManagement() {
       return;
     }
 
+    setIsSavingDiscount(true);
+
     try {
-      setLoading(true);
       let response;
 
       if (discountForm.type === "mainCategory") {
@@ -241,7 +248,7 @@ export default function DiscountsManagement() {
         toast.error("حدث خطأ في تحديث الخصم");
       }
     } finally {
-      setLoading(false);
+      setIsSavingDiscount(false);
     }
   };
 
@@ -259,8 +266,8 @@ export default function DiscountsManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsRemovingDiscount(true);
       try {
-        setLoading(true);
         let response;
 
         if (type === "mainCategory") {
@@ -298,7 +305,7 @@ export default function DiscountsManagement() {
           toast.error("حدث خطأ في إلغاء الخصم");
         }
       } finally {
-        setLoading(false);
+        setIsRemovingDiscount(false);
       }
     }
   };
@@ -315,7 +322,6 @@ export default function DiscountsManagement() {
     return total;
   };
 
-  // حساب نسبة الخصم للمنتج
   const calculateDiscountPercentage = (product) => {
     if (product.price && product.discount && product.discount > 0) {
       return ((product.discount / product.price) * 100).toFixed(1);
@@ -348,7 +354,8 @@ export default function DiscountsManagement() {
             <>
               <button
                 onClick={() => handleEditDiscount(category, "mainCategory")}
-                className="p-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors border border-green-200"
+                disabled={isEditingDiscount}
+                className="p-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="إضافة/تعديل الخصم"
               >
                 <FaPercentage className="h-4 w-4" />
@@ -356,10 +363,15 @@ export default function DiscountsManagement() {
               {category.percentageDiscount > 0 && (
                 <button
                   onClick={() => handleRemoveDiscount(category, "mainCategory")}
-                  className="p-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors border border-red-200"
+                  disabled={isRemovingDiscount}
+                  className="p-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="إلغاء الخصم"
                 >
-                  <FaTrash className="h-4 w-4" />
+                  {isRemovingDiscount ? (
+                    <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <FaTrash className="h-4 w-4" />
+                  )}
                 </button>
               )}
             </>
@@ -369,7 +381,6 @@ export default function DiscountsManagement() {
     </div>
   );
 
-  // عرض عنصر الفئة الفرعية
   const renderSubCategoryItem = (subCategory, showActions = true) => (
     <div className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-200 transition-all">
       <div className="flex items-center justify-between">
@@ -396,7 +407,8 @@ export default function DiscountsManagement() {
             <>
               <button
                 onClick={() => handleEditDiscount(subCategory, "subCategory")}
-                className="p-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors border border-green-200"
+                disabled={isEditingDiscount}
+                className="p-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="إضافة/تعديل الخصم"
               >
                 <FaPercentage className="h-4 w-4" />
@@ -406,10 +418,15 @@ export default function DiscountsManagement() {
                   onClick={() =>
                     handleRemoveDiscount(subCategory, "subCategory")
                   }
-                  className="p-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors border border-red-200"
+                  disabled={isRemovingDiscount}
+                  className="p-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="إلغاء الخصم"
                 >
-                  <FaTrash className="h-4 w-4" />
+                  {isRemovingDiscount ? (
+                    <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <FaTrash className="h-4 w-4" />
+                  )}
                 </button>
               )}
             </>
@@ -475,7 +492,8 @@ export default function DiscountsManagement() {
             <>
               <button
                 onClick={() => handleEditDiscount(product, "product")}
-                className="p-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors border border-green-200"
+                disabled={isEditingDiscount}
+                className="p-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="إضافة/تعديل الخصم"
               >
                 <FaPercentage className="h-4 w-4" />
@@ -483,10 +501,15 @@ export default function DiscountsManagement() {
               {product.discount > 0 && (
                 <button
                   onClick={() => handleRemoveDiscount(product, "product")}
-                  className="p-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors border border-red-200"
+                  disabled={isRemovingDiscount}
+                  className="p-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="إلغاء الخصم"
                 >
-                  <FaTrash className="h-4 w-4" />
+                  {isRemovingDiscount ? (
+                    <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <FaTrash className="h-4 w-4" />
+                  )}
                 </button>
               )}
             </>
@@ -526,20 +549,7 @@ export default function DiscountsManagement() {
                 e.target.style.color = "#6B21A8";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <FaArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -815,9 +825,10 @@ export default function DiscountsManagement() {
                 </div>
                 <button
                   onClick={() => setEditingDiscount(null)}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                  disabled={isSavingDiscount}
+                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors disabled:opacity-50"
                 >
-                  ×
+                  <FaTimes className="h-6 w-6" />
                 </button>
               </div>
 
@@ -878,30 +889,29 @@ export default function DiscountsManagement() {
                   <button
                     type="button"
                     onClick={() => setEditingDiscount(null)}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                    disabled={isSavingDiscount}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <FaTimes className="w-4 h-4 ml-2" />
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
+                    disabled={isSavingDiscount}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
                     style={{ backgroundColor: "#6B21A8" }}
                   >
-                    <FaPercentage className="h-4 w-4 ml-2" />
-                    حفظ الخصم
+                    {isSavingDiscount ? (
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        جاري الحفظ...
+                      </div>
+                    ) : (
+                      <>
+                        <FaSave className="h-4 w-4 ml-2" />
+                        حفظ الخصم
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

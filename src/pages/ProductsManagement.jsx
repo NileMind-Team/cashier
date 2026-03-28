@@ -3,13 +3,34 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import axiosInstance from "../api/axiosInstance";
+import {
+  ArrowLeft,
+  Package,
+  CheckCircle,
+  XCircle,
+  Plus,
+  Edit,
+  Trash2,
+  Power,
+  PowerOff,
+  Percent,
+  X,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Image,
+  DollarSign,
+  FolderTree,
+  Grid3X3,
+} from "lucide-react";
 
 export default function ProductsManagement() {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [mainCategories, setMainCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
@@ -29,9 +50,17 @@ export default function ProductsManagement() {
     hasPreviousPage: false,
   });
 
-  const isFetchingProducts = useRef(false);
-  const isFetchingMainCategories = useRef(false);
-  const isFetchingSubCategories = useRef(false);
+  // Loading states for buttons
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [isEditingProduct, setIsEditingProduct] = useState(false);
+  const [isTogglingProduct, setIsTogglingProduct] = useState(false);
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false);
+  const [isAddingTax, setIsAddingTax] = useState(false);
+  const [isFetchingProducts, setIsFetchingProducts] = useState(false);
+
+  const isFetchingProductsRef = useRef(false);
+  const isFetchingMainCategoriesRef = useRef(false);
+  const isFetchingSubCategoriesRef = useRef(false);
   const isFirstRender = useRef(true);
 
   const [productForm, setProductForm] = useState({
@@ -48,14 +77,13 @@ export default function ProductsManagement() {
     pageNumber = pagination.currentPage,
     showLoading = true,
   ) => {
-    if (isFetchingProducts.current) {
-      console.log("هناك طلب منتجات قيد التنفيذ بالفعل، تجاهل الطلب الجديد");
+    if (isFetchingProductsRef.current) {
       return;
     }
 
     try {
-      isFetchingProducts.current = true;
-      if (showLoading) setLoading(true);
+      isFetchingProductsRef.current = true;
+      if (showLoading) setIsFetchingProducts(true);
 
       const response = await axiosInstance.post("/api/Items/GetAllItems", {
         pageNumber: pageNumber,
@@ -86,21 +114,18 @@ export default function ProductsManagement() {
         toast.error("حدث خطأ في جلب المنتجات");
       }
     } finally {
-      isFetchingProducts.current = false;
-      if (showLoading) setLoading(false);
+      isFetchingProductsRef.current = false;
+      if (showLoading) setIsFetchingProducts(false);
     }
   };
 
   const fetchMainCategories = async () => {
-    if (isFetchingMainCategories.current) {
-      console.log(
-        "هناك طلب فئات رئيسية قيد التنفيذ بالفعل، تجاهل الطلب الجديد",
-      );
+    if (isFetchingMainCategoriesRef.current) {
       return;
     }
 
     try {
-      isFetchingMainCategories.current = true;
+      isFetchingMainCategoriesRef.current = true;
 
       const response = await axiosInstance.get(
         "/api/MainCategories/GetAllMainCategories",
@@ -117,18 +142,17 @@ export default function ProductsManagement() {
     } catch (error) {
       console.error("خطأ في جلب الفئات الرئيسية:", error);
     } finally {
-      isFetchingMainCategories.current = false;
+      isFetchingMainCategoriesRef.current = false;
     }
   };
 
   const fetchSubCategories = async () => {
-    if (isFetchingSubCategories.current) {
-      console.log("هناك طلب فئات فرعية قيد التنفيذ بالفعل، تجاهل الطلب الجديد");
+    if (isFetchingSubCategoriesRef.current) {
       return;
     }
 
     try {
-      isFetchingSubCategories.current = true;
+      isFetchingSubCategoriesRef.current = true;
 
       const response = await axiosInstance.get(
         "/api/SubCategories/GetAllSubCategories",
@@ -139,7 +163,7 @@ export default function ProductsManagement() {
     } catch (error) {
       console.error("خطأ في جلب الفئات الفرعية:", error);
     } finally {
-      isFetchingSubCategories.current = false;
+      isFetchingSubCategoriesRef.current = false;
     }
   };
 
@@ -160,9 +184,9 @@ export default function ProductsManagement() {
     }
 
     return () => {
-      isFetchingProducts.current = false;
-      isFetchingMainCategories.current = false;
-      isFetchingSubCategories.current = false;
+      isFetchingProductsRef.current = false;
+      isFetchingMainCategoriesRef.current = false;
+      isFetchingSubCategoriesRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -344,6 +368,12 @@ export default function ProductsManagement() {
       return;
     }
 
+    if (editingProduct) {
+      setIsEditingProduct(true);
+    } else {
+      setIsAddingProduct(true);
+    }
+
     try {
       const productData = {
         name: productForm.name,
@@ -420,6 +450,9 @@ export default function ProductsManagement() {
       } else {
         toast.error("حدث خطأ في حفظ المنتج");
       }
+    } finally {
+      setIsAddingProduct(false);
+      setIsEditingProduct(false);
     }
   };
 
@@ -430,6 +463,8 @@ export default function ProductsManagement() {
       toast.error("يرجى إدخال قيمة ضريبة صحيحة");
       return;
     }
+
+    setIsAddingTax(true);
 
     try {
       const response = await axiosInstance.post("/api/Items/AddTax", null, {
@@ -463,6 +498,8 @@ export default function ProductsManagement() {
       } else {
         toast.error("حدث خطأ في إضافة الضريبة");
       }
+    } finally {
+      setIsAddingTax(false);
     }
   };
 
@@ -480,6 +517,7 @@ export default function ProductsManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsDeletingProduct(true);
       try {
         const response = await axiosInstance.delete(
           `/api/Items/Delete/${productId}`,
@@ -501,6 +539,8 @@ export default function ProductsManagement() {
       } catch (error) {
         console.error("خطأ في حذف المنتج:", error);
         toast.error("حدث خطأ في حذف المنتج");
+      } finally {
+        setIsDeletingProduct(false);
       }
     }
   };
@@ -521,6 +561,7 @@ export default function ProductsManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsTogglingProduct(true);
       try {
         const response = await axiosInstance.put(
           `/api/Items/SetAvailability/${productId}/${product.isAvailable ? "Active" : "Active"}`,
@@ -551,6 +592,8 @@ export default function ProductsManagement() {
         } else {
           toast.error("حدث خطأ في تغيير حالة المنتج");
         }
+      } finally {
+        setIsTogglingProduct(false);
       }
     }
   };
@@ -630,20 +673,7 @@ export default function ProductsManagement() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <ArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -651,7 +681,7 @@ export default function ProductsManagement() {
       </div>
 
       <div className="container mx-auto px-4 py-6">
-        {/* Professional Stats Cards with Modern Icons */}
+        {/* Professional Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {/* Total Products Card */}
           <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
@@ -674,20 +704,7 @@ export default function ProductsManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                  />
-                </svg>
+                <Package className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -716,20 +733,7 @@ export default function ProductsManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
-                </svg>
+                <CheckCircle className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -758,20 +762,7 @@ export default function ProductsManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-red-400 to-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                  />
-                </svg>
+                <XCircle className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -790,44 +781,37 @@ export default function ProductsManagement() {
             <div className="flex gap-2">
               <button
                 onClick={handleOpenTaxModal}
-                className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center whitespace-nowrap shadow-md"
+                disabled={isAddingTax}
+                className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center whitespace-nowrap shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 ml-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2zm-8-5h.01M9 14l6-6m-5.5.5h.01m4.99 5h.01"
-                  />
-                </svg>
-                إضافة الضريبة
+                {isAddingTax ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                    جاري الإضافة...
+                  </>
+                ) : (
+                  <>
+                    <Percent className="h-5 w-5 ml-2" />
+                    إضافة الضريبة
+                  </>
+                )}
               </button>
               <button
                 onClick={handleAddProduct}
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center whitespace-nowrap shadow-md"
-                style={{ backgroundColor: "#193F94" }}
+                disabled={isAddingProduct}
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center whitespace-nowrap shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 ml-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
-                إضافة منتج جديد
+                {isAddingProduct ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                    جاري الإضافة...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-5 w-5 ml-2" />
+                    إضافة منتج جديد
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -837,7 +821,7 @@ export default function ProductsManagement() {
           id="products-table-container"
           className="bg-white rounded-2xl shadow-lg overflow-hidden"
         >
-          {loading || categoriesLoading ? (
+          {isFetchingProducts || categoriesLoading ? (
             <div className="p-8 flex flex-col items-center justify-center">
               <div className="w-16 h-16 border-t-4 border-blue-600 border-solid rounded-full animate-spin mb-4"></div>
               <p className="text-gray-600">جاري تحميل المنتجات...</p>
@@ -876,20 +860,7 @@ export default function ProductsManagement() {
                           className="py-8 px-4 text-center text-gray-500"
                         >
                           <div className="flex flex-col items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-12 w-12 text-gray-300 mb-3"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1}
-                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                              />
-                            </svg>
+                            <Package className="h-12 w-12 text-gray-300 mb-3" />
                             <p className="text-lg font-medium text-gray-400">
                               لا يوجد منتجات
                             </p>
@@ -996,78 +967,47 @@ export default function ProductsManagement() {
                             <div className="flex flex-col space-y-2">
                               <button
                                 onClick={() => handleEditProduct(product)}
-                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-blue-200"
+                                disabled={isEditingProduct}
+                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                  />
-                                </svg>
+                                <Edit className="h-3 w-3 ml-1" />
                                 تعديل
                               </button>
                               <button
                                 onClick={() =>
                                   handleToggleProductStatus(product.id)
                                 }
-                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border ${
+                                disabled={isTogglingProduct}
+                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border disabled:opacity-50 disabled:cursor-not-allowed ${
                                   product.isAvailable
                                     ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
                                     : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                                 }`}
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  {product.isAvailable ? (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                    />
-                                  ) : (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                                    />
-                                  )}
-                                </svg>
-                                {product.isAvailable ? "تعطيل" : "تفعيل"}
+                                {isTogglingProduct ? (
+                                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-1"></div>
+                                ) : product.isAvailable ? (
+                                  <PowerOff className="h-3 w-3 ml-1" />
+                                ) : (
+                                  <Power className="h-3 w-3 ml-1" />
+                                )}
+                                {isTogglingProduct
+                                  ? "جاري..."
+                                  : product.isAvailable
+                                    ? "تعطيل"
+                                    : "تفعيل"}
                               </button>
                               <button
                                 onClick={() => handleDeleteProduct(product.id)}
-                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200"
+                                disabled={isDeletingProduct}
+                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                                حذف
+                                {isDeletingProduct ? (
+                                  <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                ) : (
+                                  <Trash2 className="h-3 w-3 ml-1" />
+                                )}
+                                {isDeletingProduct ? "جاري الحذف..." : "حذف"}
                               </button>
                             </div>
                           </td>
@@ -1093,19 +1033,7 @@ export default function ProductsManagement() {
                         }`}
                         title="الصفحة الأولى"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                          />
-                        </svg>
+                        <ChevronsRight className="w-5 h-5" />
                       </button>
 
                       {/* Previous Page Button */}
@@ -1121,19 +1049,7 @@ export default function ProductsManagement() {
                         }`}
                         title="الصفحة السابقة"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
+                        <ChevronRight className="w-5 h-5" />
                       </button>
 
                       {/* Page Numbers */}
@@ -1175,19 +1091,7 @@ export default function ProductsManagement() {
                         }`}
                         title="الصفحة التالية"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 19l-7-7 7-7"
-                          />
-                        </svg>
+                        <ChevronLeft className="w-5 h-5" />
                       </button>
 
                       {/* Last Page Button */}
@@ -1201,19 +1105,7 @@ export default function ProductsManagement() {
                         }`}
                         title="الصفحة الأخيرة"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                          />
-                        </svg>
+                        <ChevronsLeft className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
@@ -1268,9 +1160,9 @@ export default function ProductsManagement() {
                 </div>
                 <button
                   onClick={() => setShowTaxModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  ×
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
@@ -1300,19 +1192,7 @@ export default function ProductsManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2zm-8-5h.01M9 14l6-6m-5.5.5h.01m4.99 5h.01"
-                          />
-                        </svg>
+                        <Percent className="w-4 h-4 ml-1" />
                         قيمة الضريبة (%) *
                       </span>
                     </label>
@@ -1363,39 +1243,29 @@ export default function ProductsManagement() {
                     onClick={() => setShowTaxModal(false)}
                     className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <X className="w-4 h-4 ml-2" />
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
+                    disabled={isAddingTax}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm ${
+                      isAddingTax
+                        ? "opacity-50 cursor-not-allowed"
+                        : "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
+                    }`}
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                      />
-                    </svg>
-                    إضافة الضريبة
+                    {isAddingTax ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        جاري الإضافة...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 ml-2" />
+                        إضافة الضريبة
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -1425,9 +1295,9 @@ export default function ProductsManagement() {
                 </div>
                 <button
                   onClick={() => setShowProductModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  ×
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
@@ -1453,19 +1323,7 @@ export default function ProductsManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                          />
-                        </svg>
+                        <Package className="w-4 h-4 ml-1" />
                         اسم المنتج *
                       </span>
                     </label>
@@ -1495,19 +1353,7 @@ export default function ProductsManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
+                        <DollarSign className="w-4 h-4 ml-1" />
                         السعر *
                       </span>
                     </label>
@@ -1535,19 +1381,7 @@ export default function ProductsManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
+                        <Image className="w-4 h-4 ml-1" />
                         رابط الصورة
                       </span>
                     </label>
@@ -1597,36 +1431,12 @@ export default function ProductsManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                          />
-                        </svg>
+                        <FolderTree className="w-4 h-4 ml-1" />
                         الفئة الرئيسية *
                       </span>
                     </label>
                     <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
+                      <ChevronDown className="w-4 h-4" />
                     </div>
                   </div>
 
@@ -1659,36 +1469,12 @@ export default function ProductsManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l5 5a2 2 0 01.586 1.414V19a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z"
-                          />
-                        </svg>
+                        <Grid3X3 className="w-4 h-4 ml-1" />
                         الفئة الفرعية *
                       </span>
                     </label>
                     <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
+                      <ChevronDown className="w-4 h-4" />
                     </div>
                   </div>
                 </div>
@@ -1699,49 +1485,37 @@ export default function ProductsManagement() {
                     onClick={() => setShowProductModal(false)}
                     className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <X className="w-4 h-4 ml-2" />
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
-                    style={{ backgroundColor: "#193F94" }}
+                    disabled={isAddingProduct || isEditingProduct}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm ${
+                      isAddingProduct || isEditingProduct
+                        ? "opacity-50 cursor-not-allowed bg-gray-400"
+                        : ""
+                    }`}
+                    style={{
+                      backgroundColor:
+                        isAddingProduct || isEditingProduct ? "" : "#193F94",
+                    }}
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      {editingProduct ? (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                        />
-                      ) : (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      )}
-                    </svg>
-                    {editingProduct ? "حفظ التعديلات" : "إضافة منتج"}
+                    {isAddingProduct || isEditingProduct ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        {editingProduct ? "جاري التحديث..." : "جاري الإضافة..."}
+                      </>
+                    ) : (
+                      <>
+                        {editingProduct ? (
+                          <Edit className="w-4 h-4 ml-2" />
+                        ) : (
+                          <Plus className="w-4 h-4 ml-2" />
+                        )}
+                        {editingProduct ? "حفظ التعديلات" : "إضافة منتج"}
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

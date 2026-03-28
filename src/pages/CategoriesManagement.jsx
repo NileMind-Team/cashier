@@ -3,6 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import axiosInstance from "../api/axiosInstance";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Power,
+  PowerOff,
+  ArrowLeft,
+  X,
+  ChevronDown,
+  FolderPlus,
+  Save,
+} from "lucide-react";
 
 export default function CategoriesManagement() {
   const navigate = useNavigate();
@@ -16,6 +28,14 @@ export default function CategoriesManagement() {
   const [selectedMainCategory, setSelectedMainCategory] = useState(null);
   const [focusedField, setFocusedField] = useState(null);
   const hasFetched = useRef(false);
+  const [isAddingMainCategory, setIsAddingMainCategory] = useState(false);
+  const [isEditingMainCategory, setIsEditingMainCategory] = useState(false);
+  const [isTogglingMainCategory, setIsTogglingMainCategory] = useState(false);
+  const [isDeletingMainCategory, setIsDeletingMainCategory] = useState(false);
+  const [isAddingSubCategory, setIsAddingSubCategory] = useState(false);
+  const [isEditingSubCategory, setIsEditingSubCategory] = useState(false);
+  const [isTogglingSubCategory, setIsTogglingSubCategory] = useState(false);
+  const [isDeletingSubCategory, setIsDeletingSubCategory] = useState(false);
 
   const [mainCategoryForm, setMainCategoryForm] = useState({
     name: "",
@@ -170,10 +190,16 @@ export default function CategoriesManagement() {
       return;
     }
 
+    if (editingMainCategory) {
+      setIsEditingMainCategory(true);
+    } else {
+      setIsAddingMainCategory(true);
+    }
+
     try {
       if (editingMainCategory) {
         const response = await axiosInstance.put(
-          `/api/MainCategories/UpdateMainCategory/${editingMainCategory.id}`,
+          `/api/MainCategories/Update/${editingMainCategory.id}`,
           {
             name: mainCategoryForm.name,
             isActive: mainCategoryForm.isActive,
@@ -195,11 +221,10 @@ export default function CategoriesManagement() {
           isActive: mainCategoryForm.isActive,
         });
 
-        if (response.status === 201) {
+        if (response.status === 201 || response.status === 200) {
           await fetchAllData();
           toast.success("تم إضافة الفئة الرئيسية بنجاح");
           setShowMainCategoryModal(false);
-          setEditingMainCategory(null);
         } else {
           toast.error("فشل في إضافة الفئة الرئيسية");
         }
@@ -221,17 +246,12 @@ export default function CategoriesManagement() {
         } else {
           toast.error("حدث خطأ في حفظ الفئة الرئيسية");
         }
-      } else if (
-        error.response?.status === 201 ||
-        error.response?.status === 200
-      ) {
-        await fetchAllData();
-        toast.success("تم حفظ الفئة الرئيسية بنجاح");
-        setShowMainCategoryModal(false);
-        setEditingMainCategory(null);
       } else {
         toast.error("حدث خطأ في حفظ الفئة الرئيسية");
       }
+    } finally {
+      setIsAddingMainCategory(false);
+      setIsEditingMainCategory(false);
     }
   };
 
@@ -248,13 +268,20 @@ export default function CategoriesManagement() {
       return;
     }
 
+    if (editingSubCategory) {
+      setIsEditingSubCategory(true);
+    } else {
+      setIsAddingSubCategory(true);
+    }
+
     try {
       if (editingSubCategory) {
         const response = await axiosInstance.put(
-          `/api/SubCategories/UpdateSubCategory/${editingSubCategory.id}`,
+          `/api/SubCategories/Update/${editingSubCategory.id}`,
           {
             name: subCategoryForm.name,
             mainCategoryId: parseInt(subCategoryForm.mainCategoryId),
+            printIP: subCategoryForm.printIP || "",
           },
         );
 
@@ -281,11 +308,10 @@ export default function CategoriesManagement() {
           printIP: subCategoryForm.printIP || "",
         });
 
-        if (response.status === 201) {
+        if (response.status === 201 || response.status === 200) {
           await fetchAllData();
           toast.success("تم إضافة الفئة الفرعية بنجاح");
           setShowSubCategoryModal(false);
-          setEditingSubCategory(null);
 
           const addedMainCategory = mainCategories.find(
             (cat) => cat.id === parseInt(subCategoryForm.mainCategoryId),
@@ -314,24 +340,12 @@ export default function CategoriesManagement() {
         } else {
           toast.error("حدث خطأ في حفظ الفئة الفرعية");
         }
-      } else if (
-        error.response?.status === 201 ||
-        error.response?.status === 200
-      ) {
-        await fetchAllData();
-        toast.success("تم حفظ الفئة الفرعية بنجاح");
-        setShowSubCategoryModal(false);
-        setEditingSubCategory(null);
-
-        const addedMainCategory = mainCategories.find(
-          (cat) => cat.id === parseInt(subCategoryForm.mainCategoryId),
-        );
-        if (addedMainCategory) {
-          setSelectedMainCategory(addedMainCategory);
-        }
       } else {
         toast.error("حدث خطأ في حفظ الفئة الفرعية");
       }
+    } finally {
+      setIsAddingSubCategory(false);
+      setIsEditingSubCategory(false);
     }
   };
 
@@ -349,6 +363,7 @@ export default function CategoriesManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsDeletingMainCategory(true);
       try {
         const response = await axiosInstance.delete(
           `/api/MainCategories/Delete/${categoryId}`,
@@ -379,6 +394,8 @@ export default function CategoriesManagement() {
         } else {
           toast.error("حدث خطأ في حذف الفئة الرئيسية");
         }
+      } finally {
+        setIsDeletingMainCategory(false);
       }
     }
   };
@@ -397,6 +414,7 @@ export default function CategoriesManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsDeletingSubCategory(true);
       try {
         const response = await axiosInstance.delete(
           `/api/SubCategories/Delete/${subCategoryId}`,
@@ -425,6 +443,8 @@ export default function CategoriesManagement() {
         } else {
           toast.error("حدث خطأ في حذف الفئة الفرعية");
         }
+      } finally {
+        setIsDeletingSubCategory(false);
       }
     }
   };
@@ -445,6 +465,7 @@ export default function CategoriesManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsTogglingMainCategory(true);
       try {
         const response = await axiosInstance.put(
           `/api/MainCategories/SetActivation/${categoryId}/Active?isActive=${!category.isActive}`,
@@ -459,6 +480,8 @@ export default function CategoriesManagement() {
       } catch (error) {
         console.error(`خطأ في ${action} الفئة:`, error);
         toast.error(`حدث خطأ في ${action} الفئة`);
+      } finally {
+        setIsTogglingMainCategory(false);
       }
     }
   };
@@ -479,6 +502,7 @@ export default function CategoriesManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsTogglingSubCategory(true);
       try {
         const response = await axiosInstance.put(
           `/api/SubCategories/SetActivation/${subCategoryId}/Active?isActive=${!subCategory.isActive}`,
@@ -493,6 +517,8 @@ export default function CategoriesManagement() {
       } catch (error) {
         console.error(`خطأ في ${action} الفئة الفرعية:`, error);
         toast.error(`حدث خطأ في ${action} الفئة الفرعية`);
+      } finally {
+        setIsTogglingSubCategory(false);
       }
     }
   };
@@ -531,20 +557,7 @@ export default function CategoriesManagement() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <ArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -565,24 +578,21 @@ export default function CategoriesManagement() {
               </div>
               <button
                 onClick={handleAddMainCategory}
-                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center shadow-md"
+                disabled={isAddingMainCategory}
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{ backgroundColor: "#193F94" }}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 ml-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
-                إضافة فئة رئيسية
+                {isAddingMainCategory ? (
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                    جاري الإضافة...
+                  </div>
+                ) : (
+                  <>
+                    <Plus className="h-5 w-5 ml-2" />
+                    إضافة فئة رئيسية
+                  </>
+                )}
               </button>
             </div>
 
@@ -594,20 +604,7 @@ export default function CategoriesManagement() {
             ) : mainCategories.length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-gray-400 mb-3">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-16 w-16 mx-auto"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1}
-                      d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
-                    />
-                  </svg>
+                  <FolderPlus className="h-16 w-16 mx-auto" />
                 </div>
                 <p className="text-gray-500">لا توجد فئات رئيسية</p>
                 <p className="text-sm text-gray-400 mt-1">
@@ -667,22 +664,10 @@ export default function CategoriesManagement() {
                           e.stopPropagation();
                           handleEditMainCategory(category);
                         }}
-                        className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-blue-200"
+                        disabled={isEditingMainCategory}
+                        className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-3 w-3 ml-1"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
+                        <Edit className="h-3 w-3 ml-1" />
                         تعديل
                       </button>
                       <button
@@ -690,59 +675,40 @@ export default function CategoriesManagement() {
                           e.stopPropagation();
                           handleToggleMainCategoryStatus(category.id);
                         }}
-                        className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center border ${
+                        disabled={isTogglingMainCategory}
+                        className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center border disabled:opacity-50 disabled:cursor-not-allowed ${
                           category.isActive
                             ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
                             : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                         }`}
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-3 w-3 ml-1"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          {category.isActive ? (
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                            />
-                          ) : (
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M13 10V3L4 14h7v7l9-11h-7z"
-                            />
-                          )}
-                        </svg>
-                        {category.isActive ? "تعطيل" : "تفعيل"}
+                        {isTogglingMainCategory ? (
+                          <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-1"></div>
+                        ) : category.isActive ? (
+                          <PowerOff className="h-3 w-3 ml-1" />
+                        ) : (
+                          <Power className="h-3 w-3 ml-1" />
+                        )}
+                        {isTogglingMainCategory
+                          ? "جاري..."
+                          : category.isActive
+                            ? "تعطيل"
+                            : "تفعيل"}
                       </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteMainCategory(category.id);
                         }}
-                        className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200"
+                        disabled={isDeletingMainCategory}
+                        className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-3 w-3 ml-1"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                        حذف
+                        {isDeletingMainCategory ? (
+                          <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                        ) : (
+                          <Trash2 className="h-3 w-3 ml-1" />
+                        )}
+                        {isDeletingMainCategory ? "جاري الحذف..." : "حذف"}
                       </button>
                     </div>
                   </div>
@@ -773,23 +739,20 @@ export default function CategoriesManagement() {
               </div>
               <button
                 onClick={handleAddSubCategory}
-                className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center shadow-md"
+                disabled={isAddingSubCategory}
+                className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 ml-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
-                إضافة فئة فرعية
+                {isAddingSubCategory ? (
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                    جاري الإضافة...
+                  </div>
+                ) : (
+                  <>
+                    <Plus className="h-5 w-5 ml-2" />
+                    إضافة فئة فرعية
+                  </>
+                )}
               </button>
             </div>
 
@@ -807,20 +770,7 @@ export default function CategoriesManagement() {
                     .length === 0 ? (
                     <div className="text-center py-8">
                       <div className="text-gray-400 mb-3">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-16 w-16 mx-auto"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1}
-                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                          />
-                        </svg>
+                        <FolderPlus className="h-16 w-16 mx-auto" />
                       </div>
                       <p className="text-gray-500">لا توجد فئات فرعية</p>
                       <p className="text-sm text-gray-400 mt-1">
@@ -885,80 +835,51 @@ export default function CategoriesManagement() {
                                 onClick={() =>
                                   handleEditSubCategory(subCategory)
                                 }
-                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-blue-200"
+                                disabled={isEditingSubCategory}
+                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                  />
-                                </svg>
+                                <Edit className="h-3 w-3 ml-1" />
                                 تعديل
                               </button>
                               <button
                                 onClick={() =>
                                   handleToggleSubCategoryStatus(subCategory.id)
                                 }
-                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center border ${
+                                disabled={isTogglingSubCategory}
+                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center border disabled:opacity-50 disabled:cursor-not-allowed ${
                                   subCategory.isActive
                                     ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
                                     : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                                 }`}
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  {subCategory.isActive ? (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                    />
-                                  ) : (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                                    />
-                                  )}
-                                </svg>
-                                {subCategory.isActive ? "تعطيل" : "تفعيل"}
+                                {isTogglingSubCategory ? (
+                                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-1"></div>
+                                ) : subCategory.isActive ? (
+                                  <PowerOff className="h-3 w-3 ml-1" />
+                                ) : (
+                                  <Power className="h-3 w-3 ml-1" />
+                                )}
+                                {isTogglingSubCategory
+                                  ? "جاري..."
+                                  : subCategory.isActive
+                                    ? "تعطيل"
+                                    : "تفعيل"}
                               </button>
                               <button
                                 onClick={() =>
                                   handleDeleteSubCategory(subCategory.id)
                                 }
-                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200"
+                                disabled={isDeletingSubCategory}
+                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                                حذف
+                                {isDeletingSubCategory ? (
+                                  <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                ) : (
+                                  <Trash2 className="h-3 w-3 ml-1" />
+                                )}
+                                {isDeletingSubCategory
+                                  ? "جاري الحذف..."
+                                  : "حذف"}
                               </button>
                             </div>
                           </div>
@@ -969,20 +890,7 @@ export default function CategoriesManagement() {
                 ) : (
                   <div className="text-center py-8">
                     <div className="text-gray-400 mb-3">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-16 w-16 mx-auto"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1}
-                          d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
+                      <FolderPlus className="h-16 w-16 mx-auto" />
                     </div>
                     <p className="text-gray-500">اختر فئة رئيسية</p>
                     <p className="text-sm text-gray-400 mt-1">
@@ -1020,7 +928,7 @@ export default function CategoriesManagement() {
                   onClick={() => setShowMainCategoryModal(false)}
                   className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
                 >
-                  ×
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
@@ -1047,19 +955,7 @@ export default function CategoriesManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                          />
-                        </svg>
+                        <FolderPlus className="w-4 h-4 ml-1" />
                         اسم الفئة الرئيسية *
                       </span>
                     </label>
@@ -1070,51 +966,37 @@ export default function CategoriesManagement() {
                   <button
                     type="button"
                     onClick={() => setShowMainCategoryModal(false)}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                    disabled={isAddingMainCategory || isEditingMainCategory}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <X className="w-4 h-4 ml-2" />
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
+                    disabled={isAddingMainCategory || isEditingMainCategory}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
                     style={{ backgroundColor: "#193F94" }}
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      {editingMainCategory ? (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                        />
-                      ) : (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      )}
-                    </svg>
-                    {editingMainCategory ? "حفظ التعديلات" : "إضافة فئة"}
+                    {isAddingMainCategory || isEditingMainCategory ? (
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        {editingMainCategory
+                          ? "جاري التحديث..."
+                          : "جاري الإضافة..."}
+                      </div>
+                    ) : (
+                      <>
+                        {editingMainCategory ? (
+                          <Save className="w-4 h-4 ml-2" />
+                        ) : (
+                          <Plus className="w-4 h-4 ml-2" />
+                        )}
+                        {editingMainCategory
+                          ? "حفظ التعديلات"
+                          : "إضافة فئة رئيسية"}
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -1145,7 +1027,7 @@ export default function CategoriesManagement() {
                   onClick={() => setShowSubCategoryModal(false)}
                   className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
                 >
-                  ×
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
@@ -1172,19 +1054,7 @@ export default function CategoriesManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l5 5a2 2 0 01.586 1.414V19a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z"
-                          />
-                        </svg>
+                        <FolderPlus className="w-4 h-4 ml-1" />
                         اسم الفئة الفرعية *
                       </span>
                     </label>
@@ -1218,36 +1088,12 @@ export default function CategoriesManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                          />
-                        </svg>
+                        <FolderPlus className="w-4 h-4 ml-1" />
                         الفئة الرئيسية *
                       </span>
                     </label>
                     <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
+                      <ChevronDown className="w-4 h-4" />
                     </div>
                   </div>
                 </div>
@@ -1256,51 +1102,37 @@ export default function CategoriesManagement() {
                   <button
                     type="button"
                     onClick={() => setShowSubCategoryModal(false)}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                    disabled={isAddingSubCategory || isEditingSubCategory}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <X className="w-4 h-4 ml-2" />
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
+                    disabled={isAddingSubCategory || isEditingSubCategory}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
                     style={{ backgroundColor: "#10B981" }}
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      {editingSubCategory ? (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                        />
-                      ) : (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      )}
-                    </svg>
-                    {editingSubCategory ? "حفظ التعديلات" : "إضافة فئة فرعية"}
+                    {isAddingSubCategory || isEditingSubCategory ? (
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        {editingSubCategory
+                          ? "جاري التحديث..."
+                          : "جاري الإضافة..."}
+                      </div>
+                    ) : (
+                      <>
+                        {editingSubCategory ? (
+                          <Save className="w-4 h-4 ml-2" />
+                        ) : (
+                          <Plus className="w-4 h-4 ml-2" />
+                        )}
+                        {editingSubCategory
+                          ? "حفظ التعديلات"
+                          : "إضافة فئة فرعية"}
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

@@ -4,13 +4,18 @@ import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import axiosInstance from "../api/axiosInstance";
 import {
-  FaChair,
-  FaTable,
-  FaPlus,
-  FaEdit,
-  FaTrash,
-  FaCircle,
-} from "react-icons/fa";
+  Plus,
+  Edit,
+  Trash2,
+  Power,
+  PowerOff,
+  ArrowLeft,
+  X,
+  ChevronDown,
+  Save,
+  Table as TableIcon,
+} from "lucide-react";
+import { FaChair } from "react-icons/fa6";
 
 export default function HallsManagement() {
   const navigate = useNavigate();
@@ -24,6 +29,13 @@ export default function HallsManagement() {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
   const hasFetched = useRef(false);
+  const [isAddingHall, setIsAddingHall] = useState(false);
+  const [isEditingHall, setIsEditingHall] = useState(false);
+  const [isDeletingHall, setIsDeletingHall] = useState(false);
+  const [isAddingTable, setIsAddingTable] = useState(false);
+  const [isEditingTable, setIsEditingTable] = useState(false);
+  const [isDeletingTable, setIsDeletingTable] = useState(false);
+  const [isTogglingTable, setIsTogglingTable] = useState(false);
 
   const [hallForm, setHallForm] = useState({
     name: "",
@@ -175,6 +187,12 @@ export default function HallsManagement() {
       return;
     }
 
+    if (editingHall) {
+      setIsEditingHall(true);
+    } else {
+      setIsAddingHall(true);
+    }
+
     try {
       if (editingHall) {
         const response = await axiosInstance.put(
@@ -202,7 +220,6 @@ export default function HallsManagement() {
           await fetchAllData();
           toast.success("تم إضافة الصالة بنجاح");
           setShowHallModal(false);
-          setEditingHall(null);
         } else {
           toast.error("فشل في إضافة الصالة");
         }
@@ -217,6 +234,9 @@ export default function HallsManagement() {
       } else {
         toast.error("حدث خطأ في حفظ الصالة");
       }
+    } finally {
+      setIsAddingHall(false);
+      setIsEditingHall(false);
     }
   };
 
@@ -241,6 +261,7 @@ export default function HallsManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsDeletingHall(true);
       try {
         const response = await axiosInstance.delete(
           `/api/Hall/Delete/${hallId}`,
@@ -255,6 +276,8 @@ export default function HallsManagement() {
       } catch (error) {
         console.error("خطأ في حذف الصالة:", error);
         toast.error("حدث خطأ في حذف الصالة");
+      } finally {
+        setIsDeletingHall(false);
       }
     }
   };
@@ -288,6 +311,8 @@ export default function HallsManagement() {
       return;
     }
 
+    setIsAddingTable(true);
+
     try {
       const tableName = generateTableName(selectedHall.id);
 
@@ -310,6 +335,8 @@ export default function HallsManagement() {
       } else {
         toast.error("حدث خطأ في إضافة الطاولة");
       }
+    } finally {
+      setIsAddingTable(false);
     }
   };
 
@@ -358,6 +385,8 @@ export default function HallsManagement() {
       return;
     }
 
+    setIsEditingTable(true);
+
     try {
       const response = await axiosInstance.put(
         `/api/Table/Update/${editingTable.id}`,
@@ -386,6 +415,8 @@ export default function HallsManagement() {
       } else {
         toast.error("حدث خطأ في تحديث الطاولة");
       }
+    } finally {
+      setIsEditingTable(false);
     }
   };
 
@@ -408,6 +439,7 @@ export default function HallsManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsDeletingTable(true);
       try {
         const response = await axiosInstance.delete(
           `/api/Table/Delete/${tableId}`,
@@ -422,6 +454,8 @@ export default function HallsManagement() {
       } catch (error) {
         console.error("خطأ في حذف الطاولة:", error);
         toast.error("حدث خطأ في حذف الطاولة");
+      } finally {
+        setIsDeletingTable(false);
       }
     }
   };
@@ -456,6 +490,7 @@ export default function HallsManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsTogglingTable(true);
       try {
         const response = await axiosInstance.put(
           `/api/Table/Update/${table.id}`,
@@ -475,6 +510,8 @@ export default function HallsManagement() {
       } catch (error) {
         console.error(`خطأ في ${action} الطاولة:`, error);
         toast.error(`حدث خطأ في ${action} الطاولة`);
+      } finally {
+        setIsTogglingTable(false);
       }
     }
   };
@@ -522,7 +559,7 @@ export default function HallsManagement() {
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
                 <span className="text-white font-bold">
-                  <FaChair />
+                  <FaChair className="h-5 w-5" />
                 </span>
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
@@ -542,20 +579,7 @@ export default function HallsManagement() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <ArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -576,11 +600,21 @@ export default function HallsManagement() {
               </div>
               <button
                 onClick={handleAddHall}
-                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center shadow-md"
+                disabled={isAddingHall}
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{ backgroundColor: "#193F94" }}
               >
-                <FaPlus className="h-5 w-5 ml-2" />
-                إضافة صالة
+                {isAddingHall ? (
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                    جاري الإضافة...
+                  </div>
+                ) : (
+                  <>
+                    <Plus className="h-5 w-5 ml-2" />
+                    إضافة صالة
+                  </>
+                )}
               </button>
             </div>
 
@@ -652,9 +686,10 @@ export default function HallsManagement() {
                             e.stopPropagation();
                             handleEditHall(hall);
                           }}
-                          className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-blue-200"
+                          disabled={isEditingHall}
+                          className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <FaEdit className="h-3 w-3 ml-1" />
+                          <Edit className="h-3 w-3 ml-1" />
                           تعديل
                         </button>
                         <button
@@ -662,10 +697,15 @@ export default function HallsManagement() {
                             e.stopPropagation();
                             handleDeleteHall(hall.id);
                           }}
-                          className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200"
+                          disabled={isDeletingHall}
+                          className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <FaTrash className="h-3 w-3 ml-1" />
-                          حذف
+                          {isDeletingHall ? (
+                            <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                          ) : (
+                            <Trash2 className="h-3 w-3 ml-1" />
+                          )}
+                          {isDeletingHall ? "جاري الحذف..." : "حذف"}
                         </button>
                       </div>
                     </div>
@@ -703,10 +743,20 @@ export default function HallsManagement() {
               {selectedHall && !selectedHall.isCompleted && (
                 <button
                   onClick={handleAddTable}
-                  className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center shadow-md"
+                  disabled={isAddingTable}
+                  className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
-                  <FaPlus className="h-5 w-5 ml-2" />
-                  إضافة طاولة
+                  {isAddingTable ? (
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                      جاري الإضافة...
+                    </div>
+                  ) : (
+                    <>
+                      <Plus className="h-5 w-5 ml-2" />
+                      إضافة طاولة
+                    </>
+                  )}
                 </button>
               )}
             </div>
@@ -722,7 +772,7 @@ export default function HallsManagement() {
                   getTablesForHall(selectedHall.id).length === 0 ? (
                     <div className="text-center py-8">
                       <div className="text-gray-400 mb-3">
-                        <FaTable className="h-16 w-16 mx-auto opacity-50" />
+                        <TableIcon className="h-16 w-16 mx-auto opacity-50" />
                       </div>
                       <p className="text-gray-500">لا توجد طاولات</p>
                       {!selectedHall.isCompleted && (
@@ -772,37 +822,53 @@ export default function HallsManagement() {
                             <div className="flex justify-end space-x-2 rtl:space-x-reverse mt-3">
                               <button
                                 onClick={() => handleEditTable(table)}
-                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-blue-200"
+                                disabled={isEditingTable}
+                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <FaEdit className="h-3 w-3 ml-1" />
+                                <Edit className="h-3 w-3 ml-1" />
                                 تعديل
                               </button>
                               {table.status !== TableStatus.OutOfService && (
                                 <button
                                   onClick={() => handleToggleTableStatus(table)}
-                                  className="text-xs bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-amber-200"
+                                  disabled={isTogglingTable}
+                                  className="text-xs bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-amber-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  <FaCircle className="h-2 w-2 ml-1" />
-                                  تعطيل
+                                  {isTogglingTable ? (
+                                    <div className="w-3 h-3 border-2 border-amber-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                  ) : (
+                                    <PowerOff className="h-3 w-3 ml-1" />
+                                  )}
+                                  {isTogglingTable ? "جاري..." : "تعطيل"}
                                 </button>
                               )}
                               {table.status === TableStatus.OutOfService && (
                                 <button
                                   onClick={() => handleToggleTableStatus(table)}
-                                  className="text-xs bg-green-50 hover:bg-green-100 text-green-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-green-200"
+                                  disabled={isTogglingTable}
+                                  className="text-xs bg-green-50 hover:bg-green-100 text-green-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  <FaPlus className="h-3 w-3 ml-1" />
-                                  تفعيل
+                                  {isTogglingTable ? (
+                                    <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                  ) : (
+                                    <Power className="h-3 w-3 ml-1" />
+                                  )}
+                                  {isTogglingTable ? "جاري..." : "تفعيل"}
                                 </button>
                               )}
                               <button
                                 onClick={() =>
                                   handleDeleteTable(table.id, table.name)
                                 }
-                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200"
+                                disabled={isDeletingTable}
+                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <FaTrash className="h-3 w-3 ml-1" />
-                                حذف
+                                {isDeletingTable ? (
+                                  <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                ) : (
+                                  <Trash2 className="h-3 w-3 ml-1" />
+                                )}
+                                {isDeletingTable ? "جاري الحذف..." : "حذف"}
                               </button>
                             </div>
                           )}
@@ -820,7 +886,7 @@ export default function HallsManagement() {
                 ) : (
                   <div className="text-center py-8">
                     <div className="text-gray-400 mb-3">
-                      <FaTable className="h-16 w-16 mx-auto opacity-50" />
+                      <TableIcon className="h-16 w-16 mx-auto opacity-50" />
                     </div>
                     <p className="text-gray-500">اختر صالة</p>
                     <p className="text-sm text-gray-400 mt-1">
@@ -856,7 +922,7 @@ export default function HallsManagement() {
                   onClick={() => setShowHallModal(false)}
                   className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
                 >
-                  ×
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
@@ -893,51 +959,33 @@ export default function HallsManagement() {
                   <button
                     type="button"
                     onClick={() => setShowHallModal(false)}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                    disabled={isAddingHall || isEditingHall}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <X className="w-4 h-4 ml-2" />
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
+                    disabled={isAddingHall || isEditingHall}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
                     style={{ backgroundColor: "#193F94" }}
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      {editingHall ? (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                        />
-                      ) : (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      )}
-                    </svg>
-                    {editingHall ? "حفظ التعديلات" : "إضافة صالة"}
+                    {isAddingHall || isEditingHall ? (
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        {editingHall ? "جاري التحديث..." : "جاري الإضافة..."}
+                      </div>
+                    ) : (
+                      <>
+                        {editingHall ? (
+                          <Save className="w-4 h-4 ml-2" />
+                        ) : (
+                          <Plus className="w-4 h-4 ml-2" />
+                        )}
+                        {editingHall ? "حفظ التعديلات" : "إضافة صالة"}
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -966,7 +1014,7 @@ export default function HallsManagement() {
                   onClick={() => setShowTableModal(false)}
                   className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
                 >
-                  ×
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
@@ -1004,19 +1052,7 @@ export default function HallsManagement() {
                       </span>
                     </label>
                     <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
+                      <ChevronDown className="w-4 h-4" />
                     </div>
                   </div>
                 </div>
@@ -1042,7 +1078,7 @@ export default function HallsManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <FaTable className="w-4 h-4 ml-1" />
+                        <TableIcon className="w-4 h-4 ml-1" />
                         اسم الطاولة *
                       </span>
                     </label>
@@ -1108,42 +1144,29 @@ export default function HallsManagement() {
                   <button
                     type="button"
                     onClick={() => setShowTableModal(false)}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                    disabled={isEditingTable}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <X className="w-4 h-4 ml-2" />
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm"
+                    disabled={isEditingTable}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
                     style={{ backgroundColor: "#10B981" }}
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                      />
-                    </svg>
-                    حفظ التعديلات
+                    {isEditingTable ? (
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        جاري التحديث...
+                      </div>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 ml-2" />
+                        حفظ التعديلات
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

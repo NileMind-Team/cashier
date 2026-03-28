@@ -2,6 +2,22 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axiosInstance from "../api/axiosInstance";
+import {
+  FaArrowLeft,
+  FaFileInvoice,
+  FaMoneyBillWave,
+  FaUsers,
+  FaChartLine,
+  FaEye,
+  FaTimes,
+  FaChevronLeft,
+  FaChevronRight,
+  FaAngleDoubleLeft,
+  FaAngleDoubleRight,
+  FaSpinner,
+  FaCheckCircle,
+  FaClock,
+} from "react-icons/fa";
 
 export default function PendingBillsReport() {
   const navigate = useNavigate();
@@ -10,8 +26,7 @@ export default function PendingBillsReport() {
   const [selectedBill, setSelectedBill] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const hasFetched = useRef(false);
-
-  // Pagination states
+  const [isViewingBill, setIsViewingBill] = useState(false);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     pageSize: 10,
@@ -91,7 +106,7 @@ export default function PendingBillsReport() {
   };
 
   const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= pagination.totalPages) {
+    if (newPage >= 1 && newPage <= pagination.totalPages && !loading) {
       fetchPendingBills(newPage);
 
       const tableElement = document.getElementById("bills-table-container");
@@ -204,8 +219,10 @@ export default function PendingBillsReport() {
   };
 
   const handleViewBillDetails = (bill) => {
+    setIsViewingBill(true);
     setSelectedBill(bill);
     setShowDetailsModal(true);
+    setTimeout(() => setIsViewingBill(false), 100);
   };
 
   const closeModal = () => {
@@ -228,7 +245,7 @@ export default function PendingBillsReport() {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center ml-3">
-                <span className="text-white font-bold">$</span>
+                <FaClock className="text-white text-lg" />
               </div>
               <h1 className="text-2xl font-bold" style={{ color: "#193F94" }}>
                 نظام الكاشير - الفواتير المعلقة
@@ -247,20 +264,7 @@ export default function PendingBillsReport() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <FaArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -289,20 +293,7 @@ export default function PendingBillsReport() {
                       <p className="text-xs text-blue-600 mt-1">فاتورة معلقة</p>
                     </div>
                     <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-blue-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
+                      <FaFileInvoice className="h-6 w-6 text-blue-700" />
                     </div>
                   </div>
                 </div>
@@ -320,20 +311,7 @@ export default function PendingBillsReport() {
                       </p>
                     </div>
                     <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-green-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                      <FaMoneyBillWave className="h-6 w-6 text-green-700" />
                     </div>
                   </div>
                 </div>
@@ -348,20 +326,7 @@ export default function PendingBillsReport() {
                       <p className="text-xs text-purple-600 mt-1">موظف</p>
                     </div>
                     <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-purple-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                        />
-                      </svg>
+                      <FaUsers className="h-6 w-6 text-purple-700" />
                     </div>
                   </div>
                 </div>
@@ -408,20 +373,7 @@ export default function PendingBillsReport() {
             {loading ? (
               <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center min-h-[400px]">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mb-6">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-12 w-12 text-blue-600 animate-spin"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
+                  <FaSpinner className="h-12 w-12 text-blue-600 animate-spin" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-700 mb-2">
                   جاري تحميل الفواتير المعلقة
@@ -450,10 +402,12 @@ export default function PendingBillsReport() {
                     </p>
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse print:hidden">
-                    <div className="px-3 py-1 bg-amber-100 text-amber-800 text-xs rounded-full font-medium">
+                    <div className="px-3 py-1 bg-amber-100 text-amber-800 text-xs rounded-full font-medium flex items-center">
+                      <FaClock className="h-3 w-3 ml-1" />
                       {pagination.totalCount} معلقة
                     </div>
-                    <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+                    <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium flex items-center">
+                      <FaMoneyBillWave className="h-3 w-3 ml-1" />
                       {formatCurrency(stats.totalAmount)} ج.م
                     </div>
                   </div>
@@ -474,7 +428,7 @@ export default function PendingBillsReport() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
-                        <span className="text-2xl text-amber-700">⏸️</span>
+                        <FaClock className="h-6 w-6 text-amber-700" />
                       </div>
                     </div>
                   </div>
@@ -493,20 +447,7 @@ export default function PendingBillsReport() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-blue-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
+                        <FaMoneyBillWave className="h-6 w-6 text-blue-700" />
                       </div>
                     </div>
                   </div>
@@ -525,20 +466,7 @@ export default function PendingBillsReport() {
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-purple-700"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                          />
-                        </svg>
+                        <FaChartLine className="h-6 w-6 text-purple-700" />
                       </div>
                     </div>
                   </div>
@@ -626,8 +554,14 @@ export default function PendingBillsReport() {
                               <td className="py-3 px-4 text-right print:hidden">
                                 <button
                                   onClick={() => handleViewBillDetails(bill)}
-                                  className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg transition-colors"
+                                  disabled={isViewingBill}
+                                  className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                                 >
+                                  {isViewingBill ? (
+                                    <FaSpinner className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <FaEye className="h-3 w-3" />
+                                  )}
                                   عرض التفاصيل
                                 </button>
                               </td>
@@ -660,27 +594,15 @@ export default function PendingBillsReport() {
                           {/* First Page Button */}
                           <button
                             onClick={() => handlePageChange(1)}
-                            disabled={!pagination.hasPreviousPage}
+                            disabled={!pagination.hasPreviousPage || loading}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasPreviousPage
+                              pagination.hasPreviousPage && !loading
                                 ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                                 : "text-gray-300 cursor-not-allowed"
                             }`}
                             title="الصفحة الأولى"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                              />
-                            </svg>
+                            <FaAngleDoubleLeft className="h-5 w-5" />
                           </button>
 
                           {/* Previous Page Button */}
@@ -688,27 +610,15 @@ export default function PendingBillsReport() {
                             onClick={() =>
                               handlePageChange(pagination.currentPage - 1)
                             }
-                            disabled={!pagination.hasPreviousPage}
+                            disabled={!pagination.hasPreviousPage || loading}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasPreviousPage
+                              pagination.hasPreviousPage && !loading
                                 ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                                 : "text-gray-300 cursor-not-allowed"
                             }`}
                             title="الصفحة السابقة"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 5l7 7-7 7"
-                              />
-                            </svg>
+                            <FaChevronRight className="h-5 w-5" />
                           </button>
 
                           {/* Page Numbers */}
@@ -725,11 +635,12 @@ export default function PendingBillsReport() {
                                 <button
                                   key={page}
                                   onClick={() => handlePageChange(page)}
+                                  disabled={loading}
                                   className={`min-w-[40px] h-10 rounded-lg text-sm font-medium transition-all ${
                                     pagination.currentPage === page
                                       ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:from-blue-700 hover:to-blue-800"
                                       : "text-gray-700 hover:bg-gray-200 hover:text-gray-900 border border-gray-200"
-                                  }`}
+                                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                                 >
                                   {page}
                                 </button>
@@ -742,27 +653,15 @@ export default function PendingBillsReport() {
                             onClick={() =>
                               handlePageChange(pagination.currentPage + 1)
                             }
-                            disabled={!pagination.hasNextPage}
+                            disabled={!pagination.hasNextPage || loading}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasNextPage
+                              pagination.hasNextPage && !loading
                                 ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                                 : "text-gray-300 cursor-not-allowed"
                             }`}
                             title="الصفحة التالية"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 19l-7-7 7-7"
-                              />
-                            </svg>
+                            <FaChevronLeft className="h-5 w-5" />
                           </button>
 
                           {/* Last Page Button */}
@@ -770,27 +669,15 @@ export default function PendingBillsReport() {
                             onClick={() =>
                               handlePageChange(pagination.totalPages)
                             }
-                            disabled={!pagination.hasNextPage}
+                            disabled={!pagination.hasNextPage || loading}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasNextPage
+                              pagination.hasNextPage && !loading
                                 ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                                 : "text-gray-300 cursor-not-allowed"
                             }`}
                             title="الصفحة الأخيرة"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                              />
-                            </svg>
+                            <FaAngleDoubleRight className="h-5 w-5" />
                           </button>
                         </div>
                       </div>
@@ -852,20 +739,7 @@ export default function PendingBillsReport() {
             ) : (
               <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center min-h-[400px]">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center mb-6">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-12 w-12 text-green-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
+                  <FaCheckCircle className="h-12 w-12 text-green-600" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-700 mb-2">
                   لا توجد فواتير معلقة
@@ -876,20 +750,7 @@ export default function PendingBillsReport() {
                 </p>
                 <div className="text-center space-y-3">
                   <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 ml-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
+                    <FaClock className="h-5 w-5 ml-2" />
                     لا توجد فواتير معلقة
                   </div>
                 </div>
@@ -920,19 +781,7 @@ export default function PendingBillsReport() {
                     onClick={closeModal}
                     className="text-white hover:text-gray-200 transition-colors"
                   >
-                    <svg
-                      className="h-6 w-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <FaTimes className="h-6 w-6" />
                   </button>
                 </div>
               </div>
@@ -945,7 +794,8 @@ export default function PendingBillsReport() {
                       {selectedBill.billNumber}
                     </p>
                   </div>
-                  <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
+                  <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium flex items-center">
+                    <FaClock className="h-3 w-3 ml-1" />
                     معلقة
                   </div>
                 </div>

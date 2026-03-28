@@ -3,6 +3,24 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import axiosInstance from "../api/axiosInstance";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Power,
+  PowerOff,
+  ArrowLeft,
+  X,
+  CheckCircle,
+  XCircle,
+  Package,
+  PlusCircle,
+  Save,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 
 export default function OptionsManagement() {
   const navigate = useNavigate();
@@ -22,6 +40,11 @@ export default function OptionsManagement() {
 
   const hasFetched = useRef(false);
   const isFetchingOptions = useRef(false);
+  const [isAddingOption, setIsAddingOption] = useState(false);
+  const [isEditingOption, setIsEditingOption] = useState(false);
+  const [isTogglingOption, setIsTogglingOption] = useState(false);
+  const [isDeletingOption, setIsDeletingOption] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(false);
 
   const [stats, setStats] = useState({
     totalOptions: 0,
@@ -162,6 +185,7 @@ export default function OptionsManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsDeletingOption(true);
       try {
         const response = await axiosInstance.delete(
           `/api/Options/Delete/${optionId}`,
@@ -183,6 +207,8 @@ export default function OptionsManagement() {
       } catch (error) {
         console.error("خطأ في حذف الإضافة:", error);
         toast.error("حدث خطأ في حذف الإضافة");
+      } finally {
+        setIsDeletingOption(false);
       }
     }
   };
@@ -203,6 +229,7 @@ export default function OptionsManagement() {
     });
 
     if (result.isConfirmed) {
+      setIsTogglingOption(true);
       try {
         const response = await axiosInstance.post(
           `/api/Options/ToggleActivation/${optionId}/toggle`,
@@ -217,6 +244,8 @@ export default function OptionsManagement() {
       } catch (error) {
         console.error(`خطأ في ${action} الإضافة:`, error);
         toast.error(`حدث خطأ في ${action} الإضافة`);
+      } finally {
+        setIsTogglingOption(false);
       }
     }
   };
@@ -249,6 +278,12 @@ export default function OptionsManagement() {
     if (!formData.price || formData.price <= 0) {
       toast.error("يرجى إدخال سعر صحيح للإضافة");
       return;
+    }
+
+    if (editingOption) {
+      setIsEditingOption(true);
+    } else {
+      setIsAddingOption(true);
     }
 
     try {
@@ -288,17 +323,22 @@ export default function OptionsManagement() {
     } catch (error) {
       console.error("خطأ في حفظ الإضافة:", error);
       toast.error("حدث خطأ في حفظ الإضافة");
+    } finally {
+      setIsAddingOption(false);
+      setIsEditingOption(false);
     }
   };
 
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= pagination.totalPages) {
+  const handlePageChange = async (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages && !isPageLoading) {
+      setIsPageLoading(true);
       setPagination((prev) => ({ ...prev, currentPage: newPage }));
-      fetchOptions(newPage, true);
+      await fetchOptions(newPage, true);
       const tableElement = document.getElementById("options-table-container");
       if (tableElement) {
         tableElement.scrollIntoView({ behavior: "smooth", block: "start" });
       }
+      setIsPageLoading(false);
     }
   };
 
@@ -375,20 +415,7 @@ export default function OptionsManagement() {
                 e.target.style.color = "#193F94";
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <ArrowLeft className="h-5 w-5 ml-2" />
               العودة للرئيسية
             </button>
           </div>
@@ -419,20 +446,7 @@ export default function OptionsManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
+                <Package className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -452,20 +466,7 @@ export default function OptionsManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+                <CheckCircle className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -485,20 +486,7 @@ export default function OptionsManagement() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-red-400 to-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                  />
-                </svg>
+                <XCircle className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -516,23 +504,20 @@ export default function OptionsManagement() {
 
             <button
               onClick={handleAddOption}
-              className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center whitespace-nowrap shadow-md"
+              disabled={isAddingOption}
+              className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center whitespace-nowrap shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 ml-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-              إضافة إضافة جديدة
+              {isAddingOption ? (
+                <div className="flex items-center">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                  جاري الإضافة...
+                </div>
+              ) : (
+                <>
+                  <Plus className="h-5 w-5 ml-2" />
+                  إضافة إضافة جديدة
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -575,20 +560,7 @@ export default function OptionsManagement() {
                           className="py-8 px-4 text-center text-gray-500"
                         >
                           <div className="flex flex-col items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-12 w-12 text-gray-300 mb-3"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1}
-                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                              />
-                            </svg>
+                            <Package className="h-12 w-12 text-gray-300 mb-3" />
                             <p className="text-lg font-medium text-gray-400">
                               لا يوجد إضافات
                             </p>
@@ -651,78 +623,47 @@ export default function OptionsManagement() {
                             <div className="flex flex-col space-y-2">
                               <button
                                 onClick={() => handleEditOption(option)}
-                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-blue-200"
+                                disabled={isEditingOption}
+                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                  />
-                                </svg>
+                                <Edit className="h-3 w-3 ml-1" />
                                 تعديل
                               </button>
                               <button
                                 onClick={() =>
                                   handleToggleOptionStatus(option.id)
                                 }
-                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border ${
+                                disabled={isTogglingOption}
+                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border disabled:opacity-50 disabled:cursor-not-allowed ${
                                   option.isActive
                                     ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
                                     : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                                 }`}
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  {option.isActive ? (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                    />
-                                  ) : (
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                                    />
-                                  )}
-                                </svg>
-                                {option.isActive ? "تعطيل" : "تفعيل"}
+                                {isTogglingOption ? (
+                                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-1"></div>
+                                ) : option.isActive ? (
+                                  <PowerOff className="h-3 w-3 ml-1" />
+                                ) : (
+                                  <Power className="h-3 w-3 ml-1" />
+                                )}
+                                {isTogglingOption
+                                  ? "جاري..."
+                                  : option.isActive
+                                    ? "تعطيل"
+                                    : "تفعيل"}
                               </button>
                               <button
                                 onClick={() => handleDeleteOption(option.id)}
-                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200"
+                                disabled={isDeletingOption}
+                                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3 ml-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                                حذف
+                                {isDeletingOption ? (
+                                  <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin ml-1"></div>
+                                ) : (
+                                  <Trash2 className="h-3 w-3 ml-1" />
+                                )}
+                                {isDeletingOption ? "جاري الحذف..." : "حذف"}
                               </button>
                             </div>
                           </td>
@@ -741,27 +682,15 @@ export default function OptionsManagement() {
                       {/* First Page Button */}
                       <button
                         onClick={() => handlePageChange(1)}
-                        disabled={!pagination.hasPreviousPage}
+                        disabled={!pagination.hasPreviousPage || isPageLoading}
                         className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                          pagination.hasPreviousPage
+                          pagination.hasPreviousPage && !isPageLoading
                             ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                             : "text-gray-300 cursor-not-allowed"
                         }`}
                         title="الصفحة الأولى"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                          />
-                        </svg>
+                        <ChevronsRight className="w-5 h-5" />
                       </button>
 
                       {/* Previous Page Button */}
@@ -769,27 +698,15 @@ export default function OptionsManagement() {
                         onClick={() =>
                           handlePageChange(pagination.currentPage - 1)
                         }
-                        disabled={!pagination.hasPreviousPage}
+                        disabled={!pagination.hasPreviousPage || isPageLoading}
                         className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                          pagination.hasPreviousPage
+                          pagination.hasPreviousPage && !isPageLoading
                             ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                             : "text-gray-300 cursor-not-allowed"
                         }`}
                         title="الصفحة السابقة"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
+                        <ChevronRight className="w-5 h-5" />
                       </button>
 
                       {/* Page Numbers */}
@@ -806,7 +723,8 @@ export default function OptionsManagement() {
                             <button
                               key={page}
                               onClick={() => handlePageChange(page)}
-                              className={`min-w-[40px] h-10 rounded-lg text-sm font-medium transition-all ${
+                              disabled={isPageLoading}
+                              className={`min-w-[40px] h-10 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                 pagination.currentPage === page
                                   ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md hover:from-orange-600 hover:to-orange-700"
                                   : "text-gray-700 hover:bg-gray-200 hover:text-gray-900 border border-gray-200"
@@ -823,53 +741,29 @@ export default function OptionsManagement() {
                         onClick={() =>
                           handlePageChange(pagination.currentPage + 1)
                         }
-                        disabled={!pagination.hasNextPage}
+                        disabled={!pagination.hasNextPage || isPageLoading}
                         className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                          pagination.hasNextPage
+                          pagination.hasNextPage && !isPageLoading
                             ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                             : "text-gray-300 cursor-not-allowed"
                         }`}
                         title="الصفحة التالية"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 19l-7-7 7-7"
-                          />
-                        </svg>
+                        <ChevronLeft className="w-5 h-5" />
                       </button>
 
                       {/* Last Page Button */}
                       <button
                         onClick={() => handlePageChange(pagination.totalPages)}
-                        disabled={!pagination.hasNextPage}
+                        disabled={!pagination.hasNextPage || isPageLoading}
                         className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                          pagination.hasNextPage
+                          pagination.hasNextPage && !isPageLoading
                             ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                             : "text-gray-300 cursor-not-allowed"
                         }`}
                         title="الصفحة الأخيرة"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                          />
-                        </svg>
+                        <ChevronsLeft className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
@@ -891,7 +785,8 @@ export default function OptionsManagement() {
                             handlePageChange(page);
                           }
                         }}
-                        className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        disabled={isPageLoading}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                       />
                       <span className="text-sm text-gray-600">
                         من {pagination.totalPages}
@@ -930,7 +825,7 @@ export default function OptionsManagement() {
                   onClick={() => setShowAddModal(false)}
                   className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
                 >
-                  ×
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
@@ -956,19 +851,7 @@ export default function OptionsManagement() {
                       }`}
                     >
                       <span className="flex items-center">
-                        <svg
-                          className="w-4 h-4 ml-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l5 5a2 2 0 01.586 1.414V19a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z"
-                          />
-                        </svg>
+                        <Package className="w-4 h-4 ml-1" />
                         اسم الإضافة *
                       </span>
                     </label>
@@ -1023,50 +906,32 @@ export default function OptionsManagement() {
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm"
+                    disabled={isAddingOption || isEditingOption}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <X className="w-4 h-4 ml-2" />
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                    disabled={isAddingOption || isEditingOption}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-white transition-all flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700`}
                   >
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      {editingOption ? (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                        />
-                      ) : (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      )}
-                    </svg>
-                    {editingOption ? "حفظ التعديلات" : "إضافة إضافة"}
+                    {isAddingOption || isEditingOption ? (
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        {editingOption ? "جاري التحديث..." : "جاري الإضافة..."}
+                      </div>
+                    ) : (
+                      <>
+                        {editingOption ? (
+                          <Save className="w-4 h-4 ml-2" />
+                        ) : (
+                          <PlusCircle className="w-4 h-4 ml-2" />
+                        )}
+                        {editingOption ? "حفظ التعديلات" : "إضافة إضافة"}
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
