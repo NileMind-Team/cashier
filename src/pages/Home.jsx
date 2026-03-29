@@ -3134,7 +3134,7 @@ export default function Home() {
     setOrderPrepared(false);
     setCurrentInvoiceRemainingAmount(0);
 
-    toast.info("تم إعادة تعيين الفاتورة (تم مسح المنتجات فقط)");
+    toast.info("تم إعادة تعيين الفاتورة");
     setIsResettingBill(false);
   };
 
