@@ -1002,60 +1002,6 @@ export default function Home() {
     }
   };
 
-  const resetBillData = () => {
-    setCurrentBillData({
-      cart: [],
-      tax: 14,
-      discount: "",
-      discountType: 0,
-      deliveryFee: "",
-      completed: false,
-      isReturned: false,
-      returnReason: "",
-      billType: "takeaway",
-      customerName: "",
-      customerPhone: "",
-      customerAddress: "",
-      customerNationalId: "",
-      customerId: null,
-      tableStatus: null,
-      generalNote: "",
-      paymentMethod: null,
-      invoiceId: null,
-      isPending: true,
-      invoiceNumber: null,
-      invoiceDate: null,
-      tableId: null,
-      tableName: null,
-      deliveryType: null,
-      deliveryCompanyId: null,
-      deliveryCompanyName: null,
-      deliveryCompanyContact: null,
-      remainingAmount: null,
-      paidAmount: null,
-    });
-    setCart([]);
-    setOriginalCart([]);
-    setHasCartChanges(false);
-    setTax(14);
-    setDiscount("");
-    setDeliveryFee("");
-    setCustomerPhone("");
-    setCustomerName("");
-    setCustomerAddress("");
-    setCustomerNationalId("");
-    setCustomerId(null);
-    setGeneralNote("");
-    setSelectedHall(null);
-    setSelectedTable(null);
-    setShowTableInfo(false);
-    setTableStatus("available");
-    setDeliveryType(null);
-    setSelectedDeliveryCompany(null);
-    setOrderPrepared(false);
-    setCurrentInvoiceRemainingAmount(0);
-  };
-
   const refreshTablesAndHalls = async () => {
     if (isRefreshingRef.current) {
       return;
@@ -3067,7 +3013,7 @@ export default function Home() {
     setShowInvoiceModal(true);
   };
 
-  const resetCart = async () => {
+  const resetCartOnly = () => {
     if (isResettingBill) return;
 
     if (currentBillData.completed) {
@@ -3086,9 +3032,167 @@ export default function Home() {
     }
 
     setIsResettingBill(true);
-    resetBillData();
-    toast.info("تم إعادة تعيين الفاتورة");
+
+    const currentBillType = currentBillData.billType;
+    const currentDeliveryType = currentBillData.deliveryType;
+    const currentDeliveryFee = currentBillData.deliveryFee;
+    const currentDeliveryCompanyId = currentBillData.deliveryCompanyId;
+    const currentDeliveryCompanyName = currentBillData.deliveryCompanyName;
+    const currentDeliveryCompanyContact =
+      currentBillData.deliveryCompanyContact;
+    const currentTableId = currentBillData.tableId;
+    const currentTableName = currentBillData.tableName;
+    const currentSelectedHall = selectedHall;
+    const currentSelectedTable = selectedTable;
+    const currentShowTableInfo = showTableInfo;
+    const currentTableStatus = tableStatus;
+    const currentDeliveryTypeState = deliveryType;
+    const currentSelectedDeliveryCompany = selectedDeliveryCompany;
+    const currentInvoiceId = currentBillData.invoiceId;
+    const currentInvoiceNumber = currentBillData.invoiceNumber;
+    const currentInvoiceDate = currentBillData.invoiceDate;
+    const currentInvoiceStatus = currentBillData.invoiceStatus;
+    const currentIsPending = currentBillData.isPending;
+    const currentIsReturned = currentBillData.isReturned;
+    const currentCompleted = currentBillData.completed;
+    const currentIsPartialPaid = currentBillData.isPartialPaid;
+    const currentRemainingAmount = currentBillData.remainingAmount;
+    const currentPaidAmount = currentBillData.paidAmount;
+    const currentDiscount = currentBillData.discount;
+    const currentDiscountType = currentBillData.discountType;
+
+    setCurrentBillData({
+      cart: [],
+      tax: 14,
+      discount: currentDiscount,
+      discountType: currentDiscountType,
+      deliveryFee: currentBillType === "delivery" ? currentDeliveryFee : "",
+      completed: currentCompleted,
+      isReturned: currentIsReturned,
+      returnReason: "",
+      billType: currentBillType,
+      customerName: "",
+      customerPhone: "",
+      customerAddress: "",
+      customerNationalId: "",
+      customerId: null,
+      tableStatus: currentBillType === "dinein" ? currentTableStatus : null,
+      generalNote: "",
+      paymentMethod: null,
+      invoiceId: currentInvoiceId,
+      isPending: currentIsPending,
+      invoiceNumber: currentInvoiceNumber,
+      invoiceDate: currentInvoiceDate,
+      invoiceStatus: currentInvoiceStatus,
+      tableId: currentBillType === "dinein" ? currentTableId : null,
+      tableName: currentBillType === "dinein" ? currentTableName : null,
+      deliveryType: currentBillType === "delivery" ? currentDeliveryType : null,
+      deliveryCompanyId:
+        currentBillType === "delivery" ? currentDeliveryCompanyId : null,
+      deliveryCompanyName:
+        currentBillType === "delivery" ? currentDeliveryCompanyName : null,
+      deliveryCompanyContact:
+        currentBillType === "delivery" ? currentDeliveryCompanyContact : null,
+      remainingAmount: currentRemainingAmount,
+      paidAmount: currentPaidAmount,
+      isPartialPaid: currentIsPartialPaid,
+    });
+
+    setCart([]);
+    setOriginalCart([]);
+    setHasCartChanges(false);
+    setTax(14);
+    setDiscount(currentDiscount);
+    setDeliveryFee(currentBillType === "delivery" ? currentDeliveryFee : "");
+    setCustomerPhone("");
+    setCustomerName("");
+    setCustomerAddress("");
+    setCustomerNationalId("");
+    setCustomerId(null);
+    setGeneralNote("");
+
+    if (currentBillType === "dinein") {
+      setSelectedHall(currentSelectedHall);
+      setSelectedTable(currentSelectedTable);
+      setShowTableInfo(currentShowTableInfo);
+      setTableStatus(currentTableStatus);
+    } else {
+      setSelectedHall(null);
+      setSelectedTable(null);
+      setShowTableInfo(false);
+      setTableStatus("available");
+    }
+
+    if (currentBillType === "delivery") {
+      setDeliveryType(currentDeliveryTypeState);
+      setSelectedDeliveryCompany(currentSelectedDeliveryCompany);
+    } else {
+      setDeliveryType(null);
+      setSelectedDeliveryCompany(null);
+    }
+
+    setOrderPrepared(false);
+    setCurrentInvoiceRemainingAmount(0);
+
+    toast.info("تم إعادة تعيين الفاتورة (تم مسح المنتجات فقط)");
     setIsResettingBill(false);
+  };
+
+  const resetBillData = () => {
+    setCurrentBillData({
+      cart: [],
+      tax: 14,
+      discount: "",
+      discountType: 0,
+      deliveryFee: "",
+      completed: false,
+      isReturned: false,
+      returnReason: "",
+      billType: "takeaway",
+      customerName: "",
+      customerPhone: "",
+      customerAddress: "",
+      customerNationalId: "",
+      customerId: null,
+      tableStatus: null,
+      generalNote: "",
+      paymentMethod: null,
+      invoiceId: null,
+      isPending: true,
+      invoiceNumber: null,
+      invoiceDate: null,
+      tableId: null,
+      tableName: null,
+      deliveryType: null,
+      deliveryCompanyId: null,
+      deliveryCompanyName: null,
+      deliveryCompanyContact: null,
+      remainingAmount: null,
+      paidAmount: null,
+    });
+    setCart([]);
+    setOriginalCart([]);
+    setHasCartChanges(false);
+    setTax(14);
+    setDiscount("");
+    setDeliveryFee("");
+    setCustomerPhone("");
+    setCustomerName("");
+    setCustomerAddress("");
+    setCustomerNationalId("");
+    setCustomerId(null);
+    setGeneralNote("");
+    setSelectedHall(null);
+    setSelectedTable(null);
+    setShowTableInfo(false);
+    setTableStatus("available");
+    setDeliveryType(null);
+    setSelectedDeliveryCompany(null);
+    setOrderPrepared(false);
+    setCurrentInvoiceRemainingAmount(0);
+  };
+  const resetCart = async () => {
+    resetCartOnly();
   };
 
   const handleShiftClose = () => {
