@@ -1484,6 +1484,11 @@ export default function Home() {
   };
 
   const handleBillTypeChange = (type) => {
+    if (!isNewBillActive) {
+      toast.error("لا يمكن تغيير نوع الفاتورة أثناء عرض فاتورة قديمة");
+      return;
+    }
+
     if (currentBillData.completed) {
       toast.error("لا يمكن تغيير نوع الفاتورة المكتملة");
       return;
@@ -5020,13 +5025,14 @@ export default function Home() {
                         onClick={() => handleBillTypeChange(type.value)}
                         disabled={
                           currentBillData.completed ||
-                          currentBillData.isPartialPaid
+                          currentBillData.isPartialPaid ||
+                          !isNewBillActive
                         }
                         className={`flex-1 flex items-center justify-center py-1.5 rounded border transition-all text-xs ${
                           currentBillData.billType === type.value
                             ? "bg-blue-100 border-blue-500 text-blue-700 font-medium"
                             : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
-                        } ${currentBillData.completed || currentBillData.isPartialPaid ? "opacity-70 cursor-not-allowed" : ""}`}
+                        } ${currentBillData.completed || currentBillData.isPartialPaid || !isNewBillActive ? "opacity-70 cursor-not-allowed" : ""}`}
                       >
                         {type.value === "takeaway" && (
                           <ShoppingBag size={12} className="ml-1" />
