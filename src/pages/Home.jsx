@@ -2735,6 +2735,40 @@ export default function Home() {
     }
   };
 
+  const goToFirstBill = async () => {
+    if (isGoingToPreviousBill) return;
+
+    if (!isNewBillActive && totalPages > 0) {
+      setIsGoingToPreviousBill(true);
+      await fetchInvoiceByPage(1);
+      setIsNewBillActive(false);
+      setIsEditingExistingInvoice(true);
+      setOrderPrepared(false);
+      setIsGoingToPreviousBill(false);
+    } else if (isNewBillActive && totalPages > 0) {
+      setIsGoingToPreviousBill(true);
+      await fetchInvoiceByPage(1);
+      setIsNewBillActive(false);
+      setIsEditingExistingInvoice(true);
+      setOrderPrepared(false);
+      setIsGoingToPreviousBill(false);
+    } else {
+      toast.warning("لا توجد فواتير سابقة");
+    }
+  };
+
+  const goToNewBill = async () => {
+    if (isGoingToNextBill) return;
+
+    setIsGoingToNextBill(true);
+    setIsNewBillActive(true);
+    setIsEditingExistingInvoice(false);
+    setCurrentInvoicePage(totalPages + 1);
+    resetBillData();
+    toast.info("فاتورة جديدة");
+    setIsGoingToNextBill(false);
+  };
+
   const subtotal = cart.reduce(
     (sum, item) => sum + item.price * item.quantity + (item.optionsTotal || 0),
     0,
@@ -4951,6 +4985,30 @@ export default function Home() {
                   </h2>
                   <div className="flex items-center space-x-1 rtl:space-x-reverse">
                     <button
+                      onClick={goToFirstBill}
+                      disabled={
+                        isGoingToPreviousBill ||
+                        (isNewBillActive && totalPages === 0)
+                      }
+                      className={`px-2 py-1 rounded text-xs transition-all flex items-center ${
+                        isGoingToPreviousBill ||
+                        (isNewBillActive && totalPages === 0)
+                          ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400"
+                          : "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                      }`}
+                      title="أول فاتورة"
+                    >
+                      {isGoingToPreviousBill ? (
+                        <FaSpinner className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <>
+                          <ChevronRight size={12} className="ml-1" />
+                          <ChevronRight size={12} />
+                          الأول
+                        </>
+                      )}
+                    </button>
+                    <button
                       onClick={goToPreviousBill}
                       disabled={
                         isGoingToPreviousBill ||
@@ -5021,6 +5079,25 @@ export default function Home() {
                         <>
                           التالي
                           <ArrowLeft size={12} className="mr-1" />
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={goToNewBill}
+                      disabled={isGoingToNextBill}
+                      className={`px-2 py-1 rounded text-xs transition-all flex items-center ${
+                        isGoingToNextBill
+                          ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400"
+                          : "bg-green-100 text-green-800 hover:bg-green-200"
+                      }`}
+                      title="فاتورة جديدة"
+                    >
+                      {isGoingToNextBill ? (
+                        <FaSpinner className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <>
+                          جديد
+                          <Plus size={12} className="mr-1" />
                         </>
                       )}
                     </button>
