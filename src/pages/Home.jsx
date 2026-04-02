@@ -70,7 +70,7 @@ export default function Home() {
   const [totalPages, setTotalPages] = useState(1);
   const [currentBillData, setCurrentBillData] = useState({
     cart: [],
-    tax: 14,
+    tax: 0,
     discount: "",
     discountType: 0,
     deliveryFee: "",
@@ -102,7 +102,7 @@ export default function Home() {
   const [cart, setCart] = useState([]);
   const [originalCart, setOriginalCart] = useState([]);
   const [hasCartChanges, setHasCartChanges] = useState(false);
-  const [tax, setTax] = useState(14);
+  const [tax, setTax] = useState(0);
   const [discount, setDiscount] = useState("");
   const [deliveryFee, setDeliveryFee] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -709,7 +709,7 @@ export default function Home() {
                         mainCategoryId: item.mainCategoryId,
                         subCategoryId: item.subCategoryId,
                         isAvailable: item.isAvailable,
-                        valueAddedTax: item.valueAddedTax,
+                        valueAddedTax: item.valueAddedTax || 0,
                         isTaxInclusive: item.isTaxInclusive,
                       });
                     }
@@ -846,11 +846,13 @@ export default function Home() {
     const totalAmount = invoice.totalAmount || 0;
     const taxAmount = totalAmount - subtotal + discount - deliveryFee;
     const taxableAmount = subtotal - discount;
-    if (taxableAmount > 0) {
-      return (taxAmount / taxableAmount) * 100;
+
+    if (taxableAmount <= 0 || taxAmount <= 0) {
+      return 0;
     }
 
-    return 14;
+    const taxPercentage = (taxAmount / taxableAmount) * 100;
+    return Math.max(0, taxPercentage);
   };
 
   const convertInvoiceToBill = (invoice) => {
@@ -896,7 +898,7 @@ export default function Home() {
             ) * item.quantity || 0,
           note: item.notesItem || "",
           isTaxInclusive: item.isTaxInclusive || false,
-          valueAddedTax: item.valueAddedTax || 14,
+          valueAddedTax: item.valueAddedTax || 0,
           discount: discountAmount,
           isPercentage: item.isPercentage || false,
           discountPercentage: discountPercentage,
@@ -2744,6 +2746,10 @@ export default function Home() {
     const taxableAmount = itemSubtotal + optionsValue;
     const itemTaxRate = item.valueAddedTax || tax;
 
+    if (itemTaxRate === 0) {
+      return sum;
+    }
+
     if (item.isTaxInclusive) {
       const itemTax = (taxableAmount * itemTaxRate) / (100 + itemTaxRate);
       return sum + itemTax;
@@ -2758,6 +2764,10 @@ export default function Home() {
     const optionsValue = item.optionsTotal || 0;
     const itemTotal = itemSubtotal + optionsValue;
     const itemTaxRate = item.valueAddedTax || tax;
+
+    if (itemTaxRate === 0) {
+      return sum + itemTotal;
+    }
 
     if (item.isTaxInclusive) {
       return sum + itemTotal;
@@ -3068,7 +3078,7 @@ export default function Home() {
 
     setCurrentBillData({
       cart: [],
-      tax: 14,
+      tax: 0,
       discount: currentDiscount,
       discountType: currentDiscountType,
       deliveryFee: currentBillType === "delivery" ? currentDeliveryFee : "",
@@ -3106,7 +3116,7 @@ export default function Home() {
     setCart([]);
     setOriginalCart([]);
     setHasCartChanges(false);
-    setTax(14);
+    setTax(0);
     setDiscount(currentDiscount);
     setDeliveryFee(currentBillType === "delivery" ? currentDeliveryFee : "");
     setCustomerPhone("");
@@ -3146,7 +3156,7 @@ export default function Home() {
   const resetBillData = () => {
     setCurrentBillData({
       cart: [],
-      tax: 14,
+      tax: 0,
       discount: "",
       discountType: 0,
       deliveryFee: "",
@@ -3178,7 +3188,7 @@ export default function Home() {
     setCart([]);
     setOriginalCart([]);
     setHasCartChanges(false);
-    setTax(14);
+    setTax(0);
     setDiscount("");
     setDeliveryFee("");
     setCustomerPhone("");
