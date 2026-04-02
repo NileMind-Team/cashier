@@ -2651,17 +2651,11 @@ export default function Home() {
         }
 
         if (invoiceResponse) {
-          setCurrentBillData({
-            ...currentBillData,
-            completed: true,
-            completedDate: new Date().toLocaleString(),
-            invoiceId: invoiceResponse.id,
-            invoiceNumber: invoiceResponse.invoiceNumber,
-            invoiceStatus: InvoiceStatus.Open,
-            isPending: true,
-          });
-
-          if (selectedTable && selectedHall) {
+          if (
+            selectedTable &&
+            selectedHall &&
+            currentBillData.billType === "dinein"
+          ) {
             await updateTableStatus(
               selectedHall.id,
               selectedTable.id,
@@ -2673,11 +2667,15 @@ export default function Home() {
             `تم تعليق الفاتورة رقم ${invoiceResponse.invoiceNumber}`,
           );
 
-          setIsNewBillActive(false);
-          setIsEditingExistingInvoice(false);
-          setCurrentInvoicePage(totalPages + 1);
-          setOrderPrepared(true);
           resetBillData();
+
+          await fetchShiftDetails();
+          await fetchLastInvoice();
+          setIsNewBillActive(true);
+          setIsEditingExistingInvoice(false);
+          setOrderPrepared(false);
+          setHasCartChanges(false);
+          toast.info("فاتورة جديدة");
         }
       } catch (error) {
         console.error("خطأ في إنشاء/تحديث الفاتورة المعلقة:", error);
@@ -2693,10 +2691,11 @@ export default function Home() {
         setIsGoingToNextBill(false);
       } else {
         setIsGoingToNextBill(true);
+        resetBillData();
         setIsNewBillActive(true);
         setIsEditingExistingInvoice(false);
-        setCurrentInvoicePage(totalPages + 1);
-        resetBillData();
+        setOrderPrepared(false);
+        setHasCartChanges(false);
         toast.info("فاتورة جديدة");
         setIsGoingToNextBill(false);
       }
