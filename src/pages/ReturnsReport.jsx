@@ -40,6 +40,13 @@ export default function ReturnsReport() {
     hasPreviousPage: false,
   });
 
+  const addTwoHours = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    date.setHours(date.getHours() + 2);
+    return date;
+  };
+
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
     const thirtyDaysAgo = new Date();
@@ -173,8 +180,8 @@ export default function ReturnsReport() {
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ar-EG", {
+    const adjustedDate = addTwoHours(dateString);
+    return adjustedDate.toLocaleDateString("ar-EG", {
       year: "numeric",
       month: "short",
       day: "numeric",

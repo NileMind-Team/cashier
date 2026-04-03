@@ -36,6 +36,14 @@ export default function PendingBillsReport() {
     hasPreviousPage: false,
   });
 
+  // دالة مساعدة لإضافة ساعتين إلى الوقت القادم من الباك إند
+  const addTwoHours = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    date.setHours(date.getHours() + 2);
+    return date;
+  };
+
   useEffect(() => {
     if (!hasFetched.current) {
       fetchPendingBills(1);
@@ -148,10 +156,11 @@ export default function PendingBillsReport() {
     return rangeWithDots;
   };
 
+  // تعديل دالة formatDate لإضافة ساعتين قبل التنسيق
   const formatDate = (dateString) => {
     if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ar-EG", {
+    const adjustedDate = addTwoHours(dateString);
+    return adjustedDate.toLocaleDateString("ar-EG", {
       year: "numeric",
       month: "short",
       day: "numeric",

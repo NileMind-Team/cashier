@@ -33,6 +33,13 @@ export default function ShiftReports() {
   const [fetchingShifts, setFetchingShifts] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
+  const addTwoHours = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    date.setHours(date.getHours() + 2);
+    return date;
+  };
+
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
     setSelectedDate(today);
@@ -117,10 +124,11 @@ export default function ShiftReports() {
     }
   };
 
+  // تعديل دالة formatDate لإضافة ساعتين قبل التنسيق
   const formatDate = (dateString) => {
     if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ar-EG", {
+    const adjustedDate = addTwoHours(dateString);
+    return adjustedDate.toLocaleDateString("ar-EG", {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -132,8 +140,8 @@ export default function ShiftReports() {
 
   const formatTime = (dateString) => {
     if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("ar-EG", {
+    const adjustedDate = addTwoHours(dateString);
+    return adjustedDate.toLocaleTimeString("ar-EG", {
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -141,10 +149,11 @@ export default function ShiftReports() {
 
   const calculateShiftDuration = (startTime, endTime) => {
     if (!startTime) return "غير محدد";
+
+    const start = addTwoHours(startTime);
     if (!endTime) return "قيد التشغيل";
 
-    const start = new Date(startTime);
-    const end = new Date(endTime);
+    const end = addTwoHours(endTime);
     const diffMs = end - start;
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
     const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
