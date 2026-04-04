@@ -3,7 +3,7 @@ import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import Navbar from "../components/layout/Navbar.jsx";
 import axiosInstance from "../api/axiosInstance";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   X,
   Plus,
@@ -34,6 +34,7 @@ import { FaSpinner } from "react-icons/fa";
 
 export default function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
   const initializedRef = useRef(false);
   const shiftFetchedRef = useRef(false);
   const hallsFetchedRef = useRef(false);
@@ -182,6 +183,8 @@ export default function Home() {
   const [isReturningBill, setIsReturningBill] = useState(false);
   const [isGoingToPreviousBill, setIsGoingToPreviousBill] = useState(false);
   const [isGoingToNextBill, setIsGoingToNextBill] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [isResumingFromPending, setIsResumingFromPending] = useState(false);
 
   const DeliveryType = {
     Store: "store",
@@ -1334,6 +1337,29 @@ export default function Home() {
     }
   };
 
+  const resumeInvoiceFromPage = async (pageNumber) => {
+    if (!pageNumber || pageNumber < 1) {
+      toast.error("رقم الفاتورة غير صحيح");
+      return false;
+    }
+
+    setIsResumingFromPending(true);
+    try {
+      await fetchInvoiceByPage(pageNumber);
+      setIsNewBillActive(false);
+      setIsEditingExistingInvoice(true);
+      setOrderPrepared(false);
+      toast.success(`تم استئناف الفاتورة رقم ${pageNumber}`);
+      return true;
+    } catch (error) {
+      console.error("خطأ في استئناف الفاتورة:", error);
+      toast.error("حدث خطأ في استئناف الفاتورة");
+      return false;
+    } finally {
+      setIsResumingFromPending(false);
+    }
+  };
+
   useEffect(() => {
     if (initializedRef.current) {
       return;
@@ -1361,6 +1387,12 @@ export default function Home() {
         ]);
 
         resetBillData();
+
+        const resumeInvoiceId = location.state?.resumeInvoiceId;
+        if (resumeInvoiceId) {
+          await resumeInvoiceFromPage(resumeInvoiceId);
+          navigate(location.pathname, { replace: true, state: {} });
+        }
       } catch (error) {
         console.error("خطأ في تحميل البيانات:", error);
         toast.error("حدث خطأ في تحميل البيانات");

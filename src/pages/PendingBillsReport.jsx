@@ -36,7 +36,6 @@ export default function PendingBillsReport() {
     hasPreviousPage: false,
   });
 
-  // دالة مساعدة لإضافة ساعتين إلى الوقت القادم من الباك إند
   const addTwoHours = (dateString) => {
     if (!dateString) return null;
     const date = new Date(dateString);
@@ -67,7 +66,6 @@ export default function PendingBillsReport() {
       if (response.status === 200 && response.data) {
         const data = response.data;
 
-        // Update pagination from response
         setPagination({
           currentPage: data.pageNumber || pageNumber,
           pageSize: data.pageSize || 10,
@@ -156,7 +154,6 @@ export default function PendingBillsReport() {
     return rangeWithDots;
   };
 
-  // تعديل دالة formatDate لإضافة ساعتين قبل التنسيق
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const adjustedDate = addTwoHours(dateString);
@@ -232,6 +229,10 @@ export default function PendingBillsReport() {
     setSelectedBill(bill);
     setShowDetailsModal(true);
     setTimeout(() => setIsViewingBill(false), 100);
+  };
+
+  const handleResumeBill = (bill) => {
+    navigate("/", { state: { resumeInvoiceId: bill.id } });
   };
 
   const closeModal = () => {
@@ -561,18 +562,27 @@ export default function PendingBillsReport() {
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-right print:hidden">
-                                <button
-                                  onClick={() => handleViewBillDetails(bill)}
-                                  disabled={isViewingBill}
-                                  className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                                >
-                                  {isViewingBill ? (
-                                    <FaSpinner className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <FaEye className="h-3 w-3" />
-                                  )}
-                                  عرض التفاصيل
-                                </button>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleViewBillDetails(bill)}
+                                    disabled={isViewingBill}
+                                    className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                  >
+                                    {isViewingBill ? (
+                                      <FaSpinner className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <FaEye className="h-3 w-3" />
+                                    )}
+                                    عرض التفاصيل
+                                  </button>
+                                  <button
+                                    onClick={() => handleResumeBill(bill)}
+                                    className="text-xs bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                  >
+                                    <FaClock className="h-3 w-3" />
+                                    استئناف
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -854,12 +864,22 @@ export default function PendingBillsReport() {
                 </div>
               </div>
 
-              <div className="bg-gray-50 px-6 py-3 rounded-b-2xl flex justify-left">
+              <div className="bg-gray-50 px-6 py-3 rounded-b-2xl flex justify-between gap-2">
                 <button
                   onClick={closeModal}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
                 >
                   إغلاق
+                </button>
+                <button
+                  onClick={() => {
+                    closeModal();
+                    handleResumeBill(selectedBill);
+                  }}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  <FaClock className="h-4 w-4" />
+                  استئناف الفاتورة
                 </button>
               </div>
             </div>
