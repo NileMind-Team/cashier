@@ -3086,6 +3086,18 @@ export default function Home() {
       toast.success(
         `تم إرجاع الفاتورة رقم ${currentBillData.invoiceNumber} بنجاح`,
       );
+
+      const nextPage = currentInvoicePage + 1;
+      if (nextPage <= totalPages) {
+        await fetchInvoiceByPage(nextPage);
+      } else {
+        resetBillData();
+        setIsNewBillActive(true);
+        setIsEditingExistingInvoice(false);
+        setOrderPrepared(false);
+        setHasCartChanges(false);
+        toast.info("فاتورة جديدة");
+      }
     } catch (error) {
       console.error("خطأ في إرجاع الفاتورة:", error);
       toast.error("حدث خطأ في إرجاع الفاتورة");
