@@ -1,6 +1,23 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../../api/axiosInstance";
 
+const parseJwt = (token) => {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(""),
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error("Error parsing JWT token:", error);
+    return null;
+  }
+};
+
 export const loginUser = createAsyncThunk(
   "auth/loginUser",
   async (formData, { rejectWithValue }) => {
@@ -54,15 +71,21 @@ const loginSlice = createSlice({
           state.isLogged = true;
           state.token = data.token;
 
-          state.user = {
-            id: data.id || data.userId,
-            username: data.userName || data.username,
-            firstName: data.firstName || "",
-            lastName: data.lastName || "",
-            email: data.email || "",
-            phoneNumber: data.phoneNumber || "",
-            roles: data.roles || ["User"],
-          };
+          const decodedToken = parseJwt(data.token);
+
+          if (decodedToken) {
+            state.user = {
+              id: decodedToken.sub || data.id || data.userId,
+              username: decodedToken.name || data.userName || data.username,
+              roles: decodedToken.roles,
+            };
+          } else {
+            state.user = {
+              id: data.id || data.userId,
+              username: data.userName || data.username,
+              roles: data.roles,
+            };
+          }
 
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(state.user));

@@ -5003,15 +5003,13 @@ export default function Home() {
                       onClick={goToPreviousBill}
                       disabled={
                         isGoingToPreviousBill ||
-                        (!isNewBillActive &&
-                          currentInvoicePage === 1 &&
-                          totalPages === 0)
+                        (!isNewBillActive && currentInvoicePage === 1) ||
+                        (isNewBillActive && totalPages === 0)
                       }
                       className={`px-2 py-1 rounded text-xs transition-all flex items-center ${
                         isGoingToPreviousBill ||
-                        (!isNewBillActive &&
-                          currentInvoicePage === 1 &&
-                          totalPages === 0)
+                        (!isNewBillActive && currentInvoicePage === 1) ||
+                        (isNewBillActive && totalPages === 0)
                           ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400"
                           : "bg-blue-100 text-blue-800 hover:bg-blue-200"
                       }`}
