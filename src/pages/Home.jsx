@@ -321,6 +321,19 @@ export default function Home() {
       }
     } catch (error) {
       console.error("خطأ في جلب بيانات الوردية:", error);
+
+      const isShiftNotFoundError =
+        error.response?.status === 404 &&
+        error.response?.data?.errors?.some(
+          (err) => err.code === "ShiftOpen.NotFound",
+        );
+
+      if (isShiftNotFoundError) {
+        toast.error("لا توجد وردية مفتوحة");
+        navigate("/login");
+        return null;
+      }
+
       toast.error("حدث خطأ في جلب بيانات الوردية");
       return null;
     } finally {
@@ -406,12 +419,6 @@ export default function Home() {
         );
         setDeliveryCompanies(activeCompanies);
         deliveryCompaniesFetchedRef.current = true;
-
-        if (activeCompanies.length === 0) {
-          console.log(
-            "لا توجد شركات توصيل، سيتم استخدام دليفري المحل تلقائياً",
-          );
-        }
       } else {
         setDeliveryCompanies([]);
       }
@@ -1374,7 +1381,6 @@ export default function Home() {
         const shiftData = await fetchShiftDetails();
 
         if (!shiftData) {
-          navigate("/login");
           return;
         }
 
