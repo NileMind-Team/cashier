@@ -1,5 +1,5 @@
 const apiConfig = {
-  baseURL: "https://cashier-api.runasp.net",
+  baseURL: "https://cashier.runasp.net",
 };
 
 export default apiConfig;
