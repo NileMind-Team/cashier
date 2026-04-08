@@ -185,6 +185,8 @@ export default function Home() {
   const [isGoingToNextBill, setIsGoingToNextBill] = useState(false);
   // eslint-disable-next-line no-unused-vars
   const [isResumingFromPending, setIsResumingFromPending] = useState(false);
+  const [nextInvoiceNumber, setNextInvoiceNumber] = useState(null);
+  const [totalInvoiceCount, setTotalInvoiceCount] = useState(0);
 
   const DeliveryType = {
     Store: "store",
@@ -294,6 +296,16 @@ export default function Home() {
     }
   };
 
+  const formatInvoiceNumber = (number) => {
+    return `#INV-${number}`;
+  };
+
+  const calculateNextInvoiceNumber = (totalInvoice) => {
+    if (!totalInvoice && totalInvoice !== 0) return null;
+    const nextNumber = totalInvoice + 1;
+    return formatInvoiceNumber(nextNumber);
+  };
+
   const fetchShiftDetails = async () => {
     if (shiftFetchedRef.current) {
       return currentShift;
@@ -312,7 +324,11 @@ export default function Home() {
         shiftFetchedRef.current = true;
 
         const totalInvoice = response.data.totalInvoice || 0;
+        setTotalInvoiceCount(totalInvoice);
         setTotalPages(totalInvoice);
+
+        const nextNumber = calculateNextInvoiceNumber(totalInvoice);
+        setNextInvoiceNumber(nextNumber);
 
         return response.data;
       } else {
@@ -339,6 +355,13 @@ export default function Home() {
     } finally {
       setShiftLoading(false);
     }
+  };
+
+  const updateNextInvoiceNumberLocally = () => {
+    const newTotalInvoice = totalInvoiceCount + 1;
+    setTotalInvoiceCount(newTotalInvoice);
+    const nextNumber = calculateNextInvoiceNumber(newTotalInvoice);
+    setNextInvoiceNumber(nextNumber);
   };
 
   const shiftSummary = useMemo(() => {
@@ -1105,6 +1128,8 @@ export default function Home() {
 
         invoicesFetchedRef.current = false;
         await fetchLastInvoice();
+
+        updateNextInvoiceNumberLocally();
 
         return response.data;
       }
@@ -5032,19 +5057,32 @@ export default function Home() {
                           فاتورة
                         </span>
                         {isNewBillActive ? (
-                          <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded-full">
-                            جديدة
-                          </span>
+                          <>
+                            {nextInvoiceNumber && (
+                              <span
+                                className="text-sm font-bold"
+                                style={{ color: "#193F94" }}
+                              >
+                                {nextInvoiceNumber}
+                              </span>
+                            )}
+                            <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded-full mr-1">
+                              جديدة
+                            </span>
+                          </>
                         ) : (
                           <>
-                            <span>
+                            <span
+                              className="text-sm font-bold"
+                              style={{ color: "#193F94" }}
+                            >
                               #
                               {currentBillData.invoiceNumber ||
                                 currentBillIndex + 1}
                             </span>
                             {currentBillData.invoiceStatus !== undefined && (
                               <span
-                                className={`text-[10px] px-1.5 py-0.5 rounded-full ${getInvoiceStatusStyle(currentBillData.invoiceStatus)}`}
+                                className={`text-[10px] px-1.5 py-0.5 rounded-full mr-1 ${getInvoiceStatusStyle(currentBillData.invoiceStatus)}`}
                               >
                                 {getInvoiceStatusText(
                                   currentBillData.invoiceStatus,
