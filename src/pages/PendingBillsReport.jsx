@@ -75,18 +75,28 @@ export default function PendingBillsReport() {
           hasPreviousPage: data.hasPrevious || false,
         });
 
-        const billsWithDetails = (data.invoices || []).map((bill) => ({
-          id: bill.invoiceId,
-          billNumber: bill.invoiceNumber,
-          createdAt: bill.invoiceDate,
-          createdBy: bill.employeeName,
-          employeeId: bill.employeeId,
-          employeeName: bill.employeeName,
-          customerName: bill.customerName || "عميل",
-          total: bill.totalAmount,
-          status: "pending",
-          invoiceType: bill.invoiceType,
-        }));
+        const billsWithDetails = (data.invoices || []).map((bill) => {
+          let sequentialNumber = null;
+          if (bill.invoiceNumber && bill.invoiceNumber.startsWith("INV-")) {
+            sequentialNumber = parseInt(bill.invoiceNumber.replace("INV-", ""));
+          } else {
+            sequentialNumber = bill.invoiceNumber;
+          }
+
+          return {
+            id: bill.invoiceId,
+            sequentialNumber: sequentialNumber,
+            billNumber: bill.invoiceNumber,
+            createdAt: bill.invoiceDate,
+            createdBy: bill.employeeName,
+            employeeId: bill.employeeId,
+            employeeName: bill.employeeName,
+            customerName: bill.customerName || "عميل",
+            total: bill.totalAmount,
+            status: "pending",
+            invoiceType: bill.invoiceType,
+          };
+        });
 
         setPendingBills(billsWithDetails);
         toast.success(`تم تحميل ${billsWithDetails.length} فاتورة معلقة`);
@@ -232,7 +242,7 @@ export default function PendingBillsReport() {
   };
 
   const handleResumeBill = (bill) => {
-    navigate("/", { state: { resumeInvoiceId: bill.id } });
+    navigate("/", { state: { resumeInvoiceId: bill.sequentialNumber } });
   };
 
   const closeModal = () => {
