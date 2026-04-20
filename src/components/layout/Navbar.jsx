@@ -670,38 +670,39 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
               )}
             </div>
 
-            {/* Reports Dropdown - Hidden for Cashier */}
-            {!isCashier && (
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setShowReportsDropdown(!showReportsDropdown)}
-                  aria-expanded={showReportsDropdown}
-                  aria-haspopup="true"
-                  className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
-                    isReportsActive
-                      ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
-                      : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
-                  } ${showReportsDropdown ? "bg-gradient-to-r from-blue-900 to-blue-700 text-white" : ""}`}
-                >
-                  <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
-                  <FaChartBar
-                    className={`h-4 w-4 ml-1.5 ${isReportsActive || showReportsDropdown ? "text-white" : "text-blue-700"}`}
-                  />
-                  <span className="relative">التقارير</span>
-                  <FaChevronDown
-                    className={`h-3 w-3 mr-1 transition-all duration-300 ${
-                      showReportsDropdown ? "rotate-180 transform" : ""
-                    } ${isReportsActive || showReportsDropdown ? "text-white" : "text-gray-500"}`}
-                  />
-                </button>
+            {/* Reports Dropdown - Show for Cashier as well (modified) */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setShowReportsDropdown(!showReportsDropdown)}
+                aria-expanded={showReportsDropdown}
+                aria-haspopup="true"
+                className={`h-9 px-3 rounded-lg font-medium transition-all duration-300 flex items-center text-sm relative overflow-hidden group ${
+                  isReportsActive
+                    ? "text-white bg-gradient-to-r from-blue-900 to-blue-700 shadow-md shadow-blue-900/30"
+                    : "text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:shadow-blue-900/10"
+                } ${showReportsDropdown ? "bg-gradient-to-r from-blue-900 to-blue-700 text-white" : ""}`}
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-blue-600/0 transition-all duration-300"></span>
+                <FaChartBar
+                  className={`h-4 w-4 ml-1.5 ${isReportsActive || showReportsDropdown ? "text-white" : "text-blue-700"}`}
+                />
+                <span className="relative">التقارير</span>
+                <FaChevronDown
+                  className={`h-3 w-3 mr-1 transition-all duration-300 ${
+                    showReportsDropdown ? "rotate-180 transform" : ""
+                  } ${isReportsActive || showReportsDropdown ? "text-white" : "text-gray-500"}`}
+                />
+              </button>
 
-                {showReportsDropdown && (
-                  <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-slideDown">
-                    <div className="p-2 bg-gradient-to-b from-gray-50 to-white">
-                      <div className="text-xs font-semibold text-gray-500 px-3 py-1.5 border-b border-gray-100 mb-1">
-                        قائمة التقارير
-                      </div>
-                      <div className="space-y-0.5">
+              {showReportsDropdown && (
+                <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-slideDown">
+                  <div className="p-2 bg-gradient-to-b from-gray-50 to-white">
+                    <div className="text-xs font-semibold text-gray-500 px-3 py-1.5 border-b border-gray-100 mb-1">
+                      قائمة التقارير
+                    </div>
+                    <div className="space-y-0.5">
+                      {/* Shifts Report - Hidden for Cashier */}
+                      {!isCashier && (
                         <button
                           onClick={() => handleReportNavigation("shifts")}
                           className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
@@ -734,7 +735,10 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                             </p>
                           </div>
                         </button>
+                      )}
 
+                      {/* Sales Report - Hidden for Cashier */}
+                      {!isCashier && (
                         <button
                           onClick={() => handleReportNavigation("sales")}
                           className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
@@ -767,7 +771,10 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                             </p>
                           </div>
                         </button>
+                      )}
 
+                      {/* Products Report - Hidden for Cashier */}
+                      {!isCashier && (
                         <button
                           onClick={() => handleReportNavigation("products")}
                           className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
@@ -800,40 +807,42 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                             </p>
                           </div>
                         </button>
+                      )}
 
-                        <button
-                          onClick={() => handleReportNavigation("customers")}
-                          className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                      {/* Customers Report - Visible for all (modified) */}
+                      <button
+                        onClick={() => handleReportNavigation("customers")}
+                        className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                          location.pathname === "/reports/customers"
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
                             location.pathname === "/reports/customers"
-                              ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
-                              : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
                           }`}
                         >
-                          <div
-                            className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
+                          <FaUserFriends
+                            className={`h-3.5 w-3.5 transition-all duration-200 ${
                               location.pathname === "/reports/customers"
-                                ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
-                                : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
+                                ? "text-white"
+                                : "text-blue-600 group-hover:text-white"
                             }`}
-                          >
-                            <FaUserFriends
-                              className={`h-3.5 w-3.5 transition-all duration-200 ${
-                                location.pathname === "/reports/customers"
-                                  ? "text-white"
-                                  : "text-blue-600 group-hover:text-white"
-                              }`}
-                            />
-                          </div>
-                          <div className="flex-1 text-right">
-                            <p className="font-medium text-sm">
-                              تقارير العملاء
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              تحليلات العملاء والمشتريات
-                            </p>
-                          </div>
-                        </button>
+                          />
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-medium text-sm">تقارير العملاء</p>
+                          <p className="text-xs text-gray-500">
+                            تحليلات العملاء والمشتريات
+                          </p>
+                        </div>
+                      </button>
 
+                      {/* Payment Methods Report - Hidden for Cashier */}
+                      {!isCashier && (
                         <button
                           onClick={() =>
                             handleReportNavigation("payment-methods")
@@ -868,7 +877,10 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                             </p>
                           </div>
                         </button>
+                      )}
 
+                      {/* Pending Bills Report - Hidden for Cashier */}
+                      {!isCashier && (
                         <button
                           onClick={() =>
                             handleReportNavigation("pending-bills")
@@ -903,7 +915,10 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                             </p>
                           </div>
                         </button>
+                      )}
 
+                      {/* Returns Report - Hidden for Cashier */}
+                      {!isCashier && (
                         <button
                           onClick={() => handleReportNavigation("returns")}
                           className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
@@ -936,12 +951,12 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                             </p>
                           </div>
                         </button>
-                      </div>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
 
             {/* Close Shift Button */}
             {isShiftOpen && (
