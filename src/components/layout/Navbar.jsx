@@ -205,6 +205,9 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
     setShowManagementDropdown(false);
 
     switch (managementType) {
+      case "organization":
+        navigate("/organization");
+        break;
       case "halls":
         navigate("/halls");
         break;
@@ -245,6 +248,7 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
 
   const isReportsActive = location.pathname.startsWith("/reports");
   const isManagementActive =
+    location.pathname === "/organization" ||
     location.pathname === "/halls" ||
     location.pathname === "/options" ||
     location.pathname === "/categories" ||
@@ -320,6 +324,39 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                       قائمة الإدارات
                     </div>
                     <div className="space-y-0.5">
+                      {/* Organization Management - Visible for Admin only (not cashier) */}
+                      {!isCashier && (
+                        <button
+                          onClick={() =>
+                            handleManagementNavigation("organization")
+                          }
+                          className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
+                            location.pathname === "/organization"
+                              ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
+                              : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
+                          }`}
+                        >
+                          <div
+                            className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
+                              location.pathname === "/organization"
+                                ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
+                                : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
+                            }`}
+                          >
+                            <FaBuilding
+                              className={`h-3.5 w-3.5 transition-all duration-200 ${
+                                location.pathname === "/organization"
+                                  ? "text-white"
+                                  : "text-blue-600 group-hover:text-white"
+                              }`}
+                            />
+                          </div>
+                          <div className="flex-1 text-right">
+                            <p className="font-medium text-sm">إدارة المنظمة</p>
+                          </div>
+                        </button>
+                      )}
+
                       {/* Halls Management - Visible for all */}
                       <button
                         onClick={() => handleManagementNavigation("halls")}
