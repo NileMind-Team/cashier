@@ -66,6 +66,7 @@ export default function ProductsManagement() {
   const isFetchingMainCategoriesRef = useRef(false);
   const isFetchingSubCategoriesRef = useRef(false);
   const isFirstRender = useRef(true);
+  const totalCountRef = useRef(0);
 
   const [productForm, setProductForm] = useState({
     name: "",
@@ -82,18 +83,27 @@ export default function ProductsManagement() {
       return;
     }
 
+    const totalCount = totalCountRef.current;
+
+    if (totalCount === 0) {
+      setAllProducts([]);
+      return;
+    }
+
     try {
       isFetchingAllProductsRef.current = true;
       setIsFetchingAllProducts(true);
 
       const response = await axiosInstance.post("/api/Items/GetAllItems", {
         pageNumber: 1,
-        pageSize: 26,
+        pageSize: totalCount,
         skip: 0,
       });
 
       if (response.status === 200 && response.data) {
         setAllProducts(response.data.items || []);
+      } else {
+        setAllProducts([]);
       }
     } catch (error) {
       console.error("خطأ في جلب جميع المنتجات:", error);
@@ -132,15 +142,21 @@ export default function ProductsManagement() {
           hasNextPage: response.data.pageNumber < response.data.totalPages,
           hasPreviousPage: response.data.pageNumber > 1,
         });
+
+        if (response.data.totalCount) {
+          totalCountRef.current = response.data.totalCount;
+        }
       } else {
         setProducts([]);
         toast.info("لا يوجد منتجات في النظام");
+        totalCountRef.current = 0;
       }
     } catch (error) {
       console.error("خطأ في جلب المنتجات:", error);
       if (error.response?.status === 404) {
         setProducts([]);
         toast.info("لا يوجد منتجات في النظام");
+        totalCountRef.current = 0;
       } else {
         toast.error("حدث خطأ في جلب المنتجات");
       }
@@ -202,10 +218,10 @@ export default function ProductsManagement() {
     setCategoriesLoading(true);
     await Promise.all([
       fetchProducts(1, false),
-      fetchAllProductsForCounting(),
       fetchMainCategories(),
       fetchSubCategories(),
     ]);
+    await fetchAllProductsForCounting();
     setCategoriesLoading(false);
   };
 

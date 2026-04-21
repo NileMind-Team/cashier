@@ -29,6 +29,7 @@ import {
   FileText,
   DollarSign,
   Save,
+  Search,
 } from "lucide-react";
 import { FaSpinner } from "react-icons/fa";
 
@@ -187,6 +188,11 @@ export default function Home() {
   const [isResumingFromPending, setIsResumingFromPending] = useState(false);
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState(null);
   const [totalInvoiceCount, setTotalInvoiceCount] = useState(0);
+  const [showInvoiceSearch, setShowInvoiceSearch] = useState(false);
+  const [searchInvoiceNumber, setSearchInvoiceNumber] = useState("");
+  const [isSearchingInvoice, setIsSearchingInvoice] = useState(false);
+  const [currentSearchedInvoiceNumber, setCurrentSearchedInvoiceNumber] =
+    useState(null);
 
   const DeliveryType = {
     Store: "store",
@@ -843,6 +849,7 @@ export default function Home() {
           setIsNewBillActive(false);
           setIsEditingExistingInvoice(true);
           setOrderPrepared(false);
+          setCurrentSearchedInvoiceNumber(null);
         }
 
         invoicesFetchedRef.current = true;
@@ -851,6 +858,62 @@ export default function Home() {
       console.error(`خطأ في جلب الفواتير للصفحة ${pageNumber}:`, error);
       toast.error("حدث خطأ في جلب الفواتير");
     }
+  };
+
+  const fetchInvoiceByNumber = async (invoiceNumber) => {
+    try {
+      setIsSearchingInvoice(true);
+      const response = await axiosInstance.post(
+        "/api/Invoices/GetAll/all",
+        {
+          pageNumber: 1,
+          pageSize: 1000,
+          skip: 0,
+        },
+        {
+          params: {
+            invoiceNumber: invoiceNumber,
+          },
+        },
+      );
+
+      if (response.status === 200 && response.data) {
+        const invoicesData = response.data.items || [];
+
+        if (invoicesData.length > 0) {
+          const invoice = invoicesData[0];
+          convertInvoiceToBill(invoice);
+          setIsNewBillActive(false);
+          setIsEditingExistingInvoice(true);
+          setOrderPrepared(false);
+          setShowInvoiceSearch(false);
+          setSearchInvoiceNumber("");
+          setCurrentSearchedInvoiceNumber(invoiceNumber);
+          toast.success(`تم العثور على الفاتورة رقم ${invoiceNumber}`);
+          return true;
+        } else {
+          toast.error(`لم يتم العثور على فاتورة برقم ${invoiceNumber}`);
+          return false;
+        }
+      } else {
+        toast.error(`لم يتم العثور على فاتورة برقم ${invoiceNumber}`);
+        return false;
+      }
+    } catch (error) {
+      console.error("خطأ في البحث عن الفاتورة:", error);
+      toast.error("حدث خطأ في البحث عن الفاتورة");
+      return false;
+    } finally {
+      setIsSearchingInvoice(false);
+    }
+  };
+
+  const handleSearchInvoice = async () => {
+    if (!searchInvoiceNumber.trim()) {
+      toast.error("الرجاء إدخال رقم الفاتورة");
+      return;
+    }
+    await fetchInvoiceByNumber(searchInvoiceNumber.trim());
   };
 
   const fetchInvoiceByTableId = async (tableId) => {
@@ -2738,6 +2801,7 @@ export default function Home() {
           setIsEditingExistingInvoice(false);
           setOrderPrepared(false);
           setHasCartChanges(false);
+          setCurrentSearchedInvoiceNumber(null);
           toast.info("فاتورة جديدة");
         }
       } catch (error) {
@@ -2747,7 +2811,17 @@ export default function Home() {
         setIsGoingToNextBill(false);
       }
     } else {
-      if (currentInvoicePage < totalPages) {
+      if (currentSearchedInvoiceNumber) {
+        const nextInvoiceNumber = parseInt(currentSearchedInvoiceNumber) + 1;
+        setIsGoingToNextBill(true);
+        const success = await fetchInvoiceByNumber(
+          nextInvoiceNumber.toString(),
+        );
+        if (success) {
+          setCurrentSearchedInvoiceNumber(nextInvoiceNumber);
+        }
+        setIsGoingToNextBill(false);
+      } else if (currentInvoicePage < totalPages) {
         setIsGoingToNextBill(true);
         const nextPage = currentInvoicePage + 1;
         await fetchInvoiceByPage(nextPage);
@@ -2759,6 +2833,7 @@ export default function Home() {
         setIsEditingExistingInvoice(false);
         setOrderPrepared(false);
         setHasCartChanges(false);
+        setCurrentSearchedInvoiceNumber(null);
         toast.info("فاتورة جديدة");
         setIsGoingToNextBill(false);
       }
@@ -2775,12 +2850,28 @@ export default function Home() {
         setIsNewBillActive(false);
         setIsEditingExistingInvoice(true);
         setOrderPrepared(false);
+        setCurrentSearchedInvoiceNumber(null);
         setIsGoingToPreviousBill(false);
       } else {
         toast.warning("لا توجد فواتير سابقة");
       }
     } else {
-      if (currentInvoicePage > 1) {
+      if (currentSearchedInvoiceNumber) {
+        const prevInvoiceNumber = parseInt(currentSearchedInvoiceNumber) - 1;
+        if (prevInvoiceNumber >= 1) {
+          setIsGoingToPreviousBill(true);
+          const success = await fetchInvoiceByNumber(
+            prevInvoiceNumber.toString(),
+          );
+          if (success) {
+            setCurrentSearchedInvoiceNumber(prevInvoiceNumber);
+          }
+          setIsGoingToPreviousBill(false);
+        } else {
+          toast.warning("لا توجد فواتير سابقة");
+          setIsGoingToPreviousBill(false);
+        }
+      } else if (currentInvoicePage > 1) {
         setIsGoingToPreviousBill(true);
         const prevPage = currentInvoicePage - 1;
         await fetchInvoiceByPage(prevPage);
@@ -2791,6 +2882,7 @@ export default function Home() {
         setIsEditingExistingInvoice(false);
         setCurrentInvoicePage(0);
         resetBillData();
+        setCurrentSearchedInvoiceNumber(null);
         toast.info("فاتورة جديدة");
         setIsGoingToPreviousBill(false);
       }
@@ -2805,6 +2897,7 @@ export default function Home() {
     setIsEditingExistingInvoice(false);
     setCurrentInvoicePage(totalPages + 1);
     resetBillData();
+    setCurrentSearchedInvoiceNumber(null);
     toast.info("فاتورة جديدة");
     setIsGoingToNextBill(false);
   };
@@ -3279,7 +3372,9 @@ export default function Home() {
     setSelectedDeliveryCompany(null);
     setOrderPrepared(false);
     setCurrentInvoiceRemainingAmount(0);
+    setCurrentSearchedInvoiceNumber(null);
   };
+
   const resetCart = async () => {
     resetCartOnly();
   };
@@ -3369,6 +3464,83 @@ export default function Home() {
         onShiftClose={handleShiftClose}
         shiftSummary={shiftSummary}
       />
+
+      {showInvoiceSearch && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold" style={{ color: "#193F94" }}>
+                  البحث عن فاتورة
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowInvoiceSearch(false);
+                    setSearchInvoiceNumber("");
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  رقم الفاتورة
+                </label>
+                <input
+                  type="text"
+                  value={searchInvoiceNumber}
+                  onChange={(e) => setSearchInvoiceNumber(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearchInvoice();
+                    }
+                  }}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm"
+                  placeholder="أدخل رقم الفاتورة..."
+                  autoFocus
+                  dir="rtl"
+                />
+              </div>
+
+              <div className="flex space-x-3 rtl:space-x-reverse">
+                <button
+                  onClick={() => {
+                    setShowInvoiceSearch(false);
+                    setSearchInvoiceNumber("");
+                  }}
+                  className="flex-1 py-3 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleSearchInvoice}
+                  disabled={isSearchingInvoice}
+                  className={`flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors flex items-center justify-center ${
+                    isSearchingInvoice
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:opacity-90"
+                  }`}
+                  style={{ backgroundColor: "#193F94" }}
+                >
+                  {isSearchingInvoice ? (
+                    <>
+                      <FaSpinner className="w-4 h-4 ml-2 animate-spin" />
+                      جاري البحث...
+                    </>
+                  ) : (
+                    <>
+                      <Search size={16} className="ml-2" />
+                      بحث
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showProductModal && selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -5025,16 +5197,32 @@ export default function Home() {
                   </h2>
                   <div className="flex items-center space-x-1 rtl:space-x-reverse">
                     <button
+                      onClick={() => setShowInvoiceSearch(true)}
+                      className="px-2 py-1 rounded bg-green-100 text-green-800 hover:bg-green-200 text-xs transition-all flex items-center"
+                      title="بحث برقم الفاتورة"
+                    >
+                      <Search size={12} className="ml-1" />
+                      بحث
+                    </button>
+                    <button
                       onClick={goToPreviousBill}
                       disabled={
                         isGoingToPreviousBill ||
-                        (!isNewBillActive && currentInvoicePage === 1) ||
-                        (isNewBillActive && totalPages === 0)
+                        (!isNewBillActive &&
+                          !currentSearchedInvoiceNumber &&
+                          currentInvoicePage === 1) ||
+                        (isNewBillActive && totalPages === 0) ||
+                        (currentSearchedInvoiceNumber &&
+                          parseInt(currentSearchedInvoiceNumber) <= 1)
                       }
                       className={`px-2 py-1 rounded text-xs transition-all flex items-center ${
                         isGoingToPreviousBill ||
-                        (!isNewBillActive && currentInvoicePage === 1) ||
-                        (isNewBillActive && totalPages === 0)
+                        (!isNewBillActive &&
+                          !currentSearchedInvoiceNumber &&
+                          currentInvoicePage === 1) ||
+                        (isNewBillActive && totalPages === 0) ||
+                        (currentSearchedInvoiceNumber &&
+                          parseInt(currentSearchedInvoiceNumber) <= 1)
                           ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400"
                           : "bg-blue-100 text-blue-800 hover:bg-blue-200"
                       }`}
