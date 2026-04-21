@@ -30,6 +30,7 @@ import { FaSpinner, FaUsers } from "react-icons/fa";
 export default function ProductsManagement() {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
   const [mainCategories, setMainCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   const [showProductModal, setShowProductModal] = useState(false);
@@ -51,15 +52,17 @@ export default function ProductsManagement() {
     hasPreviousPage: false,
   });
 
-  // Loading states for buttons
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [isEditingProduct, setIsEditingProduct] = useState(false);
   const [isTogglingProduct, setIsTogglingProduct] = useState(false);
   const [isDeletingProduct, setIsDeletingProduct] = useState(false);
   const [isAddingTax, setIsAddingTax] = useState(false);
   const [isFetchingProducts, setIsFetchingProducts] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [isFetchingAllProducts, setIsFetchingAllProducts] = useState(false);
 
   const isFetchingProductsRef = useRef(false);
+  const isFetchingAllProductsRef = useRef(false);
   const isFetchingMainCategoriesRef = useRef(false);
   const isFetchingSubCategoriesRef = useRef(false);
   const isFirstRender = useRef(true);
@@ -73,6 +76,33 @@ export default function ProductsManagement() {
     valueAddedTax: null,
     isVatIncluded: true,
   });
+
+  const fetchAllProductsForCounting = async () => {
+    if (isFetchingAllProductsRef.current) {
+      return;
+    }
+
+    try {
+      isFetchingAllProductsRef.current = true;
+      setIsFetchingAllProducts(true);
+
+      const response = await axiosInstance.post("/api/Items/GetAllItems", {
+        pageNumber: 1,
+        pageSize: 26,
+        skip: 0,
+      });
+
+      if (response.status === 200 && response.data) {
+        setAllProducts(response.data.items || []);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب جميع المنتجات:", error);
+      setAllProducts(products);
+    } finally {
+      isFetchingAllProductsRef.current = false;
+      setIsFetchingAllProducts(false);
+    }
+  };
 
   const fetchProducts = async (
     pageNumber = pagination.currentPage,
@@ -172,6 +202,7 @@ export default function ProductsManagement() {
     setCategoriesLoading(true);
     await Promise.all([
       fetchProducts(1, false),
+      fetchAllProductsForCounting(),
       fetchMainCategories(),
       fetchSubCategories(),
     ]);
@@ -186,6 +217,7 @@ export default function ProductsManagement() {
 
     return () => {
       isFetchingProductsRef.current = false;
+      isFetchingAllProductsRef.current = false;
       isFetchingMainCategoriesRef.current = false;
       isFetchingSubCategoriesRef.current = false;
     };
@@ -220,11 +252,29 @@ export default function ProductsManagement() {
     }
   };
 
+  const getProductsCountBySubCategory = (subCategoryId) => {
+    return allProducts.filter((p) => p.subCategoryId === subCategoryId).length;
+  };
+
   const handleAddProduct = () => {
     if (mainCategories.length === 0) {
       toast.error("يجب إضافة فئات أولاً");
       return;
     }
+
+    const activeSubCategories = subCategories.filter((sub) => sub.isActive);
+    const availableSubCategories = activeSubCategories.filter((sub) => {
+      const productsCount = getProductsCountBySubCategory(sub.id);
+      return productsCount < 25;
+    });
+
+    if (availableSubCategories.length === 0) {
+      toast.error(
+        "لقد تجاوزت الحد الأقصى لعدد المنتجات في جميع الفئات الفرعية النشطة",
+      );
+      return;
+    }
+
     setShowProductModal(true);
     setEditingProduct(null);
 
@@ -369,6 +419,18 @@ export default function ProductsManagement() {
       return;
     }
 
+    if (!editingProduct) {
+      const productsCountInSubCategory = getProductsCountBySubCategory(
+        parseInt(productForm.subCategoryId),
+      );
+      if (productsCountInSubCategory >= 25) {
+        toast.error(
+          "لقد تجاوزت الحد الأقصى لعدد المنتجات في هذه الفئة الفرعية (25 منتج)",
+        );
+        return;
+      }
+    }
+
     if (editingProduct) {
       setIsEditingProduct(true);
     } else {
@@ -396,6 +458,7 @@ export default function ProductsManagement() {
         if (response.status === 200) {
           toast.success("تم تحديث المنتج بنجاح");
           await fetchProducts(pagination.currentPage, false);
+          await fetchAllProductsForCounting();
           setShowProductModal(false);
           setEditingProduct(null);
         } else {
@@ -410,6 +473,7 @@ export default function ProductsManagement() {
         if (response.status === 201 || response.status === 200) {
           toast.success("تم إضافة المنتج بنجاح");
           await fetchProducts(1, false);
+          await fetchAllProductsForCounting();
           setShowProductModal(false);
           setEditingProduct(null);
         } else {
@@ -446,6 +510,7 @@ export default function ProductsManagement() {
       if (error.response?.status === 201 || error.response?.status === 200) {
         toast.success("تم حفظ المنتج بنجاح");
         await fetchProducts(pagination.currentPage, false);
+        await fetchAllProductsForCounting();
         setShowProductModal(false);
         setEditingProduct(null);
       } else {
@@ -483,6 +548,7 @@ export default function ProductsManagement() {
           taxValue: "",
         });
         await fetchProducts(pagination.currentPage, false);
+        await fetchAllProductsForCounting();
       } else {
         toast.error("فشل في إضافة الضريبة");
       }
@@ -496,6 +562,7 @@ export default function ProductsManagement() {
           taxValue: "",
         });
         await fetchProducts(pagination.currentPage, false);
+        await fetchAllProductsForCounting();
       } else {
         toast.error("حدث خطأ في إضافة الضريبة");
       }
@@ -534,6 +601,7 @@ export default function ProductsManagement() {
               : pagination.currentPage;
 
           await fetchProducts(newPage || 1, false);
+          await fetchAllProductsForCounting();
         } else {
           toast.error("فشل في حذف المنتج");
         }
@@ -579,6 +647,7 @@ export default function ProductsManagement() {
             `تم ${product.isAvailable ? "تعطيل" : "تفعيل"} المنتج بنجاح`,
           );
           await fetchProducts(pagination.currentPage, false);
+          await fetchAllProductsForCounting();
         } else {
           toast.error("فشل في تغيير حالة المنتج");
         }
@@ -590,6 +659,7 @@ export default function ProductsManagement() {
             `تم ${product.isAvailable ? "تعطيل" : "تفعيل"} المنتج بنجاح`,
           );
           await fetchProducts(pagination.currentPage, false);
+          await fetchAllProductsForCounting();
         } else {
           toast.error("حدث خطأ في تغيير حالة المنتج");
         }
@@ -776,7 +846,8 @@ export default function ProductsManagement() {
                 قائمة المنتجات
               </h3>
               <p className="text-sm text-gray-600">
-                إدارة جميع المنتجات في النظام
+                إدارة جميع المنتجات في النظام (الحد الأقصى 25 منتج لكل فئة
+                فرعية)
               </p>
             </div>
             <div className="flex gap-2">
@@ -1293,6 +1364,9 @@ export default function ProductsManagement() {
                       ? "قم بتعديل بيانات المنتج"
                       : "أدخل بيانات المنتج الجديد"}
                   </p>
+                  <p className="text-xs text-amber-600 mt-1">
+                    الحد الأقصى: 25 منتج لكل فئة فرعية
+                  </p>
                 </div>
                 <button
                   onClick={() => setShowProductModal(false)}
@@ -1455,11 +1529,22 @@ export default function ProductsManagement() {
                         getFilteredSubCategories().length === 0
                       }
                     >
-                      {getFilteredSubCategories().map((subCategory) => (
-                        <option key={subCategory.id} value={subCategory.id}>
-                          {subCategory.name}
-                        </option>
-                      ))}
+                      {getFilteredSubCategories().map((subCategory) => {
+                        const productsCount = getProductsCountBySubCategory(
+                          subCategory.id,
+                        );
+                        const isFull = productsCount >= 25;
+                        return (
+                          <option
+                            key={subCategory.id}
+                            value={subCategory.id}
+                            disabled={isFull && !editingProduct}
+                          >
+                            {subCategory.name} ({productsCount}/25){" "}
+                            {isFull && !editingProduct ? " - ممتلئة" : ""}
+                          </option>
+                        );
+                      })}
                     </select>
                     <label
                       className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${

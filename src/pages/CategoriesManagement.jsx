@@ -112,6 +112,12 @@ export default function CategoriesManagement() {
   }, []);
 
   const handleAddMainCategory = () => {
+    if (mainCategories.length >= 8) {
+      toast.error(
+        "لقد تجاوزت عدد العناصر المسموح بها. لا يمكنك إضافة أكثر من 8 فئات رئيسية.",
+      );
+      return;
+    }
     setShowMainCategoryModal(true);
     setEditingMainCategory(null);
     setMainCategoryForm({
@@ -136,6 +142,20 @@ export default function CategoriesManagement() {
       toast.error("يجب إضافة فئة رئيسية أولاً");
       return;
     }
+
+    const targetMainCategoryId =
+      selectedMainCategory?.id || mainCategories[0]?.id;
+    if (targetMainCategoryId) {
+      const subCategoriesCount =
+        getSubCategoriesForMainCategory(targetMainCategoryId).length;
+      if (subCategoriesCount >= 8) {
+        toast.error(
+          "لقد تجاوزت عدد العناصر المسموح بها. لا يمكنك إضافة أكثر من 8 فئات فرعية لهذه الفئة الرئيسية.",
+        );
+        return;
+      }
+    }
+
     setShowSubCategoryModal(true);
     setEditingSubCategory(null);
     setSubCategoryForm({
@@ -188,6 +208,13 @@ export default function CategoriesManagement() {
 
     if (!mainCategoryForm.name.trim()) {
       toast.error("يرجى إدخال اسم الفئة الرئيسية");
+      return;
+    }
+
+    if (!editingMainCategory && mainCategories.length >= 8) {
+      toast.error(
+        "لقد تجاوزت عدد العناصر المسموح بها. لا يمكنك إضافة أكثر من 8 فئات رئيسية.",
+      );
       return;
     }
 
@@ -267,6 +294,18 @@ export default function CategoriesManagement() {
     if (!subCategoryForm.mainCategoryId) {
       toast.error("يرجى اختيار الفئة الرئيسية");
       return;
+    }
+
+    if (!editingSubCategory) {
+      const currentSubCategoriesCount = getSubCategoriesForMainCategory(
+        parseInt(subCategoryForm.mainCategoryId),
+      ).length;
+      if (currentSubCategoriesCount >= 8) {
+        toast.error(
+          "لقد تجاوزت عدد العناصر المسموح بها. لا يمكنك إضافة أكثر من 8 فئات فرعية لهذه الفئة الرئيسية.",
+        );
+        return;
+      }
     }
 
     if (editingSubCategory) {
@@ -576,6 +615,10 @@ export default function CategoriesManagement() {
                 <p className="text-sm text-gray-600">
                   إضافة وتعديل الفئات الرئيسية للمنتجات
                 </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  الحد الأقصى: 8 فئات رئيسية (العدد الحالي:{" "}
+                  {mainCategories.length}/8)
+                </p>
               </div>
               <button
                 onClick={handleAddMainCategory}
@@ -638,7 +681,7 @@ export default function CategoriesManagement() {
                               getSubCategoriesForMainCategory(category.id)
                                 .length
                             }{" "}
-                            فئة فرعية
+                            / 8 فئة فرعية
                           </div>
                         </div>
                       </div>
@@ -734,6 +777,14 @@ export default function CategoriesManagement() {
                     </div>
                     <span className="text-sm font-medium text-gray-700">
                       {selectedMainCategory.name}
+                    </span>
+                    <span className="text-xs text-green-600 mr-2">
+                      (العدد الحالي:{" "}
+                      {
+                        getSubCategoriesForMainCategory(selectedMainCategory.id)
+                          .length
+                      }
+                      /8)
                     </span>
                   </div>
                 )}
@@ -1074,7 +1125,9 @@ export default function CategoriesManagement() {
                       <option value="">اختر الفئة الرئيسية</option>
                       {mainCategories.map((category) => (
                         <option key={category.id} value={category.id}>
-                          {category.name}
+                          {category.name} (
+                          {getSubCategoriesForMainCategory(category.id).length}
+                          /8)
                         </option>
                       ))}
                     </select>

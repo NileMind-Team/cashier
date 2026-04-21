@@ -4863,7 +4863,7 @@ export default function Home() {
                         <button
                           key={category.id}
                           onClick={() => setSelectedMainCategory(category)}
-                          className={`flex items-center justify-center px-4 py-3 text-sm font-medium transition-all duration-300 whitespace-nowrap border-b-2 min-w-[120px] ${
+                          className={`flex items-center justify-center px-4 py-3 text-sm font-medium transition-all duration-300 whitespace-nowrap border-b-2 min-w-[110px] ${
                             selectedMainCategory?.id === category.id
                               ? "border-blue-500 text-blue-700 bg-blue-50 rounded-t-lg"
                               : "border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100"

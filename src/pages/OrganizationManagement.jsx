@@ -28,49 +28,52 @@ export default function OrganizationManagement() {
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
   const fileInputRef = useRef(null);
+  const hasFetched = useRef(false);
 
   const [formData, setFormData] = useState({
-    companyName: "",
+    name: "",
     commercialRegister: "",
-    taxId: "",
+    taxNumber: "",
     address: "",
-    phonePrimary: "",
-    phoneSecondary: "",
+    primaryPhone: "",
+    secondaryPhone: "",
     slogan: "",
-    logo: "",
+    logoUrl: "",
   });
 
   const [focusedField, setFocusedField] = useState(null);
 
-  // Fetch company data on load
   useEffect(() => {
-    fetchCompanyData();
+    if (!hasFetched.current) {
+      hasFetched.current = true;
+      fetchCompanyData();
+    }
   }, []);
 
   const fetchCompanyData = async () => {
     setLoading(true);
     try {
-      const response = await axiosInstance.get("/api/CompanyProfile/Get");
+      const response = await axiosInstance.get("/api/Organization/Get");
 
       if (response.status === 200 && response.data) {
         const data = response.data;
         setCompanyData(data);
         setFormData({
-          companyName: data.companyName || "",
+          name: data.name || "",
           commercialRegister: data.commercialRegister || "",
-          taxId: data.taxId || "",
+          taxNumber: data.taxNumber || "",
           address: data.address || "",
-          phonePrimary: data.phonePrimary || "",
-          phoneSecondary: data.phoneSecondary || "",
+          primaryPhone: data.primaryPhone || "",
+          secondaryPhone: data.secondaryPhone || "",
           slogan: data.slogan || "",
-          logo: data.logo || "",
+          logoUrl: data.logoUrl || "",
         });
-        if (data.logo) {
-          setLogoPreview(data.logo);
+        if (data.logoUrl) {
+          const logoFullUrl = `https://cashier.runasp.net/${data.logoUrl}`;
+          setLogoPreview(logoFullUrl);
         }
       }
     } catch (error) {
-      // If 404 (not found), it's okay - first time setup
       if (error.response?.status === 404) {
         console.log("لم يتم العثور على بيانات المؤسسة - سيتم إنشاؤها لأول مرة");
         setCompanyData(null);
@@ -102,13 +105,11 @@ export default function OrganizationManagement() {
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith("image/")) {
         toast.error("الرجاء اختيار ملف صورة صالح");
         return;
       }
 
-      // Validate file size (max 2MB)
       if (file.size > 2 * 1024 * 1024) {
         toast.error("حجم الصورة يجب أن لا يتجاوز 2 ميجابايت");
         return;
@@ -126,7 +127,7 @@ export default function OrganizationManagement() {
   const removeLogo = () => {
     setLogoPreview(null);
     setLogoFile(null);
-    setFormData((prev) => ({ ...prev, logo: "" }));
+    setFormData((prev) => ({ ...prev, logoUrl: "" }));
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -135,88 +136,52 @@ export default function OrganizationManagement() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation
-    if (!formData.companyName.trim()) {
+    if (!formData.name.trim()) {
       toast.error("يرجى إدخال اسم المؤسسة");
-      return;
-    }
-    if (!formData.commercialRegister.trim()) {
-      toast.error("يرجى إدخال رقم السجل التجاري");
-      return;
-    }
-    if (!formData.taxId.trim()) {
-      toast.error("يرجى إدخال رقم السجل الضريبي");
-      return;
-    }
-    if (!formData.address.trim()) {
-      toast.error("يرجى إدخال عنوان المؤسسة");
-      return;
-    }
-    if (!formData.phonePrimary.trim()) {
-      toast.error("يرجى إدخال رقم الهاتف الأساسي");
       return;
     }
 
     setIsSaving(true);
 
     try {
-      let logoUrl = formData.logo;
-
-      // Upload logo if a new file was selected
+      const submitFormData = new FormData();
+      submitFormData.append("Name", formData.name);
+      if (formData.slogan) submitFormData.append("Slogan", formData.slogan);
+      if (formData.taxNumber)
+        submitFormData.append("TaxNumber", formData.taxNumber);
+      if (formData.commercialRegister)
+        submitFormData.append(
+          "CommercialRegister",
+          formData.commercialRegister,
+        );
+      if (formData.primaryPhone)
+        submitFormData.append("PrimaryPhone", formData.primaryPhone);
+      if (formData.secondaryPhone)
+        submitFormData.append("SecondaryPhone", formData.secondaryPhone);
+      if (formData.address) submitFormData.append("Address", formData.address);
       if (logoFile) {
-        const uploadFormData = new FormData();
-        uploadFormData.append("file", logoFile);
+        submitFormData.append("Logo", logoFile);
+      }
 
-        const uploadResponse = await axiosInstance.post(
-          "/api/CompanyProfile/UploadLogo",
-          uploadFormData,
+      let response;
+      if (companyData?.id) {
+        response = await axiosInstance.put(
+          `/api/Organization/Update/${companyData.id}`,
+          submitFormData,
           {
             headers: {
               "Content-Type": "multipart/form-data",
             },
           },
         );
-
-        if (uploadResponse.status === 200 && uploadResponse.data.url) {
-          logoUrl = uploadResponse.data.url;
-        } else {
-          throw new Error("فشل رفع الشعار");
-        }
-      }
-
-      const submitData = {
-        companyName: formData.companyName,
-        commercialRegister: formData.commercialRegister,
-        taxId: formData.taxId,
-        address: formData.address,
-        phonePrimary: formData.phonePrimary,
-        phoneSecondary: formData.phoneSecondary || "",
-        slogan: formData.slogan || "",
-        logo: logoUrl || "",
-      };
-
-      let response;
-      if (companyData?.id) {
-        // Update existing
-        response = await axiosInstance.put(
-          `/api/CompanyProfile/Update/${companyData.id}`,
-          submitData,
-        );
       } else {
-        // Create new
-        response = await axiosInstance.post(
-          "/api/CompanyProfile/Add",
-          submitData,
-        );
+        toast.error("لم يتم العثور على معرف المؤسسة. يرجى تحديث الصفحة.");
+        return;
       }
 
       if (response.status === 200 || response.status === 201) {
-        toast.success(
-          companyData?.id
-            ? "تم تحديث بيانات المؤسسة بنجاح"
-            : "تم إضافة بيانات المؤسسة بنجاح",
-        );
-        fetchCompanyData(); // Refresh data
+        toast.success("تم تحديث بيانات المؤسسة بنجاح");
+        fetchCompanyData();
       } else {
         toast.error("فشل في حفظ البيانات");
       }
@@ -344,28 +309,29 @@ export default function OrganizationManagement() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Company Name */}
+                {/* Company Name - Required */}
                 <div className="relative">
                   <input
                     type="text"
-                    name="companyName"
-                    value={formData.companyName}
+                    name="name"
+                    value={formData.name}
                     onChange={handleInputChange}
-                    onFocus={() => handleFocus("companyName")}
+                    onFocus={() => handleFocus("name")}
                     onBlur={handleBlur}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                     dir="rtl"
+                    required
                   />
                   <label
                     className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                      focusedField === "companyName" || formData.companyName
+                      focusedField === "name" || formData.name
                         ? "-top-2.5 text-xs text-blue-500 font-medium"
                         : "top-3 text-gray-400 text-sm"
                     }`}
                   >
                     <span className="flex items-center">
                       <Building2 className="w-4 h-4 ml-1" />
-                      اسم المؤسسة
+                      اسم المؤسسة <span className="text-red-500 mr-1">*</span>
                     </span>
                   </label>
                 </div>
@@ -395,28 +361,29 @@ export default function OrganizationManagement() {
                     </span>
                   </label>
                 </div>
-                {/* Tax ID */}
+
+                {/* Tax Number */}
                 <div className="relative">
                   <input
                     type="text"
-                    name="taxId"
-                    value={formData.taxId}
+                    name="taxNumber"
+                    value={formData.taxNumber}
                     onChange={handleInputChange}
-                    onFocus={() => handleFocus("taxId")}
+                    onFocus={() => handleFocus("taxNumber")}
                     onBlur={handleBlur}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                     dir="rtl"
                   />
                   <label
                     className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                      focusedField === "taxId" || formData.taxId
+                      focusedField === "taxNumber" || formData.taxNumber
                         ? "-top-2.5 text-xs text-blue-500 font-medium"
                         : "top-3 text-gray-400 text-sm"
                     }`}
                   >
                     <span className="flex items-center">
                       <Tag className="w-4 h-4 ml-1" />
-                      رقم السجل الضريبي
+                      الرقم الضريبي
                     </span>
                   </label>
                 </div>
@@ -448,21 +415,21 @@ export default function OrganizationManagement() {
                   </label>
                 </div>
 
-                {/* Phone Primary */}
+                {/* Primary Phone */}
                 <div className="relative">
                   <input
                     type="tel"
-                    name="phonePrimary"
-                    value={formData.phonePrimary}
+                    name="primaryPhone"
+                    value={formData.primaryPhone}
                     onChange={handleInputChange}
-                    onFocus={() => handleFocus("phonePrimary")}
+                    onFocus={() => handleFocus("primaryPhone")}
                     onBlur={handleBlur}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                     dir="rtl"
                   />
                   <label
                     className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                      focusedField === "phonePrimary" || formData.phonePrimary
+                      focusedField === "primaryPhone" || formData.primaryPhone
                         ? "-top-2.5 text-xs text-blue-500 font-medium"
                         : "top-3 text-gray-400 text-sm"
                     }`}
@@ -474,22 +441,22 @@ export default function OrganizationManagement() {
                   </label>
                 </div>
 
-                {/* Phone Secondary */}
+                {/* Secondary Phone */}
                 <div className="relative">
                   <input
                     type="tel"
-                    name="phoneSecondary"
-                    value={formData.phoneSecondary}
+                    name="secondaryPhone"
+                    value={formData.secondaryPhone}
                     onChange={handleInputChange}
-                    onFocus={() => handleFocus("phoneSecondary")}
+                    onFocus={() => handleFocus("secondaryPhone")}
                     onBlur={handleBlur}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
                     dir="rtl"
                   />
                   <label
                     className={`absolute right-3 px-2 transition-all pointer-events-none bg-white ${
-                      focusedField === "phoneSecondary" ||
-                      formData.phoneSecondary
+                      focusedField === "secondaryPhone" ||
+                      formData.secondaryPhone
                         ? "-top-2.5 text-xs text-blue-500 font-medium"
                         : "top-3 text-gray-400 text-sm"
                     }`}
