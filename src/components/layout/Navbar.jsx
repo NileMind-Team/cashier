@@ -29,6 +29,7 @@ import {
   FaPercentage,
   FaPrint,
   FaBuilding,
+  FaSpinner,
 } from "react-icons/fa";
 import axiosInstance from "../../api/axiosInstance";
 
@@ -38,6 +39,8 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
   const [showReportsDropdown, setShowReportsDropdown] = useState(false);
   const [showManagementDropdown, setShowManagementDropdown] = useState(false);
   const [isClosingShift, setIsClosingShift] = useState(false);
+  const [organizationData, setOrganizationData] = useState(null);
+  const [isLoadingOrganization, setIsLoadingOrganization] = useState(true);
   const dropdownRef = useRef(null);
   const managementDropdownRef = useRef(null);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -61,6 +64,24 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
+  }, []);
+
+  useEffect(() => {
+    const fetchOrganizationData = async () => {
+      setIsLoadingOrganization(true);
+      try {
+        const response = await axiosInstance.get("/api/Organization/Get");
+        if (response.status === 200 && response.data) {
+          setOrganizationData(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch organization data:", error);
+      } finally {
+        setIsLoadingOrganization(false);
+      }
+    };
+
+    fetchOrganizationData();
   }, []);
 
   const handleCloseShift = () => {
@@ -261,18 +282,44 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
     location.pathname === "/users" ||
     location.pathname === "/permissions";
 
+  if (isLoadingOrganization) {
+    return (
+      <div
+        dir="rtl"
+        className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-l from-gray-50 to-gray-100"
+        style={{
+          overflow: "hidden",
+          zIndex: 9999,
+        }}
+      >
+        <div className="text-center">
+          <FaSpinner className="w-16 h-16 text-blue-600 animate-spin mb-4" />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="bg-gradient-to-r from-white to-gray-50/80 shadow-lg backdrop-blur-sm border-b border-gray-200/80 sticky top-0 z-50">
       <div className="container mx-auto px-4 py-2">
         <div className="flex justify-between items-center">
           {/* Logo Section */}
           <div className="flex items-center group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center ml-3 shadow-md shadow-blue-900/20 group-hover:shadow-lg group-hover:shadow-blue-900/30 transition-all duration-300 transform group-hover:scale-105">
-              <FaCashRegister className="text-white text-xl" />
-            </div>
+            {organizationData?.logoUrl ? (
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center ml-3 shadow-md shadow-blue-900/20 overflow-hidden">
+                <img
+                  src={`https://cashier.runasp.net/${organizationData.logoUrl}`}
+                  alt={organizationData.name || "Logo"}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center ml-3 shadow-md shadow-blue-900/20 group-hover:shadow-lg group-hover:shadow-blue-900/30 transition-all duration-300 transform group-hover:scale-105">
+                <FaCashRegister className="text-white text-xl" />
+              </div>
+            )}
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-l from-blue-900 to-blue-700 bg-clip-text text-transparent">
-                نظام الكاشير
+                {organizationData?.name || "نظام الكاشير"}
               </h1>
               <div className="flex items-center mt-0.5 space-x-2 rtl:space-x-reverse">
                 {isShiftOpen && (
@@ -667,39 +714,6 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                           </div>
                         </button>
                       )}
-                      {/* {!isCashier && (
-                        <button
-                          onClick={() =>
-                            handleManagementNavigation("permissions")
-                          }
-                          className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
-                            location.pathname === "/permissions"
-                              ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
-                              : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30"
-                          }`}
-                        >
-                          <div
-                            className={`flex items-center justify-center w-7 h-7 rounded-lg ml-2 transition-all duration-200 ${
-                              location.pathname === "/permissions"
-                                ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/30"
-                                : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:shadow-md group-hover:shadow-blue-500/30"
-                            }`}
-                          >
-                            <FaShieldAlt
-                              className={`h-3.5 w-3.5 transition-all duration-200 ${
-                                location.pathname === "/permissions"
-                                  ? "text-white"
-                                  : "text-blue-600 group-hover:text-white"
-                              }`}
-                            />
-                          </div>
-                          <div className="flex-1 text-right">
-                            <p className="font-medium text-sm">
-                              إدارة الصلاحيات
-                            </p>
-                          </div>
-                        </button>
-                      )} */}
                     </div>
                   </div>
                 </div>
