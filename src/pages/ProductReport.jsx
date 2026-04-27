@@ -16,6 +16,7 @@ import {
   ChevronsLeft,
   PieChart,
   Settings,
+  Printer,
 } from "lucide-react";
 import { FaSpinner } from "react-icons/fa";
 
@@ -27,6 +28,9 @@ export default function ProductsReports() {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printData, setPrintData] = useState(null);
+  const [printLoading, setPrintLoading] = useState(false);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     pageSize: 10,
@@ -145,6 +149,218 @@ export default function ProductsReports() {
       setLoading(false);
       setIsGeneratingReport(false);
     }
+  };
+
+  const fetchAllProductsForPrint = async () => {
+    if (!startDate || !endDate) {
+      toast.error("يرجى اختيار تاريخ البداية والنهاية أولاً");
+      return false;
+    }
+
+    setPrintLoading(true);
+
+    try {
+      const allProductsPageSize =
+        pagination.totalCount > 0 ? pagination.totalCount : 1000;
+
+      const response = await axiosInstance.post(
+        "/api/Reports/ProductsReport",
+        {
+          pageNumber: 1,
+          pageSize: allProductsPageSize,
+          skip: 0,
+        },
+        {
+          params: {
+            from: startDate,
+            to: endDate,
+            orderBy: orderBy,
+          },
+        },
+      );
+
+      if (response.status === 200 && response.data) {
+        const data = response.data;
+
+        const stats = {
+          totalProducts: data.totalCount || 0,
+          totalQuantitySold: data.totalQuantitySold || 0,
+          totalRevenue: data.totalRevenue || 0,
+          averageRevenuePerProduct:
+            data.totalCount > 0
+              ? (data.totalRevenue || 0) / data.totalCount
+              : 0,
+        };
+
+        setPrintData({
+          products: data.products || [],
+          stats: stats,
+          dateRange: {
+            start: formatArabicDate(startDate),
+            end: formatArabicDate(endDate),
+          },
+          orderBy: orderBy,
+        });
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("خطأ في جلب بيانات الطباعة:", error);
+      toast.error("حدث خطأ في تجهيز بيانات الطباعة");
+      return false;
+    } finally {
+      setPrintLoading(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    const success = await fetchAllProductsForPrint();
+    if (!success) return;
+
+    setIsPrinting(true);
+
+    setTimeout(() => {
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "absolute";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "none";
+      document.body.appendChild(iframe);
+
+      const printContent = document.getElementById("printable-content");
+      if (!printContent) {
+        setIsPrinting(false);
+        return;
+      }
+
+      const iframeDoc = iframe.contentWindow.document;
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              padding: 20px;
+              background: white;
+              color: #333;
+            }
+            .print-container {
+              max-width: 1200px;
+              margin: 0 auto;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              padding-bottom: 20px;
+              border-bottom: 2px solid #193F94;
+            }
+            .header h1 {
+              color: #193F94;
+              margin-bottom: 10px;
+            }
+            .header h3 {
+              color: #666;
+              font-size: 16px;
+            }
+            .summary-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+            }
+            .summary-table th {
+              background-color: #193F94;
+              color: white;
+              padding: 12px;
+              text-align: center;
+              border: 1px solid #dee2e6;
+            }
+            .summary-table td {
+              padding: 12px;
+              text-align: center;
+              border: 1px solid #dee2e6;
+            }
+            .summary-table .label {
+              font-weight: bold;
+              background-color: #e9ecef;
+            }
+            .products-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+            }
+            .products-table th {
+              background-color: #4a5568;
+              color: white;
+              padding: 12px;
+              text-align: center;
+              border: 1px solid #dee2e6;
+            }
+            .products-table td {
+              padding: 10px;
+              text-align: center;
+              border: 1px solid #dee2e6;
+            }
+            .products-table tr:nth-child(even) {
+              background-color: #f8f9fa;
+            }
+            .products-table tfoot {
+              background-color: #e9ecef;
+              font-weight: bold;
+            }
+            .footer {
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #dee2e6;
+              text-align: center;
+              font-size: 12px;
+              color: #666;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+              .summary-table th {
+                background-color: #193F94 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .products-table th {
+                background-color: #4a5568 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${printContent.innerHTML}
+          </div>
+          <script>
+            window.onload = () => {
+              window.print();
+              window.onafterprint = () => {
+                window.parent.document.body.removeChild(window.frameElement);
+              };
+            };
+          </script>
+        </body>
+        </html>
+      `);
+      iframeDoc.close();
+      setTimeout(() => setIsPrinting(false), 1000);
+    }, 500);
   };
 
   const handlePageChange = (newPage) => {
@@ -274,6 +490,120 @@ export default function ProductsReports() {
         </div>
       </div>
 
+      <div id="printable-content" style={{ display: "none" }}>
+        {printData && (
+          <>
+            <div className="header">
+              <h1>تقرير أداء المنتجات</h1>
+              <h3>
+                الفترة من {printData.dateRange.start} إلى{" "}
+                {printData.dateRange.end}
+              </h3>
+              <h3>مرتب حسب: {getOrderByText(printData.orderBy)}</h3>
+            </div>
+
+            <table className="summary-table">
+              <thead>
+                <tr>
+                  <th>البيان</th>
+                  <th>القيمة</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="label">إجمالي الإيرادات</td>
+                  <td>{formatCurrency(printData.stats.totalRevenue)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">متوسط المنتج</td>
+                  <td>
+                    {formatCurrency(printData.stats.averageRevenuePerProduct)}{" "}
+                    ج.م
+                  </td>
+                </tr>
+                <tr>
+                  <td className="label">الوحدات المباعة</td>
+                  <td>{printData.stats.totalQuantitySold}</td>
+                </tr>
+                <tr>
+                  <td className="label">عدد المنتجات</td>
+                  <td>{printData.stats.totalProducts}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3
+              style={{
+                marginBottom: "15px",
+                color: "#193F94",
+                textAlign: "center",
+              }}
+            >
+              تفاصيل أداء المنتجات ({printData.stats.totalProducts} منتج)
+            </h3>
+
+            <table className="products-table">
+              <thead>
+                <tr>
+                  <th>اسم المنتج</th>
+                  <th>الفئة</th>
+                  <th>السعر</th>
+                  <th>الكمية المباعة</th>
+                  <th>إجمالي الإيرادات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printData.products.map((product, idx) => {
+                  const categoryColor = getCategoryColor(
+                    product.subCategoryName || "غير مصنف",
+                  );
+                  return (
+                    <tr key={idx}>
+                      <td style={{ fontWeight: "bold" }}>
+                        {product.productName}
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            padding: "2px 8px",
+                            borderRadius: "20px",
+                            fontSize: "12px",
+                            backgroundColor: categoryColor.bg,
+                            color: categoryColor.text,
+                          }}
+                        >
+                          {product.subCategoryName || "غير مصنف"}
+                        </span>
+                      </td>
+                      <td>{formatCurrency(product.price)} ج.م</td>
+                      <td style={{ fontWeight: "bold", color: "#1D4ED8" }}>
+                        {product.quantitySold}
+                      </td>
+                      <td style={{ fontWeight: "bold", color: "#193F94" }}>
+                        {formatCurrency(product.revenue)} ج.م
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan="3" style={{ textAlign: "center" }}>
+                    الإجمالي العام:
+                  </td>
+                  <td style={{ fontWeight: "bold", color: "#1D4ED8" }}>
+                    {printData.stats.totalQuantitySold} وحدة
+                  </td>
+                  <td style={{ fontWeight: "bold", color: "#193F94" }}>
+                    {formatCurrency(printData.stats.totalRevenue)} ج.م
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </>
+        )}
+      </div>
+
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1 print:hidden">
@@ -344,21 +674,11 @@ export default function ProductsReports() {
                   </div>
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-4 space-y-3">
                   <button
                     onClick={() => generateReport(1)}
                     disabled={isGeneratingReport || !startDate || !endDate}
-                    className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
-                      isGeneratingReport || !startDate || !endDate
-                        ? "opacity-50 cursor-not-allowed bg-gray-400"
-                        : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-                    }`}
-                    style={{
-                      backgroundColor:
-                        isGeneratingReport || !startDate || !endDate
-                          ? ""
-                          : "#193F94",
-                    }}
+                    className="w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                   >
                     {isGeneratingReport ? (
                       <>
@@ -372,6 +692,28 @@ export default function ProductsReports() {
                       </>
                     )}
                   </button>
+
+                  {reportData && (
+                    <button
+                      onClick={handlePrint}
+                      disabled={isPrinting || printLoading}
+                      className="w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                    >
+                      {isPrinting || printLoading ? (
+                        <>
+                          <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
+                          {printLoading
+                            ? "جاري تجهيز البيانات..."
+                            : "جاري الطباعة..."}
+                        </>
+                      ) : (
+                        <>
+                          <Printer className="h-5 w-5 ml-2" />
+                          طباعة التقرير PDF
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -415,6 +757,14 @@ export default function ProductsReports() {
                     <div className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
                       {formatCurrency(reportData.stats.totalRevenue)} ج.م
                     </div>
+                    <button
+                      onClick={handlePrint}
+                      disabled={isPrinting || printLoading}
+                      className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium flex items-center hover:bg-gray-200 transition-colors"
+                    >
+                      <Printer className="h-3 w-3 ml-1" />
+                      طباعة
+                    </button>
                   </div>
                 </div>
 
@@ -607,7 +957,6 @@ export default function ProductsReports() {
                             const categoryColor = getCategoryColor(
                               product.subCategoryName || "غير مصنف",
                             );
-
                             return (
                               <tr
                                 key={product.productId}
@@ -682,42 +1031,28 @@ export default function ProductsReports() {
                     </table>
                   </div>
 
-                  {/* Pagination Controls */}
                   {pagination.totalPages > 0 && !loading && (
                     <div className="px-4 py-4 border-t border-gray-200 bg-gray-50 mt-4">
                       <div className="flex justify-end">
                         <div className="flex items-center gap-2">
-                          {/* First Page Button */}
                           <button
                             onClick={() => handlePageChange(1)}
                             disabled={!pagination.hasPreviousPage}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasPreviousPage
-                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                                : "text-gray-300 cursor-not-allowed"
-                            }`}
+                            className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-700 hover:bg-gray-200 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
                             title="الصفحة الأولى"
                           >
                             <ChevronsRight className="w-5 h-5" />
                           </button>
-
-                          {/* Previous Page Button */}
                           <button
                             onClick={() =>
                               handlePageChange(pagination.currentPage - 1)
                             }
                             disabled={!pagination.hasPreviousPage}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasPreviousPage
-                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                                : "text-gray-300 cursor-not-allowed"
-                            }`}
+                            className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-700 hover:bg-gray-200 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
                             title="الصفحة السابقة"
                           >
                             <ChevronRight className="w-5 h-5" />
                           </button>
-
-                          {/* Page Numbers */}
                           <div className="flex items-center gap-1">
                             {getPageNumbers().map((page, index) =>
                               page === "..." ? (
@@ -742,42 +1077,28 @@ export default function ProductsReports() {
                               ),
                             )}
                           </div>
-
-                          {/* Next Page Button */}
                           <button
                             onClick={() =>
                               handlePageChange(pagination.currentPage + 1)
                             }
                             disabled={!pagination.hasNextPage}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasNextPage
-                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                                : "text-gray-300 cursor-not-allowed"
-                            }`}
+                            className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-700 hover:bg-gray-200 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
                             title="الصفحة التالية"
                           >
                             <ChevronLeft className="w-5 h-5" />
                           </button>
-
-                          {/* Last Page Button */}
                           <button
                             onClick={() =>
                               handlePageChange(pagination.totalPages)
                             }
                             disabled={!pagination.hasNextPage}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasNextPage
-                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                                : "text-gray-300 cursor-not-allowed"
-                            }`}
+                            className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-700 hover:bg-gray-200 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
                             title="الصفحة الأخيرة"
                           >
                             <ChevronsLeft className="w-5 h-5" />
                           </button>
                         </div>
                       </div>
-
-                      {/* Quick Jump to Page (for large page counts) */}
                       {pagination.totalPages > 10 && (
                         <div className="mt-3 flex items-center justify-end gap-2">
                           <span className="text-sm text-gray-600">

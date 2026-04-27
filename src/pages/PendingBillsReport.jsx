@@ -18,6 +18,7 @@ import {
   FaCheckCircle,
   FaClock,
 } from "react-icons/fa";
+import { Printer } from "lucide-react";
 
 export default function PendingBillsReport() {
   const navigate = useNavigate();
@@ -27,6 +28,9 @@ export default function PendingBillsReport() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const hasFetched = useRef(false);
   const [isViewingBill, setIsViewingBill] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printData, setPrintData] = useState(null);
+  const [printLoading, setPrintLoading] = useState(false);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     pageSize: 10,
@@ -34,6 +38,16 @@ export default function PendingBillsReport() {
     totalPages: 1,
     hasNextPage: false,
     hasPreviousPage: false,
+  });
+  const [reportStats, setReportStats] = useState({
+    totalInvoices: 0,
+    totalAmount: 0,
+    totalRemaining: 0,
+    averageInvoice: 0,
+    employeesCount: 0,
+    topEmployeeName: null,
+    topEmployeeCount: 0,
+    typeDistribution: [],
   });
 
   const addTwoHours = (dateString) => {
@@ -69,10 +83,21 @@ export default function PendingBillsReport() {
         setPagination({
           currentPage: data.pageNumber || pageNumber,
           pageSize: data.pageSize || 10,
-          totalCount: data.totalCount || 0,
+          totalCount: data.totalInvoices || 0,
           totalPages: data.totalPages || 1,
           hasNextPage: data.hasNext || false,
           hasPreviousPage: data.hasPrevious || false,
+        });
+
+        setReportStats({
+          totalInvoices: data.totalInvoices || 0,
+          totalAmount: data.totalAmount || 0,
+          totalRemaining: data.totalRemaining || 0,
+          averageInvoice: data.averageInvoice || 0,
+          employeesCount: data.employeesCount || 0,
+          topEmployeeName: data.topEmployeeName || null,
+          topEmployeeCount: data.topEmployeeCount || 0,
+          typeDistribution: data.typeDistribution || [],
         });
 
         const billsWithDetails = (data.invoices || []).map((bill) => {
@@ -93,6 +118,7 @@ export default function PendingBillsReport() {
             employeeName: bill.employeeName,
             customerName: bill.customerName || "عميل",
             total: bill.totalAmount,
+            remainingAmount: bill.remainingAmount,
             status: "pending",
             invoiceType: bill.invoiceType,
           };
@@ -113,12 +139,237 @@ export default function PendingBillsReport() {
           hasNextPage: false,
           hasPreviousPage: false,
         });
+        setReportStats({
+          totalInvoices: 0,
+          totalAmount: 0,
+          totalRemaining: 0,
+          averageInvoice: 0,
+          employeesCount: 0,
+          topEmployeeName: null,
+          topEmployeeCount: 0,
+          typeDistribution: [],
+        });
       } else {
         toast.error("حدث خطأ في جلب الفواتير المعلقة");
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchAllBillsForPrint = async () => {
+    setPrintLoading(true);
+    try {
+      const allBillsPageSize =
+        pagination.totalCount > 0 ? pagination.totalCount : 1000;
+
+      const response = await axiosInstance.post(
+        "/api/Reports/PendingBillsReport",
+        {
+          pageNumber: 1,
+          pageSize: allBillsPageSize,
+          skip: 0,
+        },
+      );
+
+      if (response.status === 200 && response.data) {
+        const data = response.data;
+
+        const billsWithDetails = (data.invoices || []).map((bill) => {
+          return {
+            id: bill.invoiceId,
+            billNumber: bill.invoiceNumber,
+            createdAt: bill.invoiceDate,
+            employeeName: bill.employeeName,
+            customerName: bill.customerName || "عميل",
+            total: bill.totalAmount,
+            invoiceType: bill.invoiceType,
+          };
+        });
+
+        const totalAmount = billsWithDetails.reduce(
+          (sum, bill) => sum + bill.total,
+          0,
+        );
+        const averageAmount =
+          billsWithDetails.length > 0
+            ? totalAmount / billsWithDetails.length
+            : 0;
+
+        const employeeCount = billsWithDetails.reduce((acc, bill) => {
+          acc[bill.employeeName] = (acc[bill.employeeName] || 0) + 1;
+          return acc;
+        }, {});
+
+        setPrintData({
+          bills: billsWithDetails,
+          stats: {
+            totalCount: data.totalInvoices || 0,
+            totalAmount: totalAmount,
+            averageAmount: averageAmount,
+            employeeCount: Object.keys(employeeCount).length,
+          },
+        });
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("خطأ في جلب بيانات الطباعة:", error);
+      toast.error("حدث خطأ في تجهيز بيانات الطباعة");
+      return false;
+    } finally {
+      setPrintLoading(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    const success = await fetchAllBillsForPrint();
+    if (!success) return;
+
+    setIsPrinting(true);
+
+    setTimeout(() => {
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "absolute";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "none";
+      document.body.appendChild(iframe);
+
+      const printContent = document.getElementById("printable-content");
+      if (!printContent) {
+        setIsPrinting(false);
+        return;
+      }
+
+      const iframeDoc = iframe.contentWindow.document;
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              padding: 20px;
+              background: white;
+              color: #333;
+            }
+            .print-container {
+              max-width: 1200px;
+              margin: 0 auto;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              padding-bottom: 20px;
+              border-bottom: 2px solid #193F94;
+            }
+            .header h1 {
+              color: #193F94;
+              margin-bottom: 10px;
+            }
+            .header h3 {
+              color: #666;
+              font-size: 16px;
+            }
+            .summary-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+            }
+            .summary-table th {
+              background-color: #193F94;
+              color: white;
+              padding: 12px;
+              text-align: center;
+              border: 1px solid #dee2e6;
+            }
+            .summary-table td {
+              padding: 12px;
+              text-align: center;
+              border: 1px solid #dee2e6;
+            }
+            .summary-table .label {
+              font-weight: bold;
+              background-color: #e9ecef;
+            }
+            .bills-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+            }
+            .bills-table th {
+              background-color: #4a5568;
+              color: white;
+              padding: 12px;
+              text-align: center;
+              border: 1px solid #dee2e6;
+            }
+            .bills-table td {
+              padding: 10px;
+              text-align: center;
+              border: 1px solid #dee2e6;
+            }
+            .bills-table tr:nth-child(even) {
+              background-color: #f8f9fa;
+            }
+            .bills-table tfoot {
+              background-color: #e9ecef;
+              font-weight: bold;
+            }
+            .footer {
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #dee2e6;
+              text-align: center;
+              font-size: 12px;
+              color: #666;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+              .summary-table th {
+                background-color: #193F94 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .bills-table th {
+                background-color: #4a5568 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${printContent.innerHTML}
+          </div>
+          <script>
+            window.onload = () => {
+              window.print();
+              window.onafterprint = () => {
+                window.parent.document.body.removeChild(window.frameElement);
+              };
+            };
+          </script>
+        </body>
+        </html>
+      `);
+      iframeDoc.close();
+      setTimeout(() => setIsPrinting(false), 1000);
+    }, 500);
   };
 
   const handlePageChange = (newPage) => {
@@ -176,6 +427,16 @@ export default function PendingBillsReport() {
     });
   };
 
+  const formatDateOnly = (dateString) => {
+    if (!dateString) return "";
+    const adjustedDate = addTwoHours(dateString);
+    return adjustedDate.toLocaleDateString("ar-EG", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
   const formatCurrency = (amount) => {
     if (amount === undefined || amount === null) return "0.00";
     return new Intl.NumberFormat("ar-EG", {
@@ -200,40 +461,6 @@ export default function PendingBillsReport() {
     );
   };
 
-  const calculateStats = () => {
-    const totalPendingAmount = pendingBills.reduce(
-      (sum, bill) => sum + bill.total,
-      0,
-    );
-    const averageBillAmount =
-      pendingBills.length > 0 ? totalPendingAmount / pendingBills.length : 0;
-
-    const billTypeCount = pendingBills.reduce((acc, bill) => {
-      const type = bill.invoiceType;
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    }, {});
-
-    const employeeCount = pendingBills.reduce((acc, bill) => {
-      acc[bill.employeeName] = (acc[bill.employeeName] || 0) + 1;
-      return acc;
-    }, {});
-
-    const topEmployee =
-      Object.entries(employeeCount).sort((a, b) => b[1] - a[1])[0] || null;
-
-    return {
-      totalCount: pagination.totalCount,
-      totalAmount: totalPendingAmount,
-      averageAmount: averageBillAmount,
-      billTypeCount,
-      topEmployee: topEmployee
-        ? { name: topEmployee[0], count: topEmployee[1] }
-        : null,
-      employeeCount: Object.keys(employeeCount).length,
-    };
-  };
-
   const handleViewBillDetails = (bill) => {
     setIsViewingBill(true);
     setSelectedBill(bill);
@@ -252,7 +479,17 @@ export default function PendingBillsReport() {
     }, 200);
   };
 
-  const stats = calculateStats();
+  const formatDateForPrint = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("ar-EG", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return (
     <div
@@ -291,6 +528,110 @@ export default function PendingBillsReport() {
         </div>
       </div>
 
+      {/* Hidden Printable Content */}
+      <div id="printable-content" style={{ display: "none" }}>
+        {printData && (
+          <>
+            <div className="header">
+              <h1>تقرير الفواتير المعلقة</h1>
+              <h3>تاريخ التقرير: {formatDateOnly(new Date().toISOString())}</h3>
+            </div>
+
+            <table className="summary-table">
+              <thead>
+                <tr>
+                  <th>البيان</th>
+                  <th>القيمة</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="label">عدد الفواتير</td>
+                  <td>{printData.stats.totalCount}</td>
+                </tr>
+                <tr>
+                  <td className="label">إجمالي المبالغ</td>
+                  <td>{formatCurrency(printData.stats.totalAmount)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">متوسط الفاتورة</td>
+                  <td>{formatCurrency(printData.stats.averageAmount)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">عدد الموظفين</td>
+                  <td>{printData.stats.employeeCount}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3
+              style={{
+                marginBottom: "15px",
+                color: "#193F94",
+                textAlign: "center",
+              }}
+            >
+              قائمة الفواتير المعلقة ({printData.stats.totalCount} فاتورة)
+            </h3>
+
+            <table className="bills-table">
+              <thead>
+                <tr>
+                  <th>رقم الفاتورة</th>
+                  <th>تاريخ الإنشاء</th>
+                  <th>الموظف</th>
+                  <th>نوع الفاتورة</th>
+                  <th>المبلغ الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printData.bills.map((bill, idx) => {
+                  const billType = getBillTypeLabel(bill.invoiceType);
+                  return (
+                    <tr key={idx}>
+                      <td style={{ fontWeight: "bold" }}>
+                        {bill.billNumber}
+                        <div style={{ fontSize: "11px", color: "#666" }}>
+                          {bill.customerName || "عميل"}
+                        </div>
+                      </td>
+                      <td>{formatDateForPrint(bill.createdAt)}</td>
+                      <td>{bill.employeeName}</td>
+                      <td>
+                        <span
+                          style={{
+                            padding: "2px 8px",
+                            borderRadius: "20px",
+                            fontSize: "11px",
+                            backgroundColor: billType.bgColor,
+                            color: billType.color,
+                          }}
+                        >
+                          {billType.label}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: "bold", color: "#193F94" }}>
+                        {formatCurrency(bill.total)} ج.م
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan="4" style={{ textAlign: "center" }}>
+                    الإجمالي العام:
+                  </td>
+                  <td style={{ fontWeight: "bold", color: "#193F94" }}>
+                    {formatCurrency(printData.stats.totalAmount)} ج.م
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </>
+        )}
+      </div>
+
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1 print:hidden">
@@ -308,7 +649,7 @@ export default function PendingBillsReport() {
                     <div>
                       <p className="text-sm text-blue-800">عدد الفواتير</p>
                       <p className="text-2xl font-bold text-blue-900 mt-1">
-                        {stats.totalCount}
+                        {reportStats.totalInvoices}
                       </p>
                       <p className="text-xs text-blue-600 mt-1">فاتورة معلقة</p>
                     </div>
@@ -323,11 +664,11 @@ export default function PendingBillsReport() {
                     <div>
                       <p className="text-sm text-green-800">إجمالي المبالغ</p>
                       <p className="text-2xl font-bold text-green-900 mt-1">
-                        {formatCurrency(stats.totalAmount)} ج.م
+                        {formatCurrency(reportStats.totalAmount)} ج.م
                       </p>
                       <p className="text-xs text-green-600 mt-1">
-                        متوسط الفاتورة: {formatCurrency(stats.averageAmount)}{" "}
-                        ج.م
+                        متوسط الفاتورة:{" "}
+                        {formatCurrency(reportStats.averageInvoice)} ج.م
                       </p>
                     </div>
                     <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
@@ -341,7 +682,7 @@ export default function PendingBillsReport() {
                     <div>
                       <p className="text-sm text-purple-800">عدد الموظفين</p>
                       <p className="text-2xl font-bold text-purple-900 mt-1">
-                        {stats.employeeCount}
+                        {reportStats.employeesCount}
                       </p>
                       <p className="text-xs text-purple-600 mt-1">موظف</p>
                     </div>
@@ -351,23 +692,83 @@ export default function PendingBillsReport() {
                   </div>
                 </div>
 
-                <div className="pt-4">
+                {reportStats.topEmployeeName && (
+                  <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-amber-800">أكثر موظف</p>
+                        <p className="text-xl font-bold text-amber-900 mt-1">
+                          {reportStats.topEmployeeName}
+                        </p>
+                        <p className="text-xs text-amber-600 mt-1">
+                          {reportStats.topEmployeeCount} فاتورة
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
+                        <FaChartLine className="h-6 w-6 text-amber-700" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-4 space-y-3">
+                  <button
+                    onClick={handlePrint}
+                    disabled={
+                      isPrinting || printLoading || pendingBills.length === 0
+                    }
+                    className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
+                      isPrinting || printLoading || pendingBills.length === 0
+                        ? "opacity-50 cursor-not-allowed bg-gray-400"
+                        : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                    }`}
+                  >
+                    {isPrinting || printLoading ? (
+                      <>
+                        <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
+                        {printLoading
+                          ? "جاري تجهيز البيانات..."
+                          : "جاري الطباعة..."}
+                      </>
+                    ) : (
+                      <>
+                        <Printer className="h-5 w-5 ml-2" />
+                        طباعة التقرير PDF
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="pt-4 border-t border-gray-200">
                   <div className="space-y-2">
                     <h4 className="font-bold text-sm text-gray-700">
                       توزيع حسب النوع
                     </h4>
-                    {Object.entries(stats.billTypeCount).map(
-                      ([type, count]) => {
-                        const billType = getBillTypeLabel(parseInt(type));
-                        const percentage = (count / pendingBills.length) * 100;
+                    {reportStats.typeDistribution.length > 0 ? (
+                      reportStats.typeDistribution.map((item, index) => {
+                        const typeValue =
+                          item.type === "TakeAway"
+                            ? 1
+                            : item.type === "Delivery"
+                              ? 2
+                              : 0;
+                        const billType = getBillTypeLabel(typeValue);
+                        const percentage =
+                          reportStats.totalInvoices > 0
+                            ? (item.count / reportStats.totalInvoices) * 100
+                            : 0;
                         return (
-                          <div key={type} className="space-y-1">
+                          <div key={index} className="space-y-1">
                             <div className="flex justify-between text-xs">
                               <span style={{ color: billType.color }}>
-                                {billType.label}
+                                {item.type === "TakeAway"
+                                  ? "سفري"
+                                  : item.type === "Delivery"
+                                    ? "دليفري"
+                                    : "طاولة"}
                               </span>
                               <span>
-                                {count} فاتورة ({percentage.toFixed(1)}%)
+                                {item.count} فاتورة ({percentage.toFixed(1)}%)
                               </span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-1.5">
@@ -381,7 +782,11 @@ export default function PendingBillsReport() {
                             </div>
                           </div>
                         );
-                      },
+                      })
+                    ) : (
+                      <p className="text-xs text-gray-500 text-center py-2">
+                        لا توجد بيانات
+                      </p>
                     )}
                   </div>
                 </div>
@@ -418,7 +823,7 @@ export default function PendingBillsReport() {
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
                       {pagination.totalCount} فاتورة معلقة |{" "}
-                      {stats.employeeCount} موظف
+                      {reportStats.employeesCount} موظف
                     </p>
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse print:hidden">
@@ -428,8 +833,16 @@ export default function PendingBillsReport() {
                     </div>
                     <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium flex items-center">
                       <FaMoneyBillWave className="h-3 w-3 ml-1" />
-                      {formatCurrency(stats.totalAmount)} ج.م
+                      {formatCurrency(reportStats.totalAmount)} ج.م
                     </div>
+                    <button
+                      onClick={handlePrint}
+                      disabled={isPrinting || printLoading}
+                      className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium flex items-center hover:bg-gray-200 transition-colors"
+                    >
+                      <Printer className="h-3 w-3 ml-1" />
+                      طباعة
+                    </button>
                   </div>
                 </div>
 
@@ -441,7 +854,7 @@ export default function PendingBillsReport() {
                           الفواتير المعلقة
                         </p>
                         <p className="text-2xl font-bold text-amber-900 mt-1">
-                          {pagination.totalCount}
+                          {reportStats.totalInvoices}
                         </p>
                         <p className="text-xs text-amber-600 mt-1">
                           فاتورة غير مكتملة
@@ -460,7 +873,7 @@ export default function PendingBillsReport() {
                           القيمة الإجمالية
                         </p>
                         <p className="text-2xl font-bold text-blue-900 mt-1">
-                          {formatCurrency(stats.totalAmount)} ج.م
+                          {formatCurrency(reportStats.totalAmount)} ج.م
                         </p>
                         <p className="text-xs text-blue-600 mt-1">
                           إجمالي المبالغ المعلقة
@@ -479,7 +892,7 @@ export default function PendingBillsReport() {
                           متوسط الفاتورة
                         </p>
                         <p className="text-2xl font-bold text-purple-900 mt-1">
-                          {formatCurrency(stats.averageAmount)} ج.م
+                          {formatCurrency(reportStats.averageInvoice)} ج.م
                         </p>
                         <p className="text-xs text-purple-600 mt-1">
                           لكل فاتورة معلقة
@@ -607,7 +1020,7 @@ export default function PendingBillsReport() {
                             className="py-4 px-4 text-right"
                             style={{ color: "#193F94" }}
                           >
-                            {formatCurrency(stats.totalAmount)} ج.م
+                            {formatCurrency(reportStats.totalAmount)} ج.م
                           </td>
                           <td className="print:hidden"></td>
                         </tr>
@@ -620,7 +1033,6 @@ export default function PendingBillsReport() {
                     <div className="px-4 py-4 border-t border-gray-200 bg-gray-50 mt-4">
                       <div className="flex justify-end">
                         <div className="flex items-center gap-2">
-                          {/* First Page Button */}
                           <button
                             onClick={() => handlePageChange(1)}
                             disabled={!pagination.hasPreviousPage || loading}
@@ -631,10 +1043,9 @@ export default function PendingBillsReport() {
                             }`}
                             title="الصفحة الأولى"
                           >
-                            <FaAngleDoubleLeft className="h-5 w-5" />
+                            <FaAngleDoubleRight className="h-5 w-5" />
                           </button>
 
-                          {/* Previous Page Button */}
                           <button
                             onClick={() =>
                               handlePageChange(pagination.currentPage - 1)
@@ -650,7 +1061,6 @@ export default function PendingBillsReport() {
                             <FaChevronRight className="h-5 w-5" />
                           </button>
 
-                          {/* Page Numbers */}
                           <div className="flex items-center gap-1">
                             {getPageNumbers().map((page, index) =>
                               page === "..." ? (
@@ -677,7 +1087,6 @@ export default function PendingBillsReport() {
                             )}
                           </div>
 
-                          {/* Next Page Button */}
                           <button
                             onClick={() =>
                               handlePageChange(pagination.currentPage + 1)
@@ -693,7 +1102,6 @@ export default function PendingBillsReport() {
                             <FaChevronLeft className="h-5 w-5" />
                           </button>
 
-                          {/* Last Page Button */}
                           <button
                             onClick={() =>
                               handlePageChange(pagination.totalPages)
@@ -706,7 +1114,7 @@ export default function PendingBillsReport() {
                             }`}
                             title="الصفحة الأخيرة"
                           >
-                            <FaAngleDoubleRight className="h-5 w-5" />
+                            <FaAngleDoubleLeft className="h-5 w-5" />
                           </button>
                         </div>
                       </div>
@@ -727,7 +1135,7 @@ export default function PendingBillsReport() {
                         className="text-2xl font-bold"
                         style={{ color: "#193F94" }}
                       >
-                        {pagination.totalCount}
+                        {reportStats.totalInvoices}
                       </div>
                       <div className="text-sm text-gray-600">عدد الفواتير</div>
                     </div>
@@ -736,7 +1144,7 @@ export default function PendingBillsReport() {
                         className="text-2xl font-bold"
                         style={{ color: "#10B981" }}
                       >
-                        {formatCurrency(stats.totalAmount)}
+                        {formatCurrency(reportStats.totalAmount)}
                       </div>
                       <div className="text-sm text-gray-600">
                         إجمالي المبالغ
@@ -747,7 +1155,7 @@ export default function PendingBillsReport() {
                         className="text-2xl font-bold"
                         style={{ color: "#8B5CF6" }}
                       >
-                        {formatCurrency(stats.averageAmount)}
+                        {formatCurrency(reportStats.averageInvoice)}
                       </div>
                       <div className="text-sm text-gray-600">
                         متوسط الفاتورة
@@ -758,7 +1166,7 @@ export default function PendingBillsReport() {
                         className="text-2xl font-bold"
                         style={{ color: "#F59E0B" }}
                       >
-                        {stats.employeeCount}
+                        {reportStats.employeesCount}
                       </div>
                       <div className="text-sm text-gray-600">عدد الموظفين</div>
                     </div>
@@ -800,7 +1208,6 @@ export default function PendingBillsReport() {
               className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* الهيدر */}
               <div className="bg-gradient-to-l from-blue-600 to-blue-700 px-6 py-4 rounded-t-2xl">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-bold text-white">

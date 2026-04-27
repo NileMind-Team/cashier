@@ -21,6 +21,7 @@ import {
   Percent,
   RotateCcw,
   Coins,
+  Printer,
 } from "lucide-react";
 import { FaSpinner } from "react-icons/fa";
 
@@ -32,6 +33,7 @@ export default function ShiftReports() {
   const [reportData, setReportData] = useState(null);
   const [fetchingShifts, setFetchingShifts] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const addTwoHours = (dateString) => {
     if (!dateString) return null;
@@ -124,7 +126,6 @@ export default function ShiftReports() {
     }
   };
 
-  // تعديل دالة formatDate لإضافة ساعتين قبل التنسيق
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const adjustedDate = addTwoHours(dateString);
@@ -144,6 +145,16 @@ export default function ShiftReports() {
     return adjustedDate.toLocaleTimeString("ar-EG", {
       hour: "2-digit",
       minute: "2-digit",
+    });
+  };
+
+  const formatDateOnly = (dateString) => {
+    if (!dateString) return "";
+    const adjustedDate = addTwoHours(dateString);
+    return adjustedDate.toLocaleDateString("ar-EG", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -171,13 +182,146 @@ export default function ShiftReports() {
     closedShifts: shifts.filter((s) => s.endTime).length,
   };
 
+  const handlePrint = () => {
+    setIsPrinting(true);
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "absolute";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "none";
+    document.body.appendChild(iframe);
+
+    const printContent = document.getElementById("printable-content");
+    if (!printContent) {
+      setIsPrinting(false);
+      return;
+    }
+
+    const iframeDoc = iframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html dir="rtl">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: white;
+            color: #333;
+          }
+          
+          .print-container {
+            max-width: 1200px;
+            margin: 0 auto;
+          }
+          
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #193F94;
+          }
+          
+          .header h1 {
+            color: #193F94;
+            margin-bottom: 10px;
+          }
+          
+          .header h3 {
+            color: #666;
+            font-size: 16px;
+          }
+          
+          .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          
+          .report-table th {
+            background-color: #193F94;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+          }
+          
+          .report-table td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+          }
+          
+          .report-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+          }
+          
+          .report-table .label {
+            font-weight: bold;
+            background-color: #e9ecef;
+          }
+          
+          .report-table .total-row {
+            font-weight: bold;
+            background-color: #e2e3e5;
+          }
+          
+          .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+          }
+          
+          @media print {
+            body {
+              padding: 0;
+            }
+            .report-table th {
+              background-color: #193F94 !important;
+              color: white !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-container">
+          ${printContent.innerHTML}
+        </div>
+        <script>
+          window.onload = () => {
+            window.print();
+            window.onafterprint = () => {
+              window.parent.document.body.removeChild(window.frameElement);
+            };
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    iframeDoc.close();
+    setTimeout(() => setIsPrinting(false), 1000);
+  };
+
   return (
     <div
       dir="rtl"
       className="min-h-screen bg-gradient-to-l from-gray-50 to-gray-100"
     >
       {/* Navbar */}
-      <div className="bg-white shadow-md sticky top-0 z-10">
+      <div className="bg-white shadow-md sticky top-0 z-10 print:hidden">
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
@@ -209,9 +353,96 @@ export default function ShiftReports() {
         </div>
       </div>
 
+      <div id="printable-content" style={{ display: "none" }}>
+        {reportData && (
+          <>
+            <div className="header">
+              <h1>تقرير الوردية #{reportData.shiftId}</h1>
+              <h3>
+                تاريخ البدء: {formatDateOnly(reportData.startTime)}
+                {reportData.endTime &&
+                  ` | تاريخ الانتهاء: ${formatDateOnly(reportData.endTime)}`}
+              </h3>
+              <h3>
+                المدة:{" "}
+                {calculateShiftDuration(
+                  reportData.startTime,
+                  reportData.endTime,
+                )}
+                {" | "}
+                الحالة: {reportData.endTime ? "مغلقة" : "مفتوحة"}
+              </h3>
+            </div>
+
+            <table className="report-table">
+              <thead>
+                <tr>
+                  <th>البيان</th>
+                  <th>القيمة</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="label">عدد الفواتير</td>
+                  <td>{reportData.totalInvoicesCount || 0}</td>
+                </tr>
+                <tr>
+                  <td className="label">الإجمالي الفرعي</td>
+                  <td>{formatNumber(reportData.totalSubTotal)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">إجمالي المبيعات</td>
+                  <td>{formatNumber(reportData.totalSales)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">
+                    إجمالي الضرائب (
+                    {reportData.totalSales > 0
+                      ? (
+                          (reportData.totalTax / reportData.totalSales) *
+                          100
+                        ).toFixed(1)
+                      : 0}
+                    %)
+                  </td>
+                  <td>{formatNumber(reportData.totalTax)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">
+                    إجمالي الخصومات (
+                    {reportData.totalSales > 0
+                      ? (
+                          (reportData.totalDiscount / reportData.totalSales) *
+                          100
+                        ).toFixed(1)
+                      : 0}
+                    %)
+                  </td>
+                  <td style={{ color: "#dc2626" }}>
+                    {formatNumber(reportData.totalDiscount)} ج.م
+                  </td>
+                </tr>
+                <tr>
+                  <td className="label">إجمالي المرتجعات</td>
+                  <td style={{ color: "#dc2626" }}>
+                    {formatNumber(reportData.totalReturns)} ج.م
+                  </td>
+                </tr>
+                <tr className="total-row">
+                  <td className="label">صافي الإيرادات</td>
+                  <td style={{ color: "#10B981", fontWeight: "bold" }}>
+                    {formatNumber(reportData.netRevenue)} ج.م
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </>
+        )}
+      </div>
+
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 print:hidden">
             <div className="bg-white rounded-2xl shadow-lg p-5 sticky top-24">
               <h3
                 className="text-lg font-bold mb-4"
@@ -275,7 +506,7 @@ export default function ShiftReports() {
                   </div>
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-4 space-y-3">
                   <button
                     onClick={generateReport}
                     disabled={
@@ -286,12 +517,6 @@ export default function ShiftReports() {
                         ? "opacity-50 cursor-not-allowed bg-gray-400"
                         : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                     }`}
-                    style={{
-                      backgroundColor:
-                        isGeneratingReport || !selectedShift || fetchingShifts
-                          ? ""
-                          : "#193F94",
-                    }}
                   >
                     {isGeneratingReport ? (
                       <>
@@ -305,6 +530,30 @@ export default function ShiftReports() {
                       </>
                     )}
                   </button>
+
+                  {reportData && (
+                    <button
+                      onClick={handlePrint}
+                      disabled={isPrinting}
+                      className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
+                        isPrinting
+                          ? "opacity-50 cursor-not-allowed bg-gray-400"
+                          : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                      }`}
+                    >
+                      {isPrinting ? (
+                        <>
+                          <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
+                          جاري الطباعة...
+                        </>
+                      ) : (
+                        <>
+                          <Printer className="h-5 w-5 ml-2" />
+                          طباعة التقرير PDF
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -312,8 +561,8 @@ export default function ShiftReports() {
 
           <div className="lg:col-span-3">
             {reportData ? (
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <div className="flex justify-between items-start mb-6 flex-wrap gap-4">
+              <div className="bg-white rounded-2xl shadow-lg p-6 print:shadow-none">
+                <div className="flex justify-between items-start mb-6 flex-wrap gap-4 print:hidden">
                   <div>
                     <h2
                       className="text-2xl font-bold"
@@ -353,10 +602,17 @@ export default function ShiftReports() {
                       )}
                       {reportData.endTime ? "مغلقة" : "مفتوحة"}
                     </div>
+                    <button
+                      onClick={handlePrint}
+                      disabled={isPrinting}
+                      className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium flex items-center hover:bg-gray-200 transition-colors"
+                    >
+                      <Printer className="h-3 w-3 ml-1" />
+                      طباعة
+                    </button>
                   </div>
                 </div>
 
-                {/* البطاقات الرئيسية */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
                     <div className="flex items-center justify-between">

@@ -14,6 +14,7 @@ import {
   TrendingDown,
   Wallet,
   PieChart,
+  Printer,
 } from "lucide-react";
 import { FaSpinner, FaChartLine } from "react-icons/fa";
 
@@ -23,6 +24,7 @@ export default function SalesReports() {
   const [endDate, setEndDate] = useState("");
   const [reportData, setReportData] = useState(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -112,6 +114,164 @@ export default function SalesReports() {
     }).format(amount);
   };
 
+  const handlePrint = () => {
+    setIsPrinting(true);
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "absolute";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "none";
+    document.body.appendChild(iframe);
+
+    const printContent = document.getElementById("printable-content");
+    if (!printContent) {
+      setIsPrinting(false);
+      return;
+    }
+
+    const iframeDoc = iframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html dir="rtl">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: white;
+            color: #333;
+          }
+          
+          .print-container {
+            max-width: 1200px;
+            margin: 0 auto;
+          }
+          
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #193F94;
+          }
+          
+          .header h1 {
+            color: #193F94;
+            margin-bottom: 10px;
+          }
+          
+          .header h3 {
+            color: #666;
+            font-size: 16px;
+          }
+          
+          .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          
+          .report-table th {
+            background-color: #193F94;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+          }
+          
+          .report-table td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+          }
+          
+          .report-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+          }
+          
+          .report-table .label {
+            font-weight: bold;
+            background-color: #e9ecef;
+          }
+          
+          .payment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          
+          .payment-table th {
+            background-color: #4a5568;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+          }
+          
+          .payment-table td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+          }
+          
+          .payment-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+          }
+          
+          .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+          }
+          
+          @media print {
+            body {
+              padding: 0;
+            }
+            .report-table th {
+              background-color: #193F94 !important;
+              color: white !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .payment-table th {
+              background-color: #4a5568 !important;
+              color: white !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-container">
+          ${printContent.innerHTML}
+        </div>
+        <script>
+          window.onload = () => {
+            window.print();
+            window.onafterprint = () => {
+              window.parent.document.body.removeChild(window.frameElement);
+            };
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    iframeDoc.close();
+    setTimeout(() => setIsPrinting(false), 1000);
+  };
+
   return (
     <div
       dir="rtl"
@@ -147,6 +307,139 @@ export default function SalesReports() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div id="printable-content" style={{ display: "none" }}>
+        {reportData && (
+          <>
+            <div className="header">
+              <h1>تقرير المبيعات</h1>
+              <h3>
+                الفترة من {reportData.dateRange.start} إلى{" "}
+                {reportData.dateRange.end}
+              </h3>
+            </div>
+
+            <table className="report-table">
+              <thead>
+                <tr>
+                  <th>البيان</th>
+                  <th>القيمة</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="label">عدد الفواتير</td>
+                  <td>{reportData.totalInvoicesCount || 0} فاتورة</td>
+                </tr>
+                <tr>
+                  <td className="label">إجمالي المبيعات</td>
+                  <td>{formatCurrency(reportData.totalSales || 0)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">
+                    إجمالي الضريبة (
+                    {reportData.totalSales > 0
+                      ? (
+                          ((reportData.totalTax || 0) / reportData.totalSales) *
+                          100
+                        ).toFixed(1)
+                      : 0}
+                    %)
+                  </td>
+                  <td>{formatCurrency(reportData.totalTax || 0)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">صافي الإيرادات</td>
+                  <td>{formatCurrency(reportData.netRevenue || 0)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">الإجمالي الفرعي</td>
+                  <td>{formatCurrency(reportData.totalSubTotal || 0)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">إجمالي المرتجعات</td>
+                  <td style={{ color: "#dc2626" }}>
+                    {formatCurrency(reportData.totalReturns || 0)} ج.م
+                  </td>
+                </tr>
+                <tr>
+                  <td className="label">إجمالي الخصومات</td>
+                  <td style={{ color: "#dc2626" }}>
+                    {formatCurrency(reportData.totalDiscount || 0)} ج.م
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {reportData.payments && reportData.payments.length > 0 && (
+              <>
+                <h3
+                  style={{
+                    marginBottom: "15px",
+                    color: "#193F94",
+                    textAlign: "center",
+                  }}
+                >
+                  المبيعات حسب طريقة الدفع
+                </h3>
+                <table className="payment-table">
+                  <thead>
+                    <tr>
+                      <th>طريقة الدفع</th>
+                      <th>عدد الفواتير</th>
+                      <th>إجمالي المدفوعات</th>
+                      <th>النسبة المئوية</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportData.payments.map((payment, index) => (
+                      <tr key={index}>
+                        <td style={{ fontWeight: "bold" }}>
+                          {payment.paymentMethodName}
+                        </td>
+                        <td>{payment.count || 0}</td>
+                        <td>{formatCurrency(payment.amount || 0)} ج.م</td>
+                        <td>
+                          {reportData.totalSales > 0
+                            ? (
+                                ((payment.amount || 0) /
+                                  reportData.totalSales) *
+                                100
+                              ).toFixed(1)
+                            : 0}
+                          %
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr
+                      style={{ backgroundColor: "#e9ecef", fontWeight: "bold" }}
+                    >
+                      <td>الإجمالي</td>
+                      <td>{reportData.totalInvoicesCount || 0}</td>
+                      <td>{formatCurrency(reportData.totalSales || 0)} ج.م</td>
+                      <td>100%</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </>
+            )}
+
+            {(!reportData.payments || reportData.payments.length === 0) && (
+              <p
+                style={{
+                  textAlign: "center",
+                  color: "#666",
+                  marginBottom: "30px",
+                }}
+              >
+                لا توجد مدفوعات في هذه الفترة
+              </p>
+            )}
+          </>
+        )}
       </div>
 
       <div className="container mx-auto px-4 py-6">
@@ -195,7 +488,7 @@ export default function SalesReports() {
                   </label>
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-4 space-y-3">
                   <button
                     onClick={generateReport}
                     disabled={isGeneratingReport || !startDate || !endDate}
@@ -223,6 +516,30 @@ export default function SalesReports() {
                       </>
                     )}
                   </button>
+
+                  {reportData && (
+                    <button
+                      onClick={handlePrint}
+                      disabled={isPrinting}
+                      className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
+                        isPrinting
+                          ? "opacity-50 cursor-not-allowed bg-gray-400"
+                          : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                      }`}
+                    >
+                      {isPrinting ? (
+                        <>
+                          <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
+                          جاري الطباعة...
+                        </>
+                      ) : (
+                        <>
+                          <Printer className="h-5 w-5 ml-2" />
+                          طباعة التقرير PDF
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -262,6 +579,14 @@ export default function SalesReports() {
                       <DollarSign className="w-3 h-3 ml-1" />
                       {formatCurrency(reportData.totalSales || 0)} ج.م
                     </div>
+                    <button
+                      onClick={handlePrint}
+                      disabled={isPrinting}
+                      className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium flex items-center hover:bg-gray-200 transition-colors"
+                    >
+                      <Printer className="h-3 w-3 ml-1" />
+                      طباعة
+                    </button>
                   </div>
                 </div>
 

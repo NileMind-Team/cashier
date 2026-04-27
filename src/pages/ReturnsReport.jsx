@@ -18,6 +18,7 @@ import {
   FaExchangeAlt,
   FaUsers,
 } from "react-icons/fa";
+import { Printer } from "lucide-react";
 
 export default function ReturnsReport() {
   const navigate = useNavigate();
@@ -29,6 +30,9 @@ export default function ReturnsReport() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [isViewingBill, setIsViewingBill] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printData, setPrintData] = useState(null);
+  const [printLoading, setPrintLoading] = useState(false);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     pageSize: 10,
@@ -88,9 +92,10 @@ export default function ReturnsReport() {
 
       if (response.status === 200 && response.data) {
         const data = response.data;
+        const currentPageNumber = data.pageNumber || pageNumber;
 
         setPagination({
-          currentPage: data.pageNumber || pageNumber,
+          currentPage: currentPageNumber,
           pageSize: data.pageSize || 10,
           totalReturnedInvoices: data.totalReturnedInvoices || 0,
           totalReturnedAmount: data.totalReturnedAmount || 0,
@@ -117,15 +122,15 @@ export default function ReturnsReport() {
       if (error.response?.status === 404) {
         toast.error("لا توجد فواتير مرتجعة");
         setReturnedBills([]);
-        setPagination({
-          ...pagination,
+        setPagination((prev) => ({
+          ...prev,
           totalReturnedInvoices: 0,
           totalReturnedAmount: 0,
           averageReturn: 0,
           totalPages: 1,
           hasNextPage: false,
           hasPreviousPage: false,
-        });
+        }));
       } else {
         toast.error("حدث خطأ في جلب الفواتير المرتجعة");
       }
@@ -133,6 +138,217 @@ export default function ReturnsReport() {
       setLoading(false);
       setIsSearching(false);
     }
+  };
+
+  const fetchAllReturnsForPrint = async () => {
+    setPrintLoading(true);
+    try {
+      const allReturnsPageSize =
+        pagination.totalReturnedInvoices > 0
+          ? pagination.totalReturnedInvoices
+          : 1000;
+
+      const response = await axiosInstance.post(
+        "/api/Reports/ReturnsReport",
+        {
+          pageNumber: 1,
+          pageSize: allReturnsPageSize,
+          skip: 0,
+        },
+        {
+          params: {
+            from: startDate,
+            to: endDate,
+          },
+        },
+      );
+
+      if (response.status === 200 && response.data) {
+        const data = response.data;
+
+        const billsWithDetails = (data.invoices || []).map((bill) => ({
+          id: bill.invoiceId,
+          originalBillNumber: bill.invoiceNumber,
+          returnDate: bill.invoiceDate,
+          customerName: bill.customerName || "-",
+          employeeName: bill.employeeName,
+          totalAmount: bill.totalAmount,
+        }));
+
+        const employeeCount = billsWithDetails.reduce((acc, bill) => {
+          acc[bill.employeeName] = (acc[bill.employeeName] || 0) + 1;
+          return acc;
+        }, {});
+
+        setPrintData({
+          bills: billsWithDetails,
+          stats: {
+            totalReturnedInvoices: data.totalReturnedInvoices || 0,
+            totalReturnedAmount: data.totalReturnedAmount || 0,
+            averageReturn: data.averageReturn || 0,
+            employeeCount: Object.keys(employeeCount).length,
+          },
+        });
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("خطأ في جلب بيانات الطباعة:", error);
+      toast.error("حدث خطأ في تجهيز بيانات الطباعة");
+      return false;
+    } finally {
+      setPrintLoading(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    const success = await fetchAllReturnsForPrint();
+    if (!success) return;
+
+    setIsPrinting(true);
+
+    setTimeout(() => {
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "absolute";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "none";
+      document.body.appendChild(iframe);
+
+      const printContent = document.getElementById("printable-content");
+      if (!printContent) {
+        setIsPrinting(false);
+        return;
+      }
+
+      const iframeDoc = iframe.contentWindow.document;
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              padding: 20px;
+              background: white;
+              color: #333;
+            }
+            .print-container {
+              max-width: 1200px;
+              margin: 0 auto;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              padding-bottom: 20px;
+              border-bottom: 2px solid #193F94;
+            }
+            .header h1 {
+              color: #193F94;
+              margin-bottom: 10px;
+            }
+            .header h3 {
+              color: #666;
+              font-size: 16px;
+            }
+            .summary-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+            }
+            .summary-table th {
+              background-color: #193F94;
+              color: white;
+              padding: 12px;
+              text-align: center;
+              border: 1px solid #dee2e6;
+            }
+            .summary-table td {
+              padding: 12px;
+              text-align: center;
+              border: 1px solid #dee2e6;
+            }
+            .summary-table .label {
+              font-weight: bold;
+              background-color: #e9ecef;
+            }
+            .returns-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+            }
+            .returns-table th {
+              background-color: #4a5568;
+              color: white;
+              padding: 12px;
+              text-align: center;
+              border: 1px solid #dee2e6;
+            }
+            .returns-table td {
+              padding: 10px;
+              text-align: center;
+              border: 1px solid #dee2e6;
+            }
+            .returns-table tr:nth-child(even) {
+              background-color: #f8f9fa;
+            }
+            .returns-table tfoot {
+              background-color: #e9ecef;
+              font-weight: bold;
+            }
+            .footer {
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #dee2e6;
+              text-align: center;
+              font-size: 12px;
+              color: #666;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+              .summary-table th {
+                background-color: #193F94 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .returns-table th {
+                background-color: #4a5568 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${printContent.innerHTML}
+          </div>
+          <script>
+            window.onload = () => {
+              window.print();
+              window.onafterprint = () => {
+                window.parent.document.body.removeChild(window.frameElement);
+              };
+            };
+          </script>
+        </body>
+        </html>
+      `);
+      iframeDoc.close();
+      setTimeout(() => setIsPrinting(false), 1000);
+    }, 500);
   };
 
   const handlePageChange = (newPage) => {
@@ -187,6 +403,28 @@ export default function ReturnsReport() {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+    });
+  };
+
+  const formatDateForPrint = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("ar-EG", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatDateOnly = (dateString) => {
+    if (!dateString) return "";
+    const adjustedDate = addTwoHours(dateString);
+    return adjustedDate.toLocaleDateString("ar-EG", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -274,6 +512,97 @@ export default function ReturnsReport() {
         </div>
       </div>
 
+      <div id="printable-content" style={{ display: "none" }}>
+        {printData && (
+          <>
+            <div className="header">
+              <h1>تقرير المرتجعات</h1>
+              <h3>
+                الفترة من {formatDateOnly(startDate)} إلى{" "}
+                {formatDateOnly(endDate)}
+              </h3>
+            </div>
+
+            <table className="summary-table">
+              <thead>
+                <tr>
+                  <th>البيان</th>
+                  <th>القيمة</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="label">عدد الفواتير المرتجعة</td>
+                  <td>{printData.stats.totalReturnedInvoices}</td>
+                </tr>
+                <tr>
+                  <td className="label">إجمالي المبالغ المرتجعة</td>
+                  <td>
+                    {formatCurrency(printData.stats.totalReturnedAmount)} ج.م
+                  </td>
+                </tr>
+                <tr>
+                  <td className="label">متوسط المبلغ المرتجع</td>
+                  <td>{formatCurrency(printData.stats.averageReturn)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">عدد الموظفين</td>
+                  <td>{printData.stats.employeeCount}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3
+              style={{
+                marginBottom: "15px",
+                color: "#193F94",
+                textAlign: "center",
+              }}
+            >
+              قائمة الفواتير المرتجعة ({printData.stats.totalReturnedInvoices}{" "}
+              فاتورة)
+            </h3>
+
+            <table className="returns-table">
+              <thead>
+                <tr>
+                  <th>رقم الفاتورة</th>
+                  <th>تاريخ الإرجاع</th>
+                  <th>العميل</th>
+                  <th>الموظف المسؤول</th>
+                  <th>المبلغ المرتجع</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printData.bills.map((bill, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontWeight: "bold" }}>
+                      {bill.originalBillNumber}
+                    </td>
+                    <td>{formatDateForPrint(bill.returnDate)}</td>
+                    <td>{bill.customerName}</td>
+                    <td>{bill.employeeName}</td>
+                    <td style={{ fontWeight: "bold", color: "#dc2626" }}>
+                      {formatCurrency(bill.totalAmount)} ج.م
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan="4" style={{ textAlign: "center" }}>
+                    الإجمالي العام:
+                  </td>
+                  <td style={{ fontWeight: "bold", color: "#dc2626" }}>
+                    {formatCurrency(printData.stats.totalReturnedAmount)} ج.م
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </>
+        )}
+      </div>
+
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1 print:hidden">
@@ -320,15 +649,11 @@ export default function ReturnsReport() {
                   </label>
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-4 space-y-3">
                   <button
                     onClick={() => handleSearch(1)}
                     disabled={isSearching || loading}
-                    className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
-                      isSearching || loading
-                        ? "opacity-50 cursor-not-allowed"
-                        : "hover:opacity-90"
-                    }`}
+                    className="w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ backgroundColor: "#193F94" }}
                   >
                     {isSearching || loading ? (
@@ -343,6 +668,32 @@ export default function ReturnsReport() {
                       </>
                     )}
                   </button>
+
+                  {returnedBills.length > 0 && (
+                    <button
+                      onClick={handlePrint}
+                      disabled={isPrinting || printLoading}
+                      className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
+                        isPrinting || printLoading
+                          ? "opacity-50 cursor-not-allowed bg-gray-400"
+                          : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                      }`}
+                    >
+                      {isPrinting || printLoading ? (
+                        <>
+                          <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
+                          {printLoading
+                            ? "جاري تجهيز البيانات..."
+                            : "جاري الطباعة..."}
+                        </>
+                      ) : (
+                        <>
+                          <Printer className="h-5 w-5 ml-2" />
+                          طباعة التقرير PDF
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -389,6 +740,14 @@ export default function ReturnsReport() {
                       <FaMoneyBillWave className="h-3 w-3 ml-1" />
                       {formatCurrency(pagination.totalReturnedAmount)} ج.م
                     </div>
+                    <button
+                      onClick={handlePrint}
+                      disabled={isPrinting || printLoading}
+                      className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium flex items-center hover:bg-gray-200 transition-colors"
+                    >
+                      <Printer className="h-3 w-3 ml-1" />
+                      طباعة
+                    </button>
                   </div>
                 </div>
 
@@ -548,37 +907,24 @@ export default function ReturnsReport() {
                     <div className="px-4 py-4 border-t border-gray-200 bg-gray-50 mt-4">
                       <div className="flex justify-end">
                         <div className="flex items-center gap-2">
-                          {/* First Page Button */}
                           <button
                             onClick={() => handlePageChange(1)}
                             disabled={!pagination.hasPreviousPage || loading}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasPreviousPage && !loading
-                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                                : "text-gray-300 cursor-not-allowed"
-                            }`}
+                            className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-700 hover:bg-gray-200 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
                             title="الصفحة الأولى"
                           >
-                            <FaAngleDoubleLeft className="h-5 w-5" />
+                            <FaAngleDoubleRight className="h-5 w-5" />
                           </button>
-
-                          {/* Previous Page Button */}
                           <button
                             onClick={() =>
                               handlePageChange(pagination.currentPage - 1)
                             }
                             disabled={!pagination.hasPreviousPage || loading}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasPreviousPage && !loading
-                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                                : "text-gray-300 cursor-not-allowed"
-                            }`}
+                            className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-700 hover:bg-gray-200 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
                             title="الصفحة السابقة"
                           >
                             <FaChevronRight className="h-5 w-5" />
                           </button>
-
-                          {/* Page Numbers */}
                           <div className="flex items-center gap-1">
                             {getPageNumbers().map((page, index) =>
                               page === "..." ? (
@@ -604,66 +950,28 @@ export default function ReturnsReport() {
                               ),
                             )}
                           </div>
-
-                          {/* Next Page Button */}
                           <button
                             onClick={() =>
                               handlePageChange(pagination.currentPage + 1)
                             }
                             disabled={!pagination.hasNextPage || loading}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasNextPage && !loading
-                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                                : "text-gray-300 cursor-not-allowed"
-                            }`}
+                            className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-700 hover:bg-gray-200 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
                             title="الصفحة التالية"
                           >
                             <FaChevronLeft className="h-5 w-5" />
                           </button>
-
-                          {/* Last Page Button */}
                           <button
                             onClick={() =>
                               handlePageChange(pagination.totalPages)
                             }
                             disabled={!pagination.hasNextPage || loading}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              pagination.hasNextPage && !loading
-                                ? "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                                : "text-gray-300 cursor-not-allowed"
-                            }`}
+                            className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-700 hover:bg-gray-200 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
                             title="الصفحة الأخيرة"
                           >
-                            <FaAngleDoubleRight className="h-5 w-5" />
+                            <FaAngleDoubleLeft className="h-5 w-5" />
                           </button>
                         </div>
                       </div>
-
-                      {/* Quick Jump to Page (for large page counts) */}
-                      {pagination.totalPages > 10 && (
-                        <div className="mt-3 flex items-center justify-end gap-2">
-                          <span className="text-sm text-gray-600">
-                            انتقل إلى صفحة:
-                          </span>
-                          <input
-                            type="number"
-                            min="1"
-                            max={pagination.totalPages}
-                            value={pagination.currentPage}
-                            onChange={(e) => {
-                              const page = parseInt(e.target.value);
-                              if (page >= 1 && page <= pagination.totalPages) {
-                                handlePageChange(page);
-                              }
-                            }}
-                            disabled={loading}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                          />
-                          <span className="text-sm text-gray-600">
-                            من {pagination.totalPages}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
