@@ -48,6 +48,8 @@ export default function CustomersReports() {
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
   const paymentMethodsFetchedRef = useRef(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [printData, setPrintData] = useState(null);
+  const [printLoading, setPrintLoading] = useState(false);
   const [dailyTransactions, setDailyTransactions] = useState([]);
   const [totalsFromAPI, setTotalsFromAPI] = useState({
     totalInvoicesAmount: 0,
@@ -154,6 +156,7 @@ export default function CustomersReports() {
         setCustomerInvoices([]);
         setCustomerTransactions([]);
         setDailyTransactions([]);
+        setPrintData(null);
         setPagination({
           currentPage: 1,
           pageSize: 10,
@@ -194,6 +197,7 @@ export default function CustomersReports() {
     setCustomerInvoices([]);
     setCustomerTransactions([]);
     setDailyTransactions([]);
+    setPrintData(null);
     setExpandedDay(null);
     setPagination({
       currentPage: 1,
@@ -340,6 +344,160 @@ export default function CustomersReports() {
     }
   };
 
+  const fetchAllTransactionsForPrint = async () => {
+    if (!customerData) {
+      toast.error("يرجى البحث عن عميل أولاً");
+      return false;
+    }
+
+    if (!startDate || !endDate) {
+      toast.error("يرجى اختيار تاريخ البداية والنهاية أولاً");
+      return false;
+    }
+
+    setPrintLoading(true);
+
+    try {
+      const allTransactionsPageSize =
+        pagination.totalCount > 0 ? pagination.totalCount : 1000;
+
+      const response = await axiosInstance.post(
+        "/api/Invoices/GetCustomerDailyTransactions",
+        {
+          pageNumber: 1,
+          pageSize: allTransactionsPageSize,
+          skip: 0,
+        },
+        {
+          params: {
+            customerId: customerData.id,
+          },
+        },
+      );
+
+      if (response.status === 200 && response.data) {
+        let transactions = response.data.items || response.data;
+
+        if (Array.isArray(response.data) && !response.data.items) {
+          transactions = response.data;
+        }
+
+        if (startDate && endDate && Array.isArray(transactions)) {
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+
+          transactions = transactions.filter((dayData) => {
+            const itemDate = new Date(dayData.date);
+            return itemDate >= start && itemDate <= end;
+          });
+        }
+
+        if (Array.isArray(transactions)) {
+          transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
+        let totalInvoicesAmount = 0;
+        let totalPaid = 0;
+        let totalRemaining = 0;
+        let allTransactionsList = [];
+
+        if (Array.isArray(transactions)) {
+          transactions.forEach((dayData) => {
+            totalPaid += dayData.totalPaid || 0;
+            totalInvoicesAmount += dayData.totalInvoicesAmount || 0;
+            totalRemaining += dayData.totalRemaining || 0;
+
+            if (dayData.invoices && Array.isArray(dayData.invoices)) {
+              dayData.invoices.forEach((invoice) => {
+                const invoiceDate = addTwoHours(invoice.invoiceDate);
+                const formattedDateTime = invoiceDate.toLocaleDateString(
+                  "ar-EG",
+                  {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  },
+                );
+
+                allTransactionsList.push({
+                  date: invoiceDate,
+                  dateTime: formattedDateTime,
+                  type:
+                    invoice.remainingAmount === 0
+                      ? "فاتورة مدفوعة"
+                      : "فاتورة جديدة",
+                  description: `فاتورة رقم ${invoice.invoiceNumber}`,
+                  amount: invoice.totalAmount,
+                  paid: invoice.paidAmount,
+                  remaining: invoice.remainingAmount,
+                  isInvoice: true,
+                });
+
+                if (
+                  invoice.transactions &&
+                  Array.isArray(invoice.transactions)
+                ) {
+                  invoice.transactions.forEach((transaction) => {
+                    const transactionDate = addTwoHours(
+                      transaction.transactionDate,
+                    );
+                    const transactionFormattedDateTime =
+                      transactionDate.toLocaleDateString("ar-EG", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      });
+
+                    allTransactionsList.push({
+                      date: transactionDate,
+                      dateTime: transactionFormattedDateTime,
+                      type: "دفعة",
+                      description: `دفعة على فاتورة ${invoice.invoiceNumber} - ${getPaymentMethodName(transaction.paymentMethodId)}`,
+                      amount: 0,
+                      paid: transaction.amount,
+                      remaining: invoice.remainingAmount,
+                      isInvoice: false,
+                    });
+                  });
+                }
+              });
+            }
+          });
+        }
+
+        allTransactionsList.sort((a, b) => a.date - b.date);
+
+        setPrintData({
+          transactions: allTransactionsList,
+          stats: {
+            totalInvoicesAmount,
+            totalPaid,
+            totalRemaining,
+          },
+          customer: customerData,
+          dateRange: {
+            start: formatArabicDate(startDate),
+            end: formatArabicDate(endDate),
+          },
+        });
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("خطأ في جلب بيانات الطباعة:", error);
+      toast.error("حدث خطأ في تجهيز بيانات الطباعة");
+      return false;
+    } finally {
+      setPrintLoading(false);
+    }
+  };
+
   const getPaymentMethodName = (paymentMethodId) => {
     const method = paymentMethods.find((m) => m.id === paymentMethodId);
     return method ? method.name : "كاش";
@@ -425,6 +583,186 @@ export default function CustomersReports() {
         tableElement.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     }
+  };
+
+  const handlePrint = async () => {
+    const success = await fetchAllTransactionsForPrint();
+    if (!success) return;
+
+    setIsPrinting(true);
+
+    setTimeout(() => {
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "absolute";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "none";
+      document.body.appendChild(iframe);
+
+      const printContent = document.getElementById("printable-content");
+      if (!printContent) {
+        setIsPrinting(false);
+        return;
+      }
+
+      const iframeDoc = iframe.contentWindow.document;
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              padding: 20px;
+              background: white;
+              color: #333;
+            }
+            .print-container {
+              max-width: 1200px;
+              margin: 0 auto;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              padding-bottom: 20px;
+              border-bottom: 2px solid #193F94;
+            }
+            .header h1 {
+              color: #193F94;
+              margin-bottom: 10px;
+            }
+            .header h3 {
+              color: #666;
+              font-size: 16px;
+            }
+            .customer-info {
+              background: #f8f9fa;
+              padding: 15px;
+              border-radius: 8px;
+              margin-bottom: 30px;
+              border: 1px solid #dee2e6;
+            }
+            .customer-info h4 {
+              color: #193F94;
+              margin-bottom: 10px;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+              gap: 10px;
+            }
+            .info-item {
+              font-size: 14px;
+            }
+            .info-label {
+              font-weight: bold;
+              color: #666;
+            }
+            .summary-cards {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 15px;
+              margin-bottom: 30px;
+            }
+            .summary-card {
+              background: #f8f9fa;
+              padding: 15px;
+              border-radius: 8px;
+              text-align: center;
+              border: 1px solid #dee2e6;
+            }
+            .summary-card .amount {
+              font-size: 24px;
+              font-weight: bold;
+              margin-top: 5px;
+            }
+            .summary-card.sales .amount { color: #193F94; }
+            .summary-card.paid .amount { color: #28a745; }
+            .summary-card.remaining .amount { color: #dc3545; }
+            .transactions-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+              page-break-after: avoid;
+            }
+            .transactions-table th {
+              border: 1px solid #dee2e6;
+              padding: 12px 10px;
+              text-align: right;
+              font-size: 14px;
+              font-weight: bold;
+              background-color: #4a5568;
+              color: white;
+            }
+            .transactions-table td {
+              border: 1px solid #dee2e6;
+              padding: 10px;
+              text-align: right;
+              font-size: 13px;
+            }
+            .transactions-table tr:nth-child(even) {
+              background-color: #f8f9fa;
+            }
+            .invoice-row {
+              background-color: #e3f2fd;
+            }
+            .payment-row {
+              background-color: #e8f5e9;
+            }
+            .transactions-table tfoot {
+              display: table-row-group;
+              page-break-after: avoid;
+              page-break-inside: avoid;
+            }
+            .footer {
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #dee2e6;
+              text-align: center;
+              font-size: 12px;
+              color: #666;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+              .transactions-table th {
+                background-color: #4a5568 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .transactions-table tfoot {
+                display: table-row-group;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${printContent.innerHTML}
+          </div>
+          <script>
+            window.onload = () => {
+              window.print();
+              window.onafterprint = () => {
+                window.parent.document.body.removeChild(window.frameElement);
+              };
+            };
+          </script>
+        </body>
+        </html>
+      `);
+      iframeDoc.close();
+      setTimeout(() => setIsPrinting(false), 1000);
+    }, 500);
   };
 
   const getPageNumbers = () => {
@@ -719,267 +1057,7 @@ export default function CustomersReports() {
     }
   };
 
-  const getPrintableData = () => {
-    if (!customerData || dailyTransactions.length === 0) return [];
-
-    const allTransactions = [];
-
-    dailyTransactions.forEach((dayData) => {
-      if (dayData.invoices && Array.isArray(dayData.invoices)) {
-        dayData.invoices.forEach((invoice) => {
-          const invoiceDate = addTwoHours(invoice.invoiceDate);
-          const formattedDateTime = invoiceDate.toLocaleDateString("ar-EG", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-
-          allTransactions.push({
-            date: invoiceDate,
-            dateTime: formattedDateTime,
-            type:
-              invoice.remainingAmount === 0 ? "فاتورة مدفوعة" : "فاتورة جديدة",
-            description: `فاتورة رقم ${invoice.invoiceNumber}`,
-            amount: invoice.totalAmount,
-            paid: invoice.paidAmount,
-            remaining: invoice.remainingAmount,
-            isInvoice: true,
-          });
-
-          if (invoice.transactions && Array.isArray(invoice.transactions)) {
-            invoice.transactions.forEach((transaction) => {
-              const transactionDate = addTwoHours(transaction.transactionDate);
-              const transactionFormattedDateTime =
-                transactionDate.toLocaleDateString("ar-EG", {
-                  year: "numeric",
-                  month: "2-digit",
-                  day: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-
-              allTransactions.push({
-                date: transactionDate,
-                dateTime: transactionFormattedDateTime,
-                type: "دفعة",
-                description: `دفعة على فاتورة ${invoice.invoiceNumber} - ${getPaymentMethodName(transaction.paymentMethodId)}`,
-                amount: 0,
-                paid: transaction.amount,
-                remaining: invoice.remainingAmount,
-                isInvoice: false,
-              });
-            });
-          }
-        });
-      }
-    });
-
-    allTransactions.sort((a, b) => a.date - b.date);
-
-    return allTransactions;
-  };
-
   const totals = calculateTotals();
-  const printableTransactions = getPrintableData();
-
-  const handlePrint = () => {
-    setIsPrinting(true);
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "absolute";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "none";
-    document.body.appendChild(iframe);
-
-    const printContent = document.getElementById("printable-content");
-    if (!printContent) {
-      setIsPrinting(false);
-      return;
-    }
-
-    const iframeDoc = iframe.contentWindow.document;
-    iframeDoc.open();
-    iframeDoc.write(`
-      <!DOCTYPE html>
-      <html dir="rtl">
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          
-          body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 20px;
-            background: white;
-            color: #333;
-          }
-          
-          .print-container {
-            max-width: 1200px;
-            margin: 0 auto;
-          }
-          
-          .header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #193F94;
-          }
-          
-          .header h1 {
-            color: #193F94;
-            margin-bottom: 10px;
-          }
-          
-          .header h3 {
-            color: #666;
-            font-size: 16px;
-          }
-          
-          .customer-info {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            border: 1px solid #dee2e6;
-          }
-          
-          .customer-info h4 {
-            color: #193F94;
-            margin-bottom: 10px;
-          }
-          
-          .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-          }
-          
-          .info-item {
-            font-size: 14px;
-          }
-          
-          .info-label {
-            font-weight: bold;
-            color: #666;
-          }
-          
-          .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 30px;
-          }
-          
-          .summary-card {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            border: 1px solid #dee2e6;
-          }
-          
-          .summary-card .amount {
-            font-size: 24px;
-            font-weight: bold;
-            margin-top: 5px;
-          }
-          
-          .summary-card.sales .amount { color: #193F94; }
-          .summary-card.paid .amount { color: #28a745; }
-          .summary-card.remaining .amount { color: #dc3545; }
-          
-          .transactions-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-            page-break-after: avoid;
-          }
-          
-          .transactions-table th {
-            border: 1px solid #dee2e6;
-            padding: 12px 10px;
-            text-align: right;
-            font-size: 14px;
-            font-weight: bold;
-            background-color: #4a5568;
-            color: white;
-          }
-          
-          .transactions-table td {
-            border: 1px solid #dee2e6;
-            padding: 10px;
-            text-align: right;
-            font-size: 13px;
-          }
-          
-          .transactions-table tr:nth-child(even) {
-            background-color: #f8f9fa;
-          }
-          
-          .invoice-row {
-            background-color: #e3f2fd;
-          }
-          
-          .payment-row {
-            background-color: #e8f5e9;
-          }
-          
-          .transactions-table tfoot {
-            display: table-row-group;
-            page-break-after: avoid;
-            page-break-inside: avoid;
-          }
-          
-          .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #dee2e6;
-            text-align: center;
-            font-size: 12px;
-            color: #666;
-          }
-          
-          @media print {
-            body {
-              padding: 0;
-            }
-            .transactions-table th {
-              background-color: #4a5568 !important;
-              color: white !important;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            .transactions-table tfoot {
-              display: table-row-group;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="print-container">
-          ${printContent.innerHTML}
-        </div>
-        <script>
-          window.onload = () => {
-            window.print();
-            window.onafterprint = () => {
-              window.parent.document.body.removeChild(window.frameElement);
-            };
-          };
-        </script>
-      </body>
-      </html>
-    `);
-    iframeDoc.close();
-    setTimeout(() => setIsPrinting(false), 1000);
-  };
 
   return (
     <div
@@ -1020,105 +1098,108 @@ export default function CustomersReports() {
 
       {/* Hidden Printable Content */}
       <div id="printable-content" style={{ display: "none" }}>
-        <div className="header">
-          <h1>تقرير حركة العميل</h1>
-        </div>
+        {printData && (
+          <>
+            <div className="header">
+              <h1>تقرير حركة العميل</h1>
+              <h3>
+                الفترة من {printData.dateRange.start} إلى{" "}
+                {printData.dateRange.end}
+              </h3>
+            </div>
 
-        <div className="customer-info">
-          <h4>بيانات العميل</h4>
-          <div className="info-grid">
-            <div className="info-item">
-              <span className="info-label">الاسم:</span>{" "}
-              {reportData?.customer.analytics.customerName ||
-                customerData?.name ||
-                ""}
-            </div>
-            <div className="info-item">
-              <span className="info-label">رقم التليفون:</span>{" "}
-              {reportData?.customer.analytics.phone ||
-                customerData?.phone ||
-                ""}
-            </div>
-            {reportData?.customer.address && (
-              <div className="info-item">
-                <span className="info-label">العنوان:</span>{" "}
-                {reportData.customer.address}
+            <div className="customer-info">
+              <h4>بيانات العميل</h4>
+              <div className="info-grid">
+                <div className="info-item">
+                  <span className="info-label">الاسم:</span>{" "}
+                  {printData.customer.name}
+                </div>
+                <div className="info-item">
+                  <span className="info-label">رقم التليفون:</span>{" "}
+                  {printData.customer.phone}
+                </div>
+                {printData.customer.address && (
+                  <div className="info-item">
+                    <span className="info-label">العنوان:</span>{" "}
+                    {printData.customer.address}
+                  </div>
+                )}
               </div>
-            )}
-            <div className="info-item">
-              <span className="info-label">الفترة:</span>{" "}
-              {reportData?.dateRange.start || formatArabicDate(startDate)} -{" "}
-              {reportData?.dateRange.end || formatArabicDate(endDate)}
             </div>
-          </div>
-        </div>
 
-        <div className="summary-cards">
-          <div className="summary-card sales">
-            <div>إجمالي المبيعات</div>
-            <div className="amount">
-              {formatCurrency(totals.totalInvoicesAmount)} ج.م
+            <div className="summary-cards">
+              <div className="summary-card sales">
+                <div>إجمالي المبيعات</div>
+                <div className="amount">
+                  {formatCurrency(printData.stats.totalInvoicesAmount)} ج.م
+                </div>
+              </div>
+              <div className="summary-card paid">
+                <div>إجمالي المدفوعات</div>
+                <div className="amount">
+                  {formatCurrency(printData.stats.totalPaid)} ج.م
+                </div>
+              </div>
+              <div className="summary-card remaining">
+                <div>المتبقي</div>
+                <div className="amount">
+                  {formatCurrency(printData.stats.totalRemaining)} ج.م
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="summary-card paid">
-            <div>إجمالي المدفوعات</div>
-            <div className="amount">{formatCurrency(totals.totalPaid)} ج.م</div>
-          </div>
-          <div className="summary-card remaining">
-            <div>المتبقي</div>
-            <div className="amount">
-              {formatCurrency(totals.totalRemaining)} ج.م
-            </div>
-          </div>
-        </div>
 
-        <table className="transactions-table">
-          <thead>
-            <tr>
-              <th>التاريخ والوقت</th>
-              <th>نوع العملية</th>
-              <th>الوصف</th>
-              <th>قيمة الفاتورة</th>
-              <th>المدفوع</th>
-              <th>المتبقي</th>
-            </tr>
-          </thead>
-          <tbody>
-            {printableTransactions.map((transaction, index) => (
-              <tr
-                key={index}
-                className={
-                  transaction.isInvoice ? "invoice-row" : "payment-row"
-                }
-              >
-                <td>{transaction.dateTime}</td>
-                <td>{transaction.type}</td>
-                <td>{transaction.description}</td>
-                <td>
-                  {transaction.isInvoice
-                    ? formatCurrency(transaction.amount)
-                    : "-"}
-                </td>
-                <td>{formatCurrency(transaction.paid)}</td>
-                <td>
-                  {transaction.isInvoice
-                    ? formatCurrency(transaction.remaining)
-                    : "-"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr style={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}>
-              <td colSpan="3" style={{ textAlign: "left" }}>
-                الإجمالي:
-              </td>
-              <td>{formatCurrency(totals.totalInvoicesAmount)} ج.م</td>
-              <td>{formatCurrency(totals.totalPaid)} ج.م</td>
-              <td>{formatCurrency(totals.totalRemaining)} ج.م</td>
-            </tr>
-          </tfoot>
-        </table>
+            <table className="transactions-table">
+              <thead>
+                <tr>
+                  <th>التاريخ والوقت</th>
+                  <th>نوع العملية</th>
+                  <th>الوصف</th>
+                  <th>قيمة الفاتورة</th>
+                  <th>المدفوع</th>
+                  <th>المتبقي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printData.transactions.map((transaction, index) => (
+                  <tr
+                    key={index}
+                    className={
+                      transaction.isInvoice ? "invoice-row" : "payment-row"
+                    }
+                  >
+                    <td>{transaction.dateTime}</td>
+                    <td>{transaction.type}</td>
+                    <td>{transaction.description}</td>
+                    <td>
+                      {transaction.isInvoice
+                        ? formatCurrency(transaction.amount)
+                        : "-"}
+                    </td>
+                    <td>{formatCurrency(transaction.paid)}</td>
+                    <td>
+                      {transaction.isInvoice
+                        ? formatCurrency(transaction.remaining)
+                        : "-"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}>
+                  <td colSpan="3" style={{ textAlign: "left" }}>
+                    الإجمالي:
+                  </td>
+                  <td>
+                    {formatCurrency(printData.stats.totalInvoicesAmount)} ج.م
+                  </td>
+                  <td>{formatCurrency(printData.stats.totalPaid)} ج.م</td>
+                  <td>{formatCurrency(printData.stats.totalRemaining)} ج.م</td>
+                </tr>
+              </tfoot>
+            </table>
+          </>
+        )}
       </div>
 
       <div className="container mx-auto px-4 py-6">
@@ -1264,17 +1345,19 @@ export default function CustomersReports() {
                   {reportData && (
                     <button
                       onClick={handlePrint}
-                      disabled={isPrinting}
+                      disabled={isPrinting || printLoading}
                       className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
-                        isPrinting
+                        isPrinting || printLoading
                           ? "opacity-50 cursor-not-allowed bg-gray-400"
                           : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
                       }`}
                     >
-                      {isPrinting ? (
+                      {isPrinting || printLoading ? (
                         <>
                           <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
-                          جاري الطباعة...
+                          {printLoading
+                            ? "جاري تجهيز البيانات..."
+                            : "جاري الطباعة..."}
                         </>
                       ) : (
                         <>
