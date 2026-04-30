@@ -65,6 +65,12 @@ export default function CustomersReports() {
     hasPreviousPage: false,
   });
 
+  // State for customer dropdown
+  const [allCustomers, setAllCustomers] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [filteredCustomers, setFilteredCustomers] = useState([]);
+  const dropdownRef = useRef(null);
+
   const addTwoHours = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -82,7 +88,104 @@ export default function CustomersReports() {
     setEndDate(today);
 
     fetchPaymentMethods();
+    fetchAllCustomers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch all customers
+  const fetchAllCustomers = async () => {
+    try {
+      // First request to get totalCount
+      const firstResponse = await axiosInstance.post("/api/Customers/GetAll", {
+        pageNumber: 1,
+        pageSize: 10,
+        skip: 0,
+      });
+
+      if (firstResponse.status === 200 && firstResponse.data) {
+        const totalCount = firstResponse.data.totalCount || 0;
+
+        if (totalCount > 0) {
+          // Second request to get all customers
+          const allCustomersResponse = await axiosInstance.post(
+            "/api/Customers/GetAll",
+            {
+              pageNumber: 1,
+              pageSize: totalCount,
+              skip: 0,
+            },
+          );
+
+          if (
+            allCustomersResponse.status === 200 &&
+            allCustomersResponse.data
+          ) {
+            const customers = allCustomersResponse.data.items || [];
+            setAllCustomers(customers);
+            setFilteredCustomers(customers);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("خطأ في جلب العملاء:", error);
+      toast.error("حدث خطأ في جلب قائمة العملاء");
+    }
+  };
+
+  // Handle search input change - search by phone number only
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setPhoneSearch(value);
+
+    // Remove non-digits for phone search
+    const searchTerm = value.replace(/\D/g, "");
+
+    if (searchTerm === "") {
+      setFilteredCustomers(allCustomers);
+      setShowDropdown(true);
+    } else {
+      // Filter customers by phone number only
+      const filtered = allCustomers.filter((customer) =>
+        customer.phone.includes(searchTerm),
+      );
+      setFilteredCustomers(filtered);
+      setShowDropdown(true);
+    }
+  };
+
+  // Handle customer selection from dropdown
+  const handleSelectCustomer = (customer) => {
+    setPhoneSearch(customer.phone);
+    setCustomerData(customer);
+    setShowDropdown(false);
+    toast.success(`تم اختيار ${customer.name}`);
+
+    // Clear previous data
+    setCustomerInvoices([]);
+    setCustomerTransactions([]);
+    setDailyTransactions([]);
+    setPrintData(null);
+    setPagination({
+      currentPage: 1,
+      pageSize: 10,
+      totalCount: 0,
+      totalPages: 1,
+      hasNextPage: false,
+      hasPreviousPage: false,
+    });
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const fetchPaymentMethods = async () => {
@@ -187,6 +290,7 @@ export default function CustomersReports() {
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
       handlePhoneSearch();
+      setShowDropdown(false);
     }
   };
 
@@ -207,6 +311,8 @@ export default function CustomersReports() {
       hasNextPage: false,
       hasPreviousPage: false,
     });
+    setFilteredCustomers(allCustomers);
+    setShowDropdown(false);
   };
 
   const fetchCustomerDailyTransactions = async (
@@ -1214,17 +1320,39 @@ export default function CustomersReports() {
               </h3>
 
               <div className="space-y-4">
-                <div className="relative">
+                <div className="relative" ref={dropdownRef}>
                   <div className="flex space-x-2 rtl:space-x-reverse">
-                    <input
-                      type="text"
-                      value={phoneSearch}
-                      onChange={(e) => setPhoneSearch(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="أدخل رقم التليفون..."
-                      className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
-                      dir="rtl"
-                    />
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={phoneSearch}
+                        onChange={handleSearchChange}
+                        onKeyPress={handleKeyPress}
+                        onFocus={() => setShowDropdown(true)}
+                        placeholder="أدخل رقم التليفون..."
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                        dir="rtl"
+                      />
+                      {/* Dropdown */}
+                      {showDropdown && filteredCustomers.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                          {filteredCustomers.map((customer) => (
+                            <div
+                              key={customer.id}
+                              onClick={() => handleSelectCustomer(customer)}
+                              className="px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-800">
+                                {customer.name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {customer.phone}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <button
                       onClick={handlePhoneSearch}
                       disabled={searchLoading}
