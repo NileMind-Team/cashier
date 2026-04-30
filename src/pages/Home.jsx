@@ -1366,12 +1366,17 @@ export default function Home() {
     }
   };
 
-  const payCustomerInvoice = async (customerId, paymentsData) => {
+  const payCustomerInvoice = async (
+    customerId,
+    paymentsData,
+    invoiceId = null,
+  ) => {
     try {
       const response = await axiosInstance.post(
         "/api/Invoices/PayCustomerInvoices",
         {
           customerId: customerId,
+          invoiceId: invoiceId,
           payments: paymentsData,
         },
       );
@@ -2497,6 +2502,7 @@ export default function Home() {
         const result = await payCustomerInvoice(
           currentBillData.customerId,
           payments,
+          currentBillData.invoiceId,
         );
 
         if (result && result.success) {
