@@ -63,10 +63,6 @@ export default function OptionsManagement() {
     pageNumber = pagination.currentPage,
     showLoading = true,
   ) => {
-    if (isFetchingOptions.current) {
-      console.log("هناك طلب إضافات قيد التنفيذ بالفعل، تجاهل الطلب الجديد");
-      return;
-    }
 
     try {
       isFetchingOptions.current = true;

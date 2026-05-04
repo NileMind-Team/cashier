@@ -66,10 +66,6 @@ export default function CustomersManagement() {
     pageNumber = pagination.currentPage,
     showLoading = true,
   ) => {
-    if (isFetchingCustomers.current) {
-      console.log("هناك طلب عملاء قيد التنفيذ بالفعل، تجاهل الطلب الجديد");
-      return;
-    }
 
     try {
       isFetchingCustomers.current = true;

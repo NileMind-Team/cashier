@@ -46,7 +46,6 @@ export default function CustomersReports() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
-  const paymentMethodsFetchedRef = useRef(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [printData, setPrintData] = useState(null);
   const [printLoading, setPrintLoading] = useState(false);
@@ -80,6 +79,10 @@ export default function CustomersReports() {
     hasNextPage: false,
     hasPreviousPage: false,
   });
+  const hasFetchedCustomers = useRef(false);
+  const isFetchingCustomers = useRef(false);
+  const hasFetchedPaymentMethods = useRef(false);
+  const isFetchingPaymentMethods = useRef(false);
 
   const addTwoHours = (dateString) => {
     if (!dateString) return "";
@@ -103,7 +106,10 @@ export default function CustomersReports() {
   }, []);
 
   const fetchAllCustomers = async () => {
+
     try {
+      isFetchingCustomers.current = true;
+
       const firstResponse = await axiosInstance.post("/api/Customers/GetAll", {
         pageNumber: 1,
         pageSize: 10,
@@ -130,12 +136,15 @@ export default function CustomersReports() {
             const customers = allCustomersResponse.data.items || [];
             setAllCustomers(customers);
             setFilteredCustomers(customers);
+            hasFetchedCustomers.current = true;
           }
         }
       }
     } catch (error) {
       console.error("خطأ في جلب العملاء:", error);
       toast.error("حدث خطأ في جلب قائمة العملاء");
+    } finally {
+      isFetchingCustomers.current = false;
     }
   };
 
@@ -447,11 +456,9 @@ export default function CustomersReports() {
   }, []);
 
   const fetchPaymentMethods = async () => {
-    if (paymentMethodsFetchedRef.current) {
-      return;
-    }
 
     try {
+      isFetchingPaymentMethods.current = true;
       setPaymentMethodsLoading(true);
       const response = await axiosInstance.get("/api/Payment/GetAll");
 
@@ -463,7 +470,7 @@ export default function CustomersReports() {
           color: getPaymentMethodColor(method.id),
         }));
         setPaymentMethods(formattedMethods);
-        paymentMethodsFetchedRef.current = true;
+        hasFetchedPaymentMethods.current = true;
       } else {
         setPaymentMethods([]);
       }
@@ -473,6 +480,7 @@ export default function CustomersReports() {
       setPaymentMethods([]);
     } finally {
       setPaymentMethodsLoading(false);
+      isFetchingPaymentMethods.current = false;
     }
   };
 

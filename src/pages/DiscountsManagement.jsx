@@ -72,11 +72,6 @@ export default function DiscountsManagement() {
   };
 
   const fetchAllData = async (showLoading = true) => {
-    if (isFetching.current) {
-      console.log("هناك طلب قيد التنفيذ بالفعل، تجاهل الطلب الجديد");
-      return;
-    }
-
     try {
       isFetching.current = true;
       if (showLoading) setLoading(true);
