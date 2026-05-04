@@ -32,6 +32,7 @@ import {
   FaSpinner,
 } from "react-icons/fa";
 import axiosInstance from "../../api/axiosInstance";
+import { ArrowLeft } from "lucide-react";
 
 export default function Navbar({ isShiftOpen, onShiftClose }) {
   const navigate = useNavigate();
@@ -46,6 +47,7 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const userRoles = user.roles || [];
   const isCashier = userRoles.includes("Cashier");
+  const isAdmin = userRoles.includes("Admin");
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -85,6 +87,17 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
   }, []);
 
   const handleCloseShift = () => {
+    if (!isShiftOpen) {
+      Swal.fire({
+        title: "لا توجد وردية مفتوحة",
+        text: "لا يمكن إغلاق وردية غير مفتوحة",
+        icon: "info",
+        confirmButtonColor: "#193F94",
+        confirmButtonText: "حسناً",
+      });
+      return;
+    }
+
     Swal.fire({
       title: "هل أنت متأكد من إغلاق الوردية؟",
       text: "سيتم إغلاق الوردية الحالية",
@@ -183,23 +196,42 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
           }
         } catch (error) {
           console.error("Failed to close shift:", error);
-          const errorMessage =
-            error.response?.data?.message ||
-            error.message ||
-            "حدث خطأ أثناء إغلاق الوردية";
 
-          Swal.fire({
-            title: "خطأ في إغلاق الوردية",
-            text: errorMessage,
-            icon: "error",
-            confirmButtonColor: "#193F94",
-            confirmButtonText: "حسناً",
-          });
+          // Handle 204 No Content or 404 - no shift to close
+          if (
+            error.response?.status === 204 ||
+            error.response?.status === 404
+          ) {
+            Swal.fire({
+              title: "لا توجد وردية مفتوحة",
+              text: "لا يمكن إغلاق وردية غير موجودة",
+              icon: "info",
+              confirmButtonColor: "#193F94",
+              confirmButtonText: "حسناً",
+            });
+          } else {
+            const errorMessage =
+              error.response?.data?.message ||
+              error.message ||
+              "حدث خطأ أثناء إغلاق الوردية";
+
+            Swal.fire({
+              title: "خطأ في إغلاق الوردية",
+              text: errorMessage,
+              icon: "error",
+              confirmButtonColor: "#193F94",
+              confirmButtonText: "حسناً",
+            });
+          }
         } finally {
           setIsClosingShift(false);
         }
       }
     });
+  };
+
+  const handleGoBack = () => {
+    navigate("/login");
   };
 
   const handleReportNavigation = (reportType) => {
@@ -282,22 +314,34 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
     location.pathname === "/users" ||
     location.pathname === "/permissions";
 
+  // Don't show loading state blocking the navbar, just show minimal version
   if (isLoadingOrganization) {
     return (
-      <div
-        dir="rtl"
-        className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-l from-gray-50 to-gray-100"
-        style={{
-          overflow: "hidden",
-          zIndex: 9999,
-        }}
-      >
-        <div className="text-center">
-          <FaSpinner className="w-16 h-16 text-blue-600 animate-spin mb-4" />
+      <div className="bg-gradient-to-r from-white to-gray-50/80 shadow-lg backdrop-blur-sm border-b border-gray-200/80 sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-2">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center ml-3 shadow-md shadow-blue-900/20">
+                <FaCashRegister className="text-white text-xl" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-l from-blue-900 to-blue-700 bg-clip-text text-transparent">
+                  نظام الكاشير
+                </h1>
+                <div className="flex items-center mt-0.5">
+                  <span className="text-xs text-gray-500 flex items-center">
+                    <FaCalendarDay className="inline ml-1 text-blue-600" />
+                    {new Date().toLocaleDateString("ar-EG")}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
+
   return (
     <div className="bg-gradient-to-r from-white to-gray-50/80 shadow-lg backdrop-blur-sm border-b border-gray-200/80 sticky top-0 z-50">
       <div className="container mx-auto px-4 py-2">
@@ -328,6 +372,12 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                     الوردية مفتوحة
                   </span>
                 )}
+                {!isShiftOpen && isAdmin && (
+                  <span className="text-xs bg-gradient-to-r from-orange-50 to-amber-50 text-orange-700 px-2 py-0.5 rounded-full font-medium border border-orange-200 flex items-center shadow-sm">
+                    <FaCircle className="w-2 h-2 text-orange-500 ml-1" />
+                    وضع المشاهدة (بدون وردية)
+                  </span>
+                )}
                 <span className="text-xs text-gray-500 flex items-center">
                   <FaCalendarDay className="inline ml-1 text-blue-600" />
                   {new Date().toLocaleDateString("ar-EG")}
@@ -338,7 +388,7 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
 
           {/* Navigation Buttons */}
           <div className="flex items-center space-x-1.5 rtl:space-x-reverse">
-            {/* Management Dropdown */}
+            {/* Management Dropdown - Show for all roles, but hide sensitive items for cashier */}
             <div className="relative" ref={managementDropdownRef}>
               <button
                 onClick={() =>
@@ -680,6 +730,7 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                           </div>
                         </button>
                       )}
+
                       {/* Organization Management - Visible for Admin only (not cashier) */}
                       {!isCashier && (
                         <button
@@ -720,7 +771,7 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
               )}
             </div>
 
-            {/* Reports Dropdown - Show for Cashier as well (modified) */}
+            {/* Reports Dropdown - Show for all roles, but hide sensitive items for cashier */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowReportsDropdown(!showReportsDropdown)}
@@ -859,7 +910,7 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                         </button>
                       )}
 
-                      {/* Customers Report - Visible for all (modified) */}
+                      {/* Customers Report - Visible for all */}
                       <button
                         onClick={() => handleReportNavigation("customers")}
                         className={`flex items-center w-full px-3 py-2 text-right transition-all duration-200 rounded-lg text-sm group hover:translate-x-1 ${
@@ -1008,8 +1059,8 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
               )}
             </div>
 
-            {/* Close Shift Button */}
-            {isShiftOpen && (
+            {/* Close Shift Button - Only show when shift is open */}
+            {isShiftOpen ? (
               <button
                 onClick={handleCloseShift}
                 disabled={isClosingShift}
@@ -1051,6 +1102,25 @@ export default function Navbar({ isShiftOpen, onShiftClose }) {
                   </>
                 )}
               </button>
+            ) : (
+              isAdmin && (
+                <button
+                  onClick={handleGoBack}
+                  className="px-4 py-2 rounded-lg font-medium border transition-all flex items-center"
+                  style={{ borderColor: "#193F94", color: "#193F94" }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "#193F94";
+                    e.target.style.color = "white";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "transparent";
+                    e.target.style.color = "#193F94";
+                  }}
+                >
+                  <ArrowLeft className="h-5 w-5 ml-2" />
+                  العودة لبدء وردية
+                </button>
+              )
             )}
           </div>
         </div>

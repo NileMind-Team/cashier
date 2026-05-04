@@ -399,7 +399,7 @@ export default function ShiftReports() {
                     إجمالي الضرائب (
                     {reportData.totalSales > 0
                       ? (
-                          (reportData.totalTax / reportData.totalSales) *
+                          (reportData.totalTax / reportData.totalSubTotal) *
                           100
                         ).toFixed(1)
                       : 0}
@@ -789,7 +789,7 @@ export default function ShiftReports() {
                         إجمالي الضرائب (
                         {reportData.totalSales > 0
                           ? (
-                              (reportData.totalTax / reportData.totalSales) *
+                              (reportData.totalTax / reportData.totalSubTotal) *
                               100
                             ).toFixed(1)
                           : 0}

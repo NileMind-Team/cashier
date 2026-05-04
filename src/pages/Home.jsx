@@ -194,6 +194,10 @@ export default function Home() {
   const [currentSearchedInvoiceNumber, setCurrentSearchedInvoiceNumber] =
     useState(null);
 
+  // New states for admin mode (no shift)
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [isShiftAvailable, setIsShiftAvailable] = useState(true);
+
   const DeliveryType = {
     Store: "store",
     Company: "company",
@@ -324,6 +328,8 @@ export default function Home() {
       if (response.status === 200 && response.data) {
         setCurrentShift(response.data);
         setIsShiftOpen(true);
+        setIsShiftAvailable(true);
+        setIsAdminMode(false);
         setShiftStartTime(
           new Date(response.data.startTime).toLocaleTimeString("ar-EG"),
         );
@@ -337,12 +343,42 @@ export default function Home() {
         setNextInvoiceNumber(nextNumber);
 
         return response.data;
+      } else if (response.status === 204) {
+        console.log("No open shift found (204 response)");
+        setIsShiftOpen(false);
+        setIsShiftAvailable(false);
+        setIsAdminMode(true);
+        setCurrentShift(null);
+        shiftFetchedRef.current = true;
+
+        setTotalInvoiceCount(0);
+        setTotalPages(1);
+        setNextInvoiceNumber(calculateNextInvoiceNumber(0));
+
+        toast.info("لا توجد وردية مفتوحة - وضع المشاهدة فقط");
+        return null;
       } else {
         toast.error("فشل في جلب بيانات الوردية");
         return null;
       }
     } catch (error) {
       console.error("خطأ في جلب بيانات الوردية:", error);
+
+      if (error.response?.status === 204) {
+        console.log("No open shift found (204 error)");
+        setIsShiftOpen(false);
+        setIsShiftAvailable(false);
+        setIsAdminMode(true);
+        setCurrentShift(null);
+        shiftFetchedRef.current = true;
+
+        setTotalInvoiceCount(0);
+        setTotalPages(1);
+        setNextInvoiceNumber(calculateNextInvoiceNumber(0));
+
+        toast.info("لا توجد وردية مفتوحة - وضع المشاهدة فقط");
+        return null;
+      }
 
       const isShiftNotFoundError =
         error.response?.status === 404 &&
@@ -400,8 +436,9 @@ export default function Home() {
       totalDiscount: 0,
       netRevenue: 0,
       startTime: shiftStartTime,
+      isAdminMode: isAdminMode,
     };
-  }, [currentShift, shiftStartTime]);
+  }, [currentShift, shiftStartTime, isAdminMode]);
 
   const fetchPaymentMethods = async () => {
     if (paymentMethodsFetchedRef.current) {
@@ -1119,13 +1156,13 @@ export default function Home() {
   };
 
   const createInvoice = async (isPending = true, paymentsData = null) => {
-    if (!currentShift?.shiftId) {
+    if (!currentShift?.shiftId && !isAdminMode) {
       toast.error("لا توجد وردية نشطة");
       return null;
     }
 
     const invoiceData = {
-      shiftId: currentShift.shiftId,
+      shiftId: currentShift?.shiftId || null,
       tableId: selectedTable?.id || null,
       customerId: customerId || null,
       isPending: isPending,
@@ -1473,8 +1510,8 @@ export default function Home() {
       try {
         const shiftData = await fetchShiftDetails();
 
-        if (!shiftData) {
-          return;
+        if (shiftData === null && !isShiftAvailable) {
+          console.log("No shift open, continuing in admin view mode");
         }
 
         await Promise.all([
@@ -1617,6 +1654,11 @@ export default function Home() {
   };
 
   const handleBillTypeChange = (type) => {
+    if (isAdminMode) {
+      toast.error("لا يمكن تغيير نوع الفاتورة في وضع المشاهدة");
+      return;
+    }
+
     if (!isNewBillActive) {
       toast.error("لا يمكن تغيير نوع الفاتورة أثناء عرض فاتورة قديمة");
       return;
@@ -1696,10 +1738,19 @@ export default function Home() {
   };
 
   const handleSelectHall = (hall) => {
+    if (isAdminMode) {
+      toast.error("لا يمكن اختيار صالة في وضع المشاهدة");
+      return;
+    }
     setSelectedHall(hall);
   };
 
   const handleSelectTable = async (table) => {
+    if (isAdminMode) {
+      toast.error("لا يمكن اختيار طاولة في وضع المشاهدة");
+      return;
+    }
+
     if (currentBillData.isPartialPaid) {
       toast.error("لا يمكن اختيار طاولة للفاتورة الآجلة");
       return;
@@ -1788,6 +1839,12 @@ export default function Home() {
   };
 
   const handleSelectDeliveryType = (type) => {
+    if (isAdminMode) {
+      toast.error("لا يمكن اختيار نوع التوصيل في وضع المشاهدة");
+      setShowDeliveryTypeModal(false);
+      return;
+    }
+
     setDeliveryType(type);
 
     if (type === DeliveryType.Store) {
@@ -1816,6 +1873,12 @@ export default function Home() {
   };
 
   const handleSelectDeliveryCompany = (company) => {
+    if (isAdminMode) {
+      toast.error("لا يمكن اختيار شركة توصيل في وضع المشاهدة");
+      setShowDeliveryCompanyModal(false);
+      return;
+    }
+
     setSelectedDeliveryCompany(company);
     setDeliveryType(DeliveryType.Company);
     setDeliveryFee(company.deliveryCost || 0);
@@ -1841,6 +1904,11 @@ export default function Home() {
   };
 
   const handleRemoveTable = async () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن إزالة طاولة في وضع المشاهدة");
+      return;
+    }
+
     if (!selectedTable || !selectedHall) {
       toast.error("لم يتم اختيار طاولة");
       return;
@@ -1930,6 +1998,11 @@ export default function Home() {
   }, [currentBillData.invoiceId, isNewBillActive]);
 
   const handleProductClick = (product) => {
+    if (isAdminMode) {
+      toast.error("لا يمكن إضافة منتجات في وضع المشاهدة");
+      return;
+    }
+
     if (currentBillData.completed) {
       toast.error("لا يمكن إضافة منتجات إلى فاتورة مكتملة");
       return;
@@ -1949,6 +2022,11 @@ export default function Home() {
   };
 
   const handleAddToCart = async () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن إضافة منتجات في وضع المشاهدة");
+      return;
+    }
+
     if (!selectedProduct) return;
 
     const optionsTotal = selectedOptions.reduce(
@@ -2062,6 +2140,11 @@ export default function Home() {
   };
 
   const removeFromCart = (uniqueId) => {
+    if (isAdminMode) {
+      toast.error("لا يمكن تعديل الفاتورة في وضع المشاهدة");
+      return;
+    }
+
     if (currentBillData.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
       return;
@@ -2088,6 +2171,11 @@ export default function Home() {
   };
 
   const deleteFromCart = (uniqueId) => {
+    if (isAdminMode) {
+      toast.error("لا يمكن حذف منتجات في وضع المشاهدة");
+      return;
+    }
+
     if (currentBillData.completed) {
       toast.error("لا يمكن حذف منتجات من فاتورة مكتملة");
       return;
@@ -2102,6 +2190,11 @@ export default function Home() {
   };
 
   const handleAddNote = (uniqueId, note) => {
+    if (isAdminMode) {
+      toast.error("لا يمكن إضافة ملاحظات في وضع المشاهدة");
+      return;
+    }
+
     if (currentBillData.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
       return;
@@ -2126,6 +2219,11 @@ export default function Home() {
   };
 
   const startEditingNote = (uniqueId, currentNote) => {
+    if (isAdminMode) {
+      toast.error("لا يمكن تعديل الملاحظات في وضع المشاهدة");
+      return;
+    }
+
     if (currentBillData.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
       return;
@@ -2141,6 +2239,11 @@ export default function Home() {
   };
 
   const startEditingGeneralNote = () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن تعديل الملاحظات في وضع المشاهدة");
+      return;
+    }
+
     if (currentBillData.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
       return;
@@ -2156,6 +2259,11 @@ export default function Home() {
   };
 
   const handleSaveGeneralNote = () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن تعديل الملاحظات في وضع المشاهدة");
+      return;
+    }
+
     if (currentBillData.completed) {
       toast.error("لا يمكن تعديل فاتورة مكتملة");
       return;
@@ -2180,6 +2288,11 @@ export default function Home() {
   };
 
   const openPaymentModal = () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن إتمام الدفع في وضع المشاهدة");
+      return;
+    }
+
     if (cart.length === 0 && !currentBillData.isPartialPaid) {
       toast.error("الفاتورة فارغة");
       return;
@@ -2234,6 +2347,11 @@ export default function Home() {
   };
 
   const handlePartialPayment = () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن تأجيل الدفع في وضع المشاهدة");
+      return;
+    }
+
     setIsPartialPayment(true);
     setPayments([]);
     if (currentBillData.isPartialPaid && currentBillData.remainingAmount) {
@@ -2245,6 +2363,11 @@ export default function Home() {
   };
 
   const handleAddPayment = (paymentMethodId) => {
+    if (isAdminMode) {
+      toast.error("لا يمكن إضافة دفعات في وضع المشاهدة");
+      return;
+    }
+
     if (isPartialPayment) {
       setIsPartialPayment(false);
     }
@@ -2287,6 +2410,11 @@ export default function Home() {
   };
 
   const handlePaymentAmountChange = (paymentMethodId, amount) => {
+    if (isAdminMode) {
+      toast.error("لا يمكن تعديل الدفعات في وضع المشاهدة");
+      return;
+    }
+
     if (isPartialPayment) {
       setIsPartialPayment(false);
     }
@@ -2312,6 +2440,11 @@ export default function Home() {
   };
 
   const handleRemovePayment = (paymentMethodId) => {
+    if (isAdminMode) {
+      toast.error("لا يمكن إزالة الدفعات في وضع المشاهدة");
+      return;
+    }
+
     if (isPartialPayment) {
       setIsPartialPayment(false);
     }
@@ -2331,6 +2464,11 @@ export default function Home() {
   };
 
   const openDiscountModal = () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن تطبيق خصم في وضع المشاهدة");
+      return;
+    }
+
     if (cart.length === 0) {
       toast.error("الفاتورة فارغة");
       return;
@@ -2356,6 +2494,12 @@ export default function Home() {
   };
 
   const handleApplyDiscount = async () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن تطبيق خصم في وضع المشاهدة");
+      setShowDiscountModal(false);
+      return;
+    }
+
     const discountNum = parseFloat(discountValue) || 0;
 
     if (discountNum < 0) {
@@ -2408,6 +2552,11 @@ export default function Home() {
   };
 
   const handleCompletePayment = async () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن إتمام الدفع في وضع المشاهدة");
+      return;
+    }
+
     if (isPartialPayment) {
       if (isProcessingPayment) {
         return;
@@ -2741,6 +2890,11 @@ export default function Home() {
   };
 
   const goToNextBill = async () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن التنقل بين الفواتير في وضع المشاهدة");
+      return;
+    }
+
     if (isGoingToNextBill) return;
 
     if (isNewBillActive) {
@@ -2847,6 +3001,11 @@ export default function Home() {
   };
 
   const goToPreviousBill = async () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن التنقل بين الفواتير في وضع المشاهدة");
+      return;
+    }
+
     if (isGoingToPreviousBill) return;
 
     if (isNewBillActive) {
@@ -2896,6 +3055,11 @@ export default function Home() {
   };
 
   const goToNewBill = async () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن إنشاء فاتورة جديدة في وضع المشاهدة");
+      return;
+    }
+
     if (isGoingToNextBill) return;
 
     setIsGoingToNextBill(true);
@@ -2963,6 +3127,11 @@ export default function Home() {
     (currentBillData.billType === "delivery" && deliveryFee ? deliveryFee : 0);
 
   const handlePrepareOrder = async () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن تحضير طلب في وضع المشاهدة");
+      return;
+    }
+
     if (isPreparingOrder) return;
 
     if (cart.length === 0) {
@@ -3082,6 +3251,11 @@ export default function Home() {
   };
 
   const handleReturnBill = async () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن إرجاع فاتورة في وضع المشاهدة");
+      return;
+    }
+
     if (isReturningBill) return;
 
     if (!currentBillData.completed) {
@@ -3202,6 +3376,11 @@ export default function Home() {
   };
 
   const resetCartOnly = () => {
+    if (isAdminMode) {
+      toast.error("لا يمكن إعادة تعيين الفاتورة في وضع المشاهدة");
+      return;
+    }
+
     if (isResettingBill) return;
 
     if (currentBillData.completed) {
@@ -3391,6 +3570,8 @@ export default function Home() {
   };
 
   const shouldShowPrepareOrderButton = () => {
+    if (isAdminMode) return false;
+
     if (currentBillData.billType !== "dinein") {
       return false;
     }
@@ -3419,6 +3600,8 @@ export default function Home() {
   };
 
   const shouldShowCompleteBillButton = () => {
+    if (isAdminMode) return false;
+
     if (!currentBillData) return false;
 
     if (!isNewBillActive && currentBillData.isPending && !hasCartChanges) {
@@ -3522,9 +3705,9 @@ export default function Home() {
                 </button>
                 <button
                   onClick={handleSearchInvoice}
-                  disabled={isSearchingInvoice}
+                  disabled={isSearchingInvoice || isAdminMode}
                   className={`flex-1 py-3 px-4 rounded-lg font-bold text-white transition-colors flex items-center justify-center ${
-                    isSearchingInvoice
+                    isSearchingInvoice || isAdminMode
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:opacity-90"
                   }`}
@@ -4364,7 +4547,10 @@ export default function Home() {
                       <button
                         key={hall.id}
                         onClick={() => handleSelectHall(hall)}
+                        disabled={isAdminMode}
                         className={`w-full p-3 text-right border-b transition-all ${
+                          isAdminMode ? "opacity-50 cursor-not-allowed" : ""
+                        } ${
                           selectedHall?.id === hall.id
                             ? "bg-blue-50 border-r-4"
                             : "hover:bg-gray-100"
@@ -4419,9 +4605,9 @@ export default function Home() {
                           <button
                             key={table.id}
                             onClick={() => handleSelectTable(table)}
-                            disabled={selectedHall?.isCompleted}
+                            disabled={selectedHall?.isCompleted || isAdminMode}
                             className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center transition-all transform hover:scale-[1.02] active:scale-[0.98] ${
-                              selectedHall?.isCompleted
+                              selectedHall?.isCompleted || isAdminMode
                                 ? "opacity-50 cursor-not-allowed"
                                 : table.status === "occupied"
                                   ? "bg-red-50 border-red-300"
@@ -4588,7 +4774,7 @@ export default function Home() {
                                   e.target.value,
                                 )
                               }
-                              disabled={isProcessingPayment}
+                              disabled={isProcessingPayment || isAdminMode}
                               className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 disabled:bg-gray-100"
                               placeholder="المبلغ"
                               min="0"
@@ -4600,7 +4786,7 @@ export default function Home() {
                             onClick={() =>
                               handleRemovePayment(payment.paymentMethodId)
                             }
-                            disabled={isProcessingPayment}
+                            disabled={isProcessingPayment || isAdminMode}
                             className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                           >
                             <Trash2 size={16} />
@@ -4707,7 +4893,7 @@ export default function Home() {
                               <button
                                 key={method.id}
                                 onClick={() => handleAddPayment(method.id)}
-                                disabled={isProcessingPayment}
+                                disabled={isProcessingPayment || isAdminMode}
                                 className={`w-full p-2 rounded-lg border flex items-center justify-between transition-all ${
                                   isSelected
                                     ? "border-blue-500 bg-blue-50"
@@ -4746,7 +4932,7 @@ export default function Home() {
                   <div className="mt-3 pt-2 border-t border-gray-200">
                     <button
                       onClick={handlePartialPayment}
-                      disabled={isProcessingPayment}
+                      disabled={isProcessingPayment || isAdminMode}
                       className="w-full py-2 px-3 rounded-lg border-2 border-yellow-400 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 font-medium transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       <Clock size={14} />
@@ -4759,7 +4945,7 @@ export default function Home() {
                   <div className="mt-3 pt-2 border-t border-gray-200">
                     <button
                       onClick={() => setIsPartialPayment(false)}
-                      disabled={isProcessingPayment}
+                      disabled={isProcessingPayment || isAdminMode}
                       className="w-full py-2 px-3 rounded-lg border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium transition-all text-xs disabled:opacity-50"
                     >
                       إلغاء التأجيل والدفع العادي
@@ -4780,18 +4966,21 @@ export default function Home() {
                   onClick={handleCompletePayment}
                   disabled={
                     (!isPartialPayment && payments.length === 0) ||
-                    isProcessingPayment
+                    isProcessingPayment ||
+                    isAdminMode
                   }
                   className={`flex-1 py-2 px-3 rounded-lg font-bold text-white transition-colors text-xs flex items-center justify-center ${
                     (!isPartialPayment && payments.length === 0) ||
-                    isProcessingPayment
+                    isProcessingPayment ||
+                    isAdminMode
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:opacity-90"
                   }`}
                   style={{
                     backgroundColor:
                       (!isPartialPayment && payments.length === 0) ||
-                      isProcessingPayment
+                      isProcessingPayment ||
+                      isAdminMode
                         ? "#9CA3AF"
                         : "#193F94",
                   }}
@@ -5126,11 +5315,13 @@ export default function Home() {
                               onClick={() => handleProductClick(product)}
                               disabled={
                                 currentBillData.completed ||
-                                currentBillData.isPartialPaid
+                                currentBillData.isPartialPaid ||
+                                isAdminMode
                               }
                               className={`bg-gray-50 hover:bg-blue-50 rounded-lg p-2 flex items-center transition-all duration-300 transform active:scale-[0.98] border border-gray-200 h-20 ${
                                 currentBillData.completed ||
-                                currentBillData.isPartialPaid
+                                currentBillData.isPartialPaid ||
+                                isAdminMode
                                   ? "opacity-50 cursor-not-allowed"
                                   : ""
                               }`}
@@ -5204,7 +5395,12 @@ export default function Home() {
                   <div className="flex items-center space-x-1 rtl:space-x-reverse">
                     <button
                       onClick={() => setShowInvoiceSearch(true)}
-                      className="px-2 py-1 rounded bg-green-100 text-green-800 hover:bg-green-200 text-xs transition-all flex items-center"
+                      disabled={isAdminMode}
+                      className={`px-2 py-1 rounded text-xs transition-all flex items-center ${
+                        isAdminMode
+                          ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400"
+                          : "bg-green-100 text-green-800 hover:bg-green-200"
+                      }`}
                       title="بحث برقم الفاتورة"
                     >
                       <Search size={12} className="ml-1" />
@@ -5219,7 +5415,8 @@ export default function Home() {
                           currentInvoicePage === 1) ||
                         (isNewBillActive && totalPages === 0) ||
                         (currentSearchedInvoiceNumber &&
-                          parseInt(currentSearchedInvoiceNumber) <= 1)
+                          parseInt(currentSearchedInvoiceNumber) <= 1) ||
+                        isAdminMode
                       }
                       className={`px-2 py-1 rounded text-xs transition-all flex items-center ${
                         isGoingToPreviousBill ||
@@ -5228,7 +5425,8 @@ export default function Home() {
                           currentInvoicePage === 1) ||
                         (isNewBillActive && totalPages === 0) ||
                         (currentSearchedInvoiceNumber &&
-                          parseInt(currentSearchedInvoiceNumber) <= 1)
+                          parseInt(currentSearchedInvoiceNumber) <= 1) ||
+                        isAdminMode
                           ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400"
                           : "bg-blue-100 text-blue-800 hover:bg-blue-200"
                       }`}
@@ -5289,9 +5487,11 @@ export default function Home() {
                     </div>
                     <button
                       onClick={goToNextBill}
-                      disabled={isGoingToNextBill}
-                      className={`px-2 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs transition-all flex items-center ${
-                        isGoingToNextBill ? "opacity-50 cursor-not-allowed" : ""
+                      disabled={isGoingToNextBill || isAdminMode}
+                      className={`px-2 py-1 rounded text-xs transition-all flex items-center ${
+                        isGoingToNextBill || isAdminMode
+                          ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400"
+                          : "bg-blue-100 text-blue-800 hover:bg-blue-200"
                       }`}
                     >
                       {isGoingToNextBill ? (
@@ -5305,9 +5505,9 @@ export default function Home() {
                     </button>
                     <button
                       onClick={goToNewBill}
-                      disabled={isGoingToNextBill}
+                      disabled={isGoingToNextBill || isAdminMode}
                       className={`px-2 py-1 rounded text-xs transition-all flex items-center ${
-                        isGoingToNextBill
+                        isGoingToNextBill || isAdminMode
                           ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400"
                           : "bg-green-100 text-green-800 hover:bg-green-200"
                       }`}
@@ -5334,13 +5534,14 @@ export default function Home() {
                         disabled={
                           currentBillData.completed ||
                           currentBillData.isPartialPaid ||
-                          !isNewBillActive
+                          !isNewBillActive ||
+                          isAdminMode
                         }
                         className={`flex-1 flex items-center justify-center py-1.5 rounded border transition-all text-xs ${
                           currentBillData.billType === type.value
                             ? "bg-blue-100 border-blue-500 text-blue-700 font-medium"
                             : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
-                        } ${currentBillData.completed || currentBillData.isPartialPaid || !isNewBillActive ? "opacity-70 cursor-not-allowed" : ""}`}
+                        } ${currentBillData.completed || currentBillData.isPartialPaid || !isNewBillActive || isAdminMode ? "opacity-70 cursor-not-allowed" : ""}`}
                       >
                         {type.value === "takeaway" && (
                           <ShoppingBag size={12} className="ml-1" />
@@ -5386,7 +5587,8 @@ export default function Home() {
                         </div>
                       </div>
                       {!currentBillData.completed &&
-                        !currentBillData.isPartialPaid && (
+                        !currentBillData.isPartialPaid &&
+                        !isAdminMode && (
                           <div className="flex space-x-1 rtl:space-x-reverse">
                             <button
                               onClick={handleOpenTableSelection}
@@ -5440,7 +5642,8 @@ export default function Home() {
                         </span>
                       </div>
                       {!currentBillData.completed &&
-                        !currentBillData.isPartialPaid && (
+                        !currentBillData.isPartialPaid &&
+                        !isAdminMode && (
                           <button
                             onClick={() => setShowDeliveryTypeModal(true)}
                             className="text-[9px] bg-amber-100 hover:bg-amber-200 text-amber-700 px-1 py-1 rounded transition-colors flex items-center"
@@ -5470,7 +5673,8 @@ export default function Home() {
                         onBlur={handleBlur}
                         disabled={
                           currentBillData.completed ||
-                          currentBillData.isPartialPaid
+                          currentBillData.isPartialPaid ||
+                          isAdminMode
                         }
                         className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white disabled:bg-gray-100"
                         dir="rtl"
@@ -5512,7 +5716,8 @@ export default function Home() {
                             onClick={openEditCustomerModal}
                             disabled={
                               currentBillData.completed ||
-                              currentBillData.isPartialPaid
+                              currentBillData.isPartialPaid ||
+                              isAdminMode
                             }
                             className="p-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 transition-all border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="تعديل بيانات العميل"
@@ -5530,7 +5735,8 @@ export default function Home() {
                           onClick={openAddCustomerModal}
                           disabled={
                             currentBillData.completed ||
-                            currentBillData.isPartialPaid
+                            currentBillData.isPartialPaid ||
+                            isAdminMode
                           }
                           className="p-2 rounded-xl bg-green-50 hover:bg-green-100 text-green-700 transition-all border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="إضافة عميل جديد"
@@ -5582,7 +5788,8 @@ export default function Home() {
                               </p>
                             </div>
                             {!currentBillData.completed &&
-                              !currentBillData.isPartialPaid && (
+                              !currentBillData.isPartialPaid &&
+                              !isAdminMode && (
                                 <button
                                   onClick={startEditingGeneralNote}
                                   className="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded-md transition-colors flex items-center border border-blue-300 mr-2"
@@ -5598,11 +5805,13 @@ export default function Home() {
                           onClick={startEditingGeneralNote}
                           disabled={
                             currentBillData.completed ||
-                            currentBillData.isPartialPaid
+                            currentBillData.isPartialPaid ||
+                            isAdminMode
                           }
                           className={`w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-right flex items-center justify-between ${
                             currentBillData.completed ||
-                            currentBillData.isPartialPaid
+                            currentBillData.isPartialPaid ||
+                            isAdminMode
                               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                               : "bg-gray-50 text-gray-600 hover:bg-gray-100"
                           }`}
@@ -5748,11 +5957,13 @@ export default function Home() {
                                       }
                                       disabled={
                                         currentBillData.completed ||
-                                        currentBillData.isPartialPaid
+                                        currentBillData.isPartialPaid ||
+                                        isAdminMode
                                       }
                                       className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${
                                         currentBillData.completed ||
-                                        currentBillData.isPartialPaid
+                                        currentBillData.isPartialPaid ||
+                                        isAdminMode
                                           ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                           : "bg-gray-200 hover:bg-gray-300 text-gray-700"
                                       }`}
@@ -5794,11 +6005,13 @@ export default function Home() {
                                       }}
                                       disabled={
                                         currentBillData.completed ||
-                                        currentBillData.isPartialPaid
+                                        currentBillData.isPartialPaid ||
+                                        isAdminMode
                                       }
                                       className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${
                                         currentBillData.completed ||
-                                        currentBillData.isPartialPaid
+                                        currentBillData.isPartialPaid ||
+                                        isAdminMode
                                           ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                           : "bg-gray-200 hover:bg-gray-300 text-gray-700"
                                       }`}
@@ -5809,7 +6022,8 @@ export default function Home() {
 
                                   <div className="flex items-center space-x-1 rtl:space-x-reverse">
                                     {!currentBillData.completed &&
-                                      !currentBillData.isPartialPaid && (
+                                      !currentBillData.isPartialPaid &&
+                                      !isAdminMode && (
                                         <>
                                           {item.note && item.note.trim() ? (
                                             <button
@@ -5847,7 +6061,8 @@ export default function Home() {
                                         </>
                                       )}
                                     {!currentBillData.completed &&
-                                      !currentBillData.isPartialPaid && (
+                                      !currentBillData.isPartialPaid &&
+                                      !isAdminMode && (
                                         <button
                                           onClick={() =>
                                             deleteFromCart(
@@ -5944,12 +6159,14 @@ export default function Home() {
                       disabled={
                         currentBillData.completed ||
                         currentBillData.isPartialPaid ||
-                        isApplyingDiscount
+                        isApplyingDiscount ||
+                        isAdminMode
                       }
                       className={`w-12 text-center px-1 py-1 border rounded mr-1.5 text-xs ${
                         currentBillData.completed ||
                         currentBillData.isPartialPaid ||
-                        isApplyingDiscount
+                        isApplyingDiscount ||
+                        isAdminMode
                           ? "bg-gray-100 cursor-not-allowed"
                           : "bg-blue-50 hover:bg-blue-100 cursor-pointer border-blue-200"
                       }`}
@@ -5986,7 +6203,8 @@ export default function Home() {
                             min="0"
                             disabled={
                               currentBillData.completed ||
-                              currentBillData.isPartialPaid
+                              currentBillData.isPartialPaid ||
+                              isAdminMode
                             }
                           />
                           <span className="font-bold">
@@ -6023,12 +6241,14 @@ export default function Home() {
                 disabled={
                   currentBillData.completed ||
                   currentBillData.isPartialPaid ||
-                  isResettingBill
+                  isResettingBill ||
+                  isAdminMode
                 }
                 className={`py-2.5 px-3 rounded-lg font-medium border transition-all text-xs flex-1 flex items-center justify-center ${
                   currentBillData.completed ||
                   currentBillData.isPartialPaid ||
-                  isResettingBill
+                  isResettingBill ||
+                  isAdminMode
                     ? "opacity-50 cursor-not-allowed"
                     : ""
                 }`}
@@ -6037,7 +6257,8 @@ export default function Home() {
                   if (
                     !currentBillData.completed &&
                     !currentBillData.isPartialPaid &&
-                    !isResettingBill
+                    !isResettingBill &&
+                    !isAdminMode
                   ) {
                     e.target.style.backgroundColor = "#193F94";
                     e.target.style.color = "white";
@@ -6047,7 +6268,8 @@ export default function Home() {
                   if (
                     !currentBillData.completed &&
                     !currentBillData.isPartialPaid &&
-                    !isResettingBill
+                    !isResettingBill &&
+                    !isAdminMode
                   ) {
                     e.target.style.backgroundColor = "transparent";
                     e.target.style.color = "#193F94";
@@ -6064,109 +6286,113 @@ export default function Home() {
                 )}
               </button>
 
-              {!isNewBillActive &&
-              currentBillData.completed &&
-              !currentBillData.isReturned ? (
-                <button
-                  onClick={handleReturnBill}
-                  disabled={isReturningBill}
-                  className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 flex items-center justify-center ${
-                    isReturningBill
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:scale-[1.02] active:scale-[0.98]"
-                  }`}
-                  style={{ backgroundColor: "#EF4444" }}
-                  onMouseEnter={(e) => {
-                    if (!isReturningBill) {
-                      e.target.style.backgroundColor = "#DC2626";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isReturningBill) {
-                      e.target.style.backgroundColor = "#EF4444";
-                    }
-                  }}
-                >
-                  {isReturningBill ? (
-                    <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
-                  ) : (
-                    <>
-                      <ArrowLeft size={12} className="ml-1" />
-                      ارتجاع
-                    </>
-                  )}
-                </button>
-              ) : !isNewBillActive &&
-                currentBillData.invoiceStatus === InvoiceStatus.Returned ? (
-                <button
-                  onClick={handleReprintBill}
-                  className="py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 flex items-center justify-center hover:scale-[1.02] active:scale-[0.98]"
-                  style={{ backgroundColor: "#10B981" }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = "#059669";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = "#10B981";
-                  }}
-                >
-                  <FileText size={12} className="ml-1" />
-                  عرض الفاتورة
-                </button>
-              ) : shouldShowPrepareOrderButton() ? (
-                <button
-                  onClick={handlePrepareOrder}
-                  disabled={isPreparingOrder}
-                  className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 flex items-center justify-center ${
-                    isPreparingOrder
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:scale-[1.02] active:scale-[0.98]"
-                  }`}
-                  style={{ backgroundColor: "#F59E0B" }}
-                  onMouseEnter={(e) => {
-                    if (!isPreparingOrder) {
-                      e.target.style.backgroundColor = "#D97706";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isPreparingOrder) {
-                      e.target.style.backgroundColor = "#F59E0B";
-                    }
-                  }}
-                >
-                  {isPreparingOrder ? (
-                    <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
-                  ) : (
-                    <>
-                      <Check size={12} className="ml-1" />
-                      تحضير الطلب
-                    </>
-                  )}
-                </button>
-              ) : shouldShowCompleteBillButton() ? (
-                <button
-                  onClick={handleCompleteBill}
-                  disabled={isProcessingPayment}
-                  className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 flex items-center justify-center ${
-                    isProcessingPayment
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:scale-[1.02] active:scale-[0.98]"
-                  }`}
-                  style={{ backgroundColor: "#20A4D4" }}
-                  onMouseEnter={(e) => {
-                    if (!isProcessingPayment) {
-                      e.target.style.backgroundColor = "#1DC7E0";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isProcessingPayment) {
-                      e.target.style.backgroundColor = "#20A4D4";
-                    }
-                  }}
-                >
-                  <DollarSign size={12} className="ml-1" />
-                  {getCompleteBillButtonText()}
-                </button>
-              ) : null}
+              {!isAdminMode && (
+                <>
+                  {!isNewBillActive &&
+                  currentBillData.completed &&
+                  !currentBillData.isReturned ? (
+                    <button
+                      onClick={handleReturnBill}
+                      disabled={isReturningBill}
+                      className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 flex items-center justify-center ${
+                        isReturningBill
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:scale-[1.02] active:scale-[0.98]"
+                      }`}
+                      style={{ backgroundColor: "#EF4444" }}
+                      onMouseEnter={(e) => {
+                        if (!isReturningBill) {
+                          e.target.style.backgroundColor = "#DC2626";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isReturningBill) {
+                          e.target.style.backgroundColor = "#EF4444";
+                        }
+                      }}
+                    >
+                      {isReturningBill ? (
+                        <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
+                      ) : (
+                        <>
+                          <ArrowLeft size={12} className="ml-1" />
+                          ارتجاع
+                        </>
+                      )}
+                    </button>
+                  ) : !isNewBillActive &&
+                    currentBillData.invoiceStatus === InvoiceStatus.Returned ? (
+                    <button
+                      onClick={handleReprintBill}
+                      className="py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 flex items-center justify-center hover:scale-[1.02] active:scale-[0.98]"
+                      style={{ backgroundColor: "#10B981" }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = "#059669";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = "#10B981";
+                      }}
+                    >
+                      <FileText size={12} className="ml-1" />
+                      عرض الفاتورة
+                    </button>
+                  ) : shouldShowPrepareOrderButton() ? (
+                    <button
+                      onClick={handlePrepareOrder}
+                      disabled={isPreparingOrder}
+                      className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 flex items-center justify-center ${
+                        isPreparingOrder
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:scale-[1.02] active:scale-[0.98]"
+                      }`}
+                      style={{ backgroundColor: "#F59E0B" }}
+                      onMouseEnter={(e) => {
+                        if (!isPreparingOrder) {
+                          e.target.style.backgroundColor = "#D97706";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isPreparingOrder) {
+                          e.target.style.backgroundColor = "#F59E0B";
+                        }
+                      }}
+                    >
+                      {isPreparingOrder ? (
+                        <FaSpinner className="w-3 h-3 ml-1 animate-spin" />
+                      ) : (
+                        <>
+                          <Check size={12} className="ml-1" />
+                          تحضير الطلب
+                        </>
+                      )}
+                    </button>
+                  ) : shouldShowCompleteBillButton() ? (
+                    <button
+                      onClick={handleCompleteBill}
+                      disabled={isProcessingPayment}
+                      className={`py-2.5 px-3 rounded-lg font-bold text-white transition-all duration-300 transform text-xs flex-1 flex items-center justify-center ${
+                        isProcessingPayment
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:scale-[1.02] active:scale-[0.98]"
+                      }`}
+                      style={{ backgroundColor: "#20A4D4" }}
+                      onMouseEnter={(e) => {
+                        if (!isProcessingPayment) {
+                          e.target.style.backgroundColor = "#1DC7E0";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isProcessingPayment) {
+                          e.target.style.backgroundColor = "#20A4D4";
+                        }
+                      }}
+                    >
+                      <DollarSign size={12} className="ml-1" />
+                      {getCompleteBillButtonText()}
+                    </button>
+                  ) : null}
+                </>
+              )}
             </div>
           </div>
         </div>

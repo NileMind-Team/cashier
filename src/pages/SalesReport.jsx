@@ -341,7 +341,8 @@ export default function SalesReports() {
                     إجمالي الضريبة (
                     {reportData.totalSales > 0
                       ? (
-                          ((reportData.totalTax || 0) / reportData.totalSales) *
+                          ((reportData.totalTax || 0) /
+                            reportData.totalSubTotal) *
                           100
                         ).toFixed(1)
                       : 0}
@@ -618,7 +619,7 @@ export default function SalesReports() {
                           {reportData.totalSales > 0
                             ? (
                                 ((reportData.totalTax || 0) /
-                                  reportData.totalSales) *
+                                  reportData.totalSubTotal) *
                                 100
                               ).toFixed(1)
                             : 0}

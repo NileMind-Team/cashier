@@ -64,12 +64,22 @@ export default function CustomersReports() {
     hasNextPage: false,
     hasPreviousPage: false,
   });
-
-  // State for customer dropdown
   const [allCustomers, setAllCustomers] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const dropdownRef = useRef(null);
+  const [showAllCustomersReport, setShowAllCustomersReport] = useState(false);
+  const [allCustomersReportData, setAllCustomersReportData] = useState([]);
+  const [allCustomersLoading, setAllCustomersLoading] = useState(false);
+  const [isPrintingAllCustomers, setIsPrintingAllCustomers] = useState(false);
+  const [allCustomersPagination, setAllCustomersPagination] = useState({
+    currentPage: 1,
+    pageSize: 10,
+    totalCount: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
 
   const addTwoHours = (dateString) => {
     if (!dateString) return "";
@@ -92,10 +102,8 @@ export default function CustomersReports() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch all customers
   const fetchAllCustomers = async () => {
     try {
-      // First request to get totalCount
       const firstResponse = await axiosInstance.post("/api/Customers/GetAll", {
         pageNumber: 1,
         pageSize: 10,
@@ -106,7 +114,6 @@ export default function CustomersReports() {
         const totalCount = firstResponse.data.totalCount || 0;
 
         if (totalCount > 0) {
-          // Second request to get all customers
           const allCustomersResponse = await axiosInstance.post(
             "/api/Customers/GetAll",
             {
@@ -130,6 +137,256 @@ export default function CustomersReports() {
       console.error("خطأ في جلب العملاء:", error);
       toast.error("حدث خطأ في جلب قائمة العملاء");
     }
+  };
+
+  const fetchAllCustomersForPrint = async () => {
+    try {
+      const totalCount = allCustomersPagination.totalCount;
+
+      if (totalCount === 0) {
+        return [];
+      }
+
+      const allCustomersResponse = await axiosInstance.post(
+        "/api/Customers/GetAll",
+        {
+          pageNumber: 1,
+          pageSize: totalCount,
+          skip: 0,
+        },
+      );
+
+      if (allCustomersResponse.status === 200 && allCustomersResponse.data) {
+        const customers = allCustomersResponse.data.items || [];
+        return customers;
+      }
+      return [];
+    } catch (error) {
+      console.error("خطأ في جلب بيانات الطباعة:", error);
+      toast.error("حدث خطأ في تجهيز بيانات الطباعة");
+      return [];
+    }
+  };
+
+  const fetchAllCustomersReport = async (pageNumber = 1, pageSize = 10) => {
+    setAllCustomersLoading(true);
+    try {
+      const response = await axiosInstance.post("/api/Customers/GetAll", {
+        pageNumber: pageNumber,
+        pageSize: pageSize,
+        skip: (pageNumber - 1) * pageSize,
+      });
+
+      if (response.status === 200 && response.data) {
+        const customers = response.data.items || [];
+        setAllCustomersReportData(customers);
+        setAllCustomersPagination({
+          currentPage: response.data.pageNumber || pageNumber,
+          pageSize: response.data.pageSize || pageSize,
+          totalCount: response.data.totalCount || 0,
+          totalPages: response.data.totalPages || 1,
+          hasNextPage: response.data.hasNextPage || false,
+          hasPreviousPage: response.data.hasPreviousPage || false,
+        });
+        setShowAllCustomersReport(true);
+        toast.success(`تم تحميل ${customers.length} عميل`);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب تقرير العملاء:", error);
+      toast.error("حدث خطأ في جلب تقرير العملاء");
+    } finally {
+      setAllCustomersLoading(false);
+    }
+  };
+
+  const handleAllCustomersPageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= allCustomersPagination.totalPages) {
+      fetchAllCustomersReport(newPage, allCustomersPagination.pageSize);
+    }
+  };
+
+  const handlePrintAllCustomers = async () => {
+    setIsPrintingAllCustomers(true);
+
+    const allCustomersData = await fetchAllCustomersForPrint();
+
+    if (allCustomersData.length === 0) {
+      setIsPrintingAllCustomers(false);
+      toast.error("لا توجد بيانات للطباعة");
+      return;
+    }
+
+    setTimeout(() => {
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "absolute";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "none";
+      document.body.appendChild(iframe);
+
+      const iframeDoc = iframe.contentWindow.document;
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <title>تقرير جميع العملاء</title>
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              padding: 20px;
+              background: white;
+              color: #333;
+            }
+            .print-container {
+              max-width: 1200px;
+              margin: 0 auto;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              padding-bottom: 20px;
+              border-bottom: 2px solid #193F94;
+            }
+            .header h1 {
+              color: #193F94;
+              margin-bottom: 10px;
+            }
+            .header h3 {
+              color: #666;
+              font-size: 16px;
+            }
+            .customers-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+            }
+            .customers-table th {
+              border: 1px solid #dee2e6;
+              padding: 12px 10px;
+              text-align: center;
+              font-size: 14px;
+              font-weight: bold;
+              background-color: #4a5568;
+              color: white;
+            }
+            .customers-table td {
+              border: 1px solid #dee2e6;
+              padding: 10px;
+              text-align: center;
+              font-size: 13px;
+            }
+            .customers-table tr:nth-child(even) {
+              background-color: #f8f9fa;
+            }
+            .footer {
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #dee2e6;
+              text-align: center;
+              font-size: 12px;
+              color: #666;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+              .customers-table th {
+                background-color: #4a5568 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            <div class="header">
+              <h1>تقرير جميع العملاء</h1>
+              <h3>تاريخ التقرير: ${new Date().toLocaleDateString("ar-EG")}</h3>
+            </div>
+            <table class="customers-table">
+              <thead>
+                <tr>
+                  <th>اسم العميل</th>
+                  <th>رقم التليفون</th>
+                  <th>الرقم القومي</th>
+                  <th>العنوان</th>
+                  <th>المبلغ المستحق</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${allCustomersData
+                  .map(
+                    (customer) => `
+                  <tr>
+                    <td>${customer.name}</td>
+                    <td>${customer.phone}</td>
+                    <td>${customer.nationalId || "---"}</td>
+                    <td>${customer.address || "---"}</td>
+                    <td style="color: ${customer.totalRemainingAmount > 0 ? "#dc3545" : "#28a745"}">
+                      ${formatCurrency(customer.totalRemainingAmount)} ج.م
+                    </td>
+                  </tr>
+                `,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </div>
+          <script>
+            window.onload = () => {
+              window.print();
+              window.onafterprint = () => {
+                window.parent.document.body.removeChild(window.frameElement);
+              };
+            };
+          </script>
+        </body>
+        </html>
+      `);
+      iframeDoc.close();
+      setTimeout(() => setIsPrintingAllCustomers(false), 1000);
+    }, 500);
+  };
+
+  const getAllCustomersPageNumbers = () => {
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+    let l;
+
+    for (let i = 1; i <= allCustomersPagination.totalPages; i++) {
+      if (
+        i === 1 ||
+        i === allCustomersPagination.totalPages ||
+        (i >= allCustomersPagination.currentPage - delta &&
+          i <= allCustomersPagination.currentPage + delta)
+      ) {
+        range.push(i);
+      }
+    }
+
+    range.forEach((i) => {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push("...");
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    });
+
+    return rangeWithDots;
   };
 
   // Handle search input change - search by phone number only
@@ -158,6 +415,7 @@ export default function CustomersReports() {
     setPhoneSearch(customer.phone);
     setCustomerData(customer);
     setShowDropdown(false);
+    setShowAllCustomersReport(false);
     toast.success(`تم اختيار ${customer.name}`);
 
     // Clear previous data
@@ -245,6 +503,7 @@ export default function CustomersReports() {
     }
 
     setSearchLoading(true);
+    setShowAllCustomersReport(false);
 
     try {
       const response = await axiosInstance.get("/api/Reports/GetCustomer", {
@@ -303,6 +562,7 @@ export default function CustomersReports() {
     setDailyTransactions([]);
     setPrintData(null);
     setExpandedDay(null);
+    setShowAllCustomersReport(false);
     setPagination({
       currentPage: 1,
       pageSize: 10,
@@ -626,6 +886,7 @@ export default function CustomersReports() {
     }
 
     setLoading(true);
+    setShowAllCustomersReport(false);
 
     try {
       const response = await axiosInstance.get(
@@ -1182,27 +1443,45 @@ export default function CustomersReports() {
                 نظام الكاشير - تقارير العملاء
               </h1>
             </div>
-            <button
-              onClick={() => navigate("/")}
-              className="px-4 py-2 rounded-lg font-medium border transition-all flex items-center"
-              style={{ borderColor: "#193F94", color: "#193F94" }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = "#193F94";
-                e.target.style.color = "white";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = "transparent";
-                e.target.style.color = "#193F94";
-              }}
-            >
-              <ArrowLeft className="h-5 w-5 ml-2" />
-              العودة للرئيسية
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => fetchAllCustomersReport(1, 10)}
+                className="px-4 py-2 rounded-lg font-medium border transition-all flex items-center"
+                style={{ borderColor: "#10B981", color: "#10B981" }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = "#10B981";
+                  e.target.style.color = "white";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = "transparent";
+                  e.target.style.color = "#10B981";
+                }}
+              >
+                <Users className="h-5 w-5 ml-2" />
+                تقرير جميع العملاء
+              </button>
+              <button
+                onClick={() => navigate("/")}
+                className="px-4 py-2 rounded-lg font-medium border transition-all flex items-center"
+                style={{ borderColor: "#193F94", color: "#193F94" }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = "#193F94";
+                  e.target.style.color = "white";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = "transparent";
+                  e.target.style.color = "#193F94";
+                }}
+              >
+                <ArrowLeft className="h-5 w-5 ml-2" />
+                العودة للرئيسية
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Hidden Printable Content */}
+      {/* Hidden Printable Content for Customer Report */}
       <div id="printable-content" style={{ display: "none" }}>
         {printData && (
           <>
@@ -1274,16 +1553,18 @@ export default function CustomersReports() {
                       transaction.isInvoice ? "invoice-row" : "payment-row"
                     }
                   >
-                    <td>{transaction.dateTime}</td>
-                    <td>{transaction.type}</td>
-                    <td>{transaction.description}</td>
-                    <td>
+                    <td className="text-center">{transaction.dateTime}</td>
+                    <td className="text-center">{transaction.type}</td>
+                    <td className="text-center">{transaction.description}</td>
+                    <td className="text-center">
                       {transaction.isInvoice
                         ? formatCurrency(transaction.amount)
                         : "-"}
                     </td>
-                    <td>{formatCurrency(transaction.paid)}</td>
-                    <td>
+                    <td className="text-center">
+                      {formatCurrency(transaction.paid)}
+                    </td>
+                    <td className="text-center">
                       {transaction.isInvoice
                         ? formatCurrency(transaction.remaining)
                         : "-"}
@@ -1296,11 +1577,15 @@ export default function CustomersReports() {
                   <td colSpan="3" style={{ textAlign: "left" }}>
                     الإجمالي:
                   </td>
-                  <td>
+                  <td className="text-center">
                     {formatCurrency(printData.stats.totalInvoicesAmount)} ج.م
                   </td>
-                  <td>{formatCurrency(printData.stats.totalPaid)} ج.م</td>
-                  <td>{formatCurrency(printData.stats.totalRemaining)} ج.م</td>
+                  <td className="text-center">
+                    {formatCurrency(printData.stats.totalPaid)} ج.م
+                  </td>
+                  <td className="text-center">
+                    {formatCurrency(printData.stats.totalRemaining)} ج.م
+                  </td>
                 </tr>
               </tfoot>
             </table>
@@ -1373,7 +1658,7 @@ export default function CustomersReports() {
                   </label>
                 </div>
 
-                {customerData && (
+                {customerData && !showAllCustomersReport && (
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-green-800">
@@ -1456,21 +1741,23 @@ export default function CustomersReports() {
                     )}
                   </button>
 
-                  {customerData && totals.totalRemaining > 0 && (
-                    <button
-                      onClick={openPaymentModal}
-                      className="w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700"
-                    >
-                      <Wallet className="h-5 w-5 ml-2" />
-                      استكمال الدفع ({formatCurrency(
-                        totals.totalRemaining,
-                      )}{" "}
-                      ج.م)
-                    </button>
-                  )}
+                  {customerData &&
+                    !showAllCustomersReport &&
+                    totals.totalRemaining > 0 && (
+                      <button
+                        onClick={openPaymentModal}
+                        className="w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700"
+                      >
+                        <Wallet className="h-5 w-5 ml-2" />
+                        استكمال الدفع ({formatCurrency(
+                          totals.totalRemaining,
+                        )}{" "}
+                        ج.م)
+                      </button>
+                    )}
 
                   {/* Print Button */}
-                  {reportData && (
+                  {reportData && !showAllCustomersReport && (
                     <button
                       onClick={handlePrint}
                       disabled={isPrinting || printLoading}
@@ -1501,7 +1788,202 @@ export default function CustomersReports() {
           </div>
 
           <div className="lg:col-span-3">
-            {reportData ? (
+            {/* All Customers Report */}
+            {showAllCustomersReport && (
+              <div className="bg-white rounded-2xl shadow-lg p-6 print:shadow-none">
+                <div className="flex justify-between items-center mb-6 print:hidden">
+                  <h2
+                    className="text-2xl font-bold"
+                    style={{ color: "#193F94" }}
+                  >
+                    تقرير جميع العملاء
+                  </h2>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handlePrintAllCustomers}
+                      disabled={isPrintingAllCustomers}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center ${
+                        isPrintingAllCustomers
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-green-600 hover:bg-green-700"
+                      } text-white`}
+                    >
+                      {isPrintingAllCustomers ? (
+                        <>
+                          <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
+                          جاري الطباعة...
+                        </>
+                      ) : (
+                        <>
+                          <Printer className="h-5 w-5 ml-2" />
+                          طباعة التقرير
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowAllCustomersReport(false)}
+                      className="px-4 py-2 rounded-lg font-medium bg-gray-200 hover:bg-gray-300 text-gray-700 transition-all flex items-center"
+                    >
+                      <X className="h-5 w-5 ml-2" />
+                      إغلاق
+                    </button>
+                  </div>
+                </div>
+
+                {allCustomersLoading ? (
+                  <div className="bg-gray-50 rounded-xl p-6 flex flex-col items-center justify-center">
+                    <FaSpinner className="w-10 h-10 text-blue-600 animate-spin mb-3" />
+                    <p className="text-gray-500">جاري تحميل البيانات...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full bg-white border border-gray-200 rounded-xl">
+                        <thead>
+                          <tr className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+                            <th className="px-4 py-3 text-center text-sm font-bold">
+                              اسم العميل
+                            </th>
+                            <th className="px-4 py-3 text-center text-sm font-bold">
+                              رقم التليفون
+                            </th>
+                            <th className="px-4 py-3 text-center text-sm font-bold">
+                              الرقم القومي
+                            </th>
+                            <th className="px-4 py-3 text-center text-sm font-bold">
+                              العنوان
+                            </th>
+                            <th className="px-4 py-3 text-center text-sm font-bold">
+                              المبلغ المستحق
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {allCustomersReportData.map((customer) => (
+                            <tr
+                              key={customer.id}
+                              className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
+                            >
+                              <td className="px-4 py-3 text-center text-sm font-medium text-gray-800">
+                                {customer.name}
+                              </td>
+                              <td className="px-4 py-3 text-center text-sm text-gray-600">
+                                {customer.phone}
+                              </td>
+                              <td className="px-4 py-3 text-center text-sm text-gray-600">
+                                {customer.nationalId || "---"}
+                              </td>
+                              <td className="px-4 py-3 text-center text-sm text-gray-600">
+                                {customer.address || "---"}
+                              </td>
+                              <td className="px-4 py-3 text-center text-sm font-bold">
+                                <span
+                                  className={
+                                    customer.totalRemainingAmount > 0
+                                      ? "text-red-600"
+                                      : "text-green-600"
+                                  }
+                                >
+                                  {formatCurrency(
+                                    customer.totalRemainingAmount,
+                                  )}{" "}
+                                  ج.م
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Pagination Controls for All Customers */}
+                    {allCustomersPagination.totalPages > 1 && (
+                      <div className="px-4 py-4 border-t border-gray-200 bg-gray-50 mt-4 rounded-xl">
+                        <div className="flex justify-center">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleAllCustomersPageChange(1)}
+                              disabled={!allCustomersPagination.hasPreviousPage}
+                              className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-700 hover:bg-gray-200 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
+                              title="الصفحة الأولى"
+                            >
+                              <ChevronsRight className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleAllCustomersPageChange(
+                                  allCustomersPagination.currentPage - 1,
+                                )
+                              }
+                              disabled={!allCustomersPagination.hasPreviousPage}
+                              className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-700 hover:bg-gray-200 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
+                              title="الصفحة السابقة"
+                            >
+                              <ChevronRight className="w-5 h-5" />
+                            </button>
+                            <div className="flex items-center gap-1">
+                              {getAllCustomersPageNumbers().map(
+                                (page, index) =>
+                                  page === "..." ? (
+                                    <span
+                                      key={`dots-${index}`}
+                                      className="px-3 py-2 text-gray-500"
+                                    >
+                                      ...
+                                    </span>
+                                  ) : (
+                                    <button
+                                      key={page}
+                                      onClick={() =>
+                                        handleAllCustomersPageChange(page)
+                                      }
+                                      className={`min-w-[40px] h-10 rounded-lg text-sm font-medium transition-all ${
+                                        allCustomersPagination.currentPage ===
+                                        page
+                                          ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:from-blue-700 hover:to-blue-800"
+                                          : "text-gray-700 hover:bg-gray-200 hover:text-gray-900 border border-gray-200"
+                                      }`}
+                                    >
+                                      {page}
+                                    </button>
+                                  ),
+                              )}
+                            </div>
+                            <button
+                              onClick={() =>
+                                handleAllCustomersPageChange(
+                                  allCustomersPagination.currentPage + 1,
+                                )
+                              }
+                              disabled={!allCustomersPagination.hasNextPage}
+                              className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-700 hover:bg-gray-200 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
+                              title="الصفحة التالية"
+                            >
+                              <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleAllCustomersPageChange(
+                                  allCustomersPagination.totalPages,
+                                )
+                              }
+                              disabled={!allCustomersPagination.hasNextPage}
+                              className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-700 hover:bg-gray-200 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
+                              title="الصفحة الأخيرة"
+                            >
+                              <ChevronsLeft className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Customer Report */}
+            {reportData && !showAllCustomersReport ? (
               <div className="bg-white rounded-2xl shadow-lg p-6 print:shadow-none">
                 <div className="flex justify-between items-start mb-6 print:hidden">
                   <div>
@@ -1932,23 +2414,25 @@ export default function CustomersReports() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center min-h-[400px]">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mb-6">
-                  <Users className="h-12 w-12 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-700 mb-2">
-                  تقارير العملاء
-                </h3>
-                <p className="text-gray-500 text-center mb-6 max-w-md">
-                  ابحث برقم التليفون واختر تاريخ البداية والنهاية لعرض التقرير
-                </p>
-                <div className="text-center space-y-3">
-                  <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg">
-                    <Search className="h-5 w-5 ml-2" />
-                    بحث برقم التليفون
+              !showAllCustomersReport && (
+                <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center min-h-[400px]">
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mb-6">
+                    <Users className="h-12 w-12 text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-700 mb-2">
+                    تقارير العملاء
+                  </h3>
+                  <p className="text-gray-500 text-center mb-6 max-w-md">
+                    ابحث برقم التليفون واختر تاريخ البداية والنهاية لعرض التقرير
+                  </p>
+                  <div className="text-center space-y-3">
+                    <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg">
+                      <Search className="h-5 w-5 ml-2" />
+                      بحث برقم التليفون
+                    </div>
                   </div>
                 </div>
-              </div>
+              )
             )}
           </div>
         </div>

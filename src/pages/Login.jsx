@@ -5,7 +5,7 @@ import { loginUser, logout, clearError } from "../redux/slices/loginSlice";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axiosInstance from "../api/axiosInstance";
-import { User, Lock, LogIn, LogOut, Play } from "lucide-react";
+import { User, Lock, LogIn, LogOut, Play, Wallet } from "lucide-react";
 import { FaSpinner } from "react-icons/fa";
 
 export default function Login() {
@@ -16,6 +16,7 @@ export default function Login() {
   const [isOpeningShift, setIsOpeningShift] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
+  const [isOpeningWithoutShift, setIsOpeningWithoutShift] = useState(false);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -23,6 +24,8 @@ export default function Login() {
   const { isLoading, isLogged, user, error } = useSelector(
     (state) => state.auth,
   );
+
+  const isAdmin = user?.roles?.includes("Admin") || false;
 
   useEffect(() => {
     dispatch(clearError());
@@ -69,6 +72,35 @@ export default function Login() {
       }
     } else {
       toast.warning("يرجى ملء جميع الحقول");
+    }
+  };
+
+  // New: Login without opening shift (for Admin) - direct navigation after login
+  const handleLoginWithoutShift = async () => {
+    // If already logged in, just navigate directly
+    if (isLogged && user) {
+      navigate("/");
+      return;
+    }
+
+    // Otherwise, login first then navigate
+    if (formData.username && formData.password) {
+      setIsOpeningWithoutShift(true);
+      try {
+        const result = await dispatch(loginUser(formData)).unwrap();
+
+        if (result?.token) {
+          toast.success("تم تسجيل الدخول بنجاح!");
+          // Navigate directly to home without opening shift
+          navigate("/");
+        }
+      } catch (error) {
+        console.error("Login failed:", error);
+      } finally {
+        setIsOpeningWithoutShift(false);
+      }
+    } else {
+      toast.warning("يرجى ملء جميع الحقول أولاً");
     }
   };
 
@@ -150,6 +182,9 @@ export default function Login() {
                   <p className="mt-2 font-medium text-lg">
                     {user.firstName || user.username}
                   </p>
+                  {isAdmin && (
+                    <p className="text-xs text-blue-600 mt-1">(مدير النظام)</p>
+                  )}
                 </div>
 
                 <div className="space-y-4">
@@ -185,6 +220,42 @@ export default function Login() {
                       </>
                     )}
                   </button>
+
+                  {/* New button for Admin: Open cashier without shift */}
+                  {isAdmin && (
+                    <button
+                      onClick={handleLoginWithoutShift}
+                      disabled={isOpeningWithoutShift}
+                      className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform ${
+                        isOpeningWithoutShift
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:scale-[1.02] active:scale-[0.98]"
+                      } shadow-md flex items-center justify-center`}
+                      style={{ backgroundColor: "#10B981" }}
+                      onMouseEnter={(e) => {
+                        if (!isOpeningWithoutShift) {
+                          e.target.style.backgroundColor = "#059669";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isOpeningWithoutShift) {
+                          e.target.style.backgroundColor = "#10B981";
+                        }
+                      }}
+                    >
+                      {isOpeningWithoutShift ? (
+                        <>
+                          <FaSpinner className="animate-spin ml-2 h-5 w-5 text-white" />
+                          جاري الدخول...
+                        </>
+                      ) : (
+                        <>
+                          <Wallet className="h-5 w-5 ml-2" />
+                          فتح الكاشير بدون بداية وردية
+                        </>
+                      )}
+                    </button>
+                  )}
 
                   <button
                     onClick={handleLogout}
