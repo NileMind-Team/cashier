@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axiosInstance from "../api/axiosInstance";
 
 export default function useLicenseCheck() {
   const [licenseValid, setLicenseValid] = useState(true);
@@ -14,12 +15,17 @@ export default function useLicenseCheck() {
           return;
         }
 
-        const baseUrl =
-          import.meta.env.VITE_API_URL || "https://cashier.runasp.net";
-        const res = await fetch(baseUrl + "/api/MainCategories");
+        const res = await axiosInstance.get(
+          "/api/MainCategories/GetAllMainCategories",
+          {
+            validateStatus: () => true,
+          },
+        );
 
         if (res.status === 403) {
-          const text = await res.text();
+          const text =
+            typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+
           if (text.includes("License expired")) {
             setLicenseValid(false);
             localStorage.setItem("licenseExpired", "true");
