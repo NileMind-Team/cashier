@@ -193,6 +193,8 @@ export default function Home() {
   const [isSearchingInvoice, setIsSearchingInvoice] = useState(false);
   const [currentSearchedInvoiceNumber, setCurrentSearchedInvoiceNumber] =
     useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // New states for admin mode (no shift)
   const [isAdminMode, setIsAdminMode] = useState(false);
@@ -228,6 +230,19 @@ export default function Home() {
     Returned: 3,
     PartialPaid: 4,
   };
+
+  // Check authentication first - no API calls until authenticated
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login");
+      setAuthChecked(true);
+      setIsAuthenticated(false);
+    } else {
+      setIsAuthenticated(true);
+      setAuthChecked(true);
+    }
+  }, [navigate]);
 
   const getTableStatusText = (status) => {
     switch (status) {
@@ -1497,10 +1512,11 @@ export default function Home() {
     }
   };
 
+  // Initialize data only after authentication is confirmed
   useEffect(() => {
-    if (initializedRef.current) {
-      return;
-    }
+    if (!authChecked) return;
+    if (!isAuthenticated) return;
+    if (initializedRef.current) return;
 
     initializedRef.current = true;
 
@@ -1545,7 +1561,7 @@ export default function Home() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authChecked, isAuthenticated]);
 
   useEffect(() => {
     if (selectedMainCategory && subCategories.length > 0) {
@@ -3629,6 +3645,24 @@ export default function Home() {
     }
     return "إتمام البيع";
   };
+
+  // Show loading while checking authentication
+  if (!authChecked) {
+    return (
+      <div
+        dir="rtl"
+        className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-l from-gray-50 to-gray-100"
+      >
+        <div className="text-center">
+          <FaSpinner className="w-16 h-16 text-blue-600 animate-spin mb-4" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   if (isPageLoading) {
     return (
