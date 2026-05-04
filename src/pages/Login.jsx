@@ -17,6 +17,7 @@ export default function Login() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
   const [isOpeningWithoutShift, setIsOpeningWithoutShift] = useState(false);
+  const [isCheckingShift, setIsCheckingShift] = useState(false);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -37,6 +38,32 @@ export default function Login() {
       dispatch(clearError());
     }
   }, [error, dispatch]);
+
+  useEffect(() => {
+    const checkShiftStatus = async () => {
+      if (isLogged && user) {
+        setIsCheckingShift(true);
+        try {
+          const response = await axiosInstance.post("/api/Shifts/GetDetails");
+
+          if (response.status === 200 && response.data) {
+            const shiftData = response.data;
+            const isShiftOpen = shiftData.endTime === "0001-01-01T00:00:00";
+
+            if (isShiftOpen) {
+              navigate("/");
+            }
+          }
+        } catch (error) {
+          console.error("Failed to check shift status:", error);
+        } finally {
+          setIsCheckingShift(false);
+        }
+      }
+    };
+
+    checkShiftStatus();
+  }, [isLogged, user, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -75,15 +102,23 @@ export default function Login() {
     }
   };
 
-  // New: Login without opening shift (for Admin) - direct navigation after login
   const handleLoginWithoutShift = async () => {
-    // If already logged in, just navigate directly
     if (isLogged && user) {
-      navigate("/");
+      try {
+        const response = await axiosInstance.post("/api/Shifts/GetDetails");
+        if (response.status === 200 && response.data) {
+          const isShiftOpen = response.data.endTime === "0001-01-01T00:00:00";
+
+          if (isShiftOpen) {
+            navigate("/");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check shift status:", error);
+      }
       return;
     }
 
-    // Otherwise, login first then navigate
     if (formData.username && formData.password) {
       setIsOpeningWithoutShift(true);
       try {
@@ -91,8 +126,21 @@ export default function Login() {
 
         if (result?.token) {
           toast.success("تم تسجيل الدخول بنجاح!");
-          // Navigate directly to home without opening shift
-          navigate("/");
+          try {
+            const shiftResponse = await axiosInstance.post(
+              "/api/Shifts/GetDetails",
+            );
+            if (shiftResponse.status === 200 && shiftResponse.data) {
+              const isShiftOpen =
+                shiftResponse.data.endTime === "0001-01-01T00:00:00";
+
+              if (isShiftOpen) {
+                navigate("/");
+              }
+            }
+          } catch (shiftError) {
+            console.error("Failed to check shift after login:", shiftError);
+          }
         }
       } catch (error) {
         console.error("Login failed:", error);
@@ -146,6 +194,22 @@ export default function Login() {
   };
 
   const isLoginDisabled = !formData.username || !formData.password || isLoading;
+
+  if (isCheckingShift) {
+    return (
+      <div
+        dir="rtl"
+        className="min-h-screen flex items-center justify-center bg-gradient-to-l from-gray-50 to-gray-100 p-4"
+      >
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <FaSpinner
+            className="animate-spin h-8 w-8 mx-auto mb-4"
+            style={{ color: "#193F94" }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (isLogged && user) {
     return (
@@ -221,7 +285,6 @@ export default function Login() {
                     )}
                   </button>
 
-                  {/* New button for Admin: Open cashier without shift */}
                   {isAdmin && (
                     <button
                       onClick={handleLoginWithoutShift}
