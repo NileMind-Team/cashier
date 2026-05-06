@@ -1512,7 +1512,6 @@ export default function Home() {
     }
   };
 
-  // Initialize data only after authentication is confirmed
   useEffect(() => {
     if (!authChecked) return;
     if (!isAuthenticated) return;
@@ -3088,15 +3087,25 @@ export default function Home() {
     setIsGoingToNextBill(false);
   };
 
-  const subtotal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity + (item.optionsTotal || 0),
-    0,
-  );
+  const subtotal = cart.reduce((sum, item) => {
+    const itemSubtotal = item.price * item.quantity;
+    const optionsValue = item.optionsTotal || 0;
+    const itemTotalIncludingTax = itemSubtotal + optionsValue;
+    const itemTaxRate = item.valueAddedTax || tax;
+
+    if (item.isTaxInclusive && itemTaxRate > 0) {
+      const taxMultiplier = (100 + itemTaxRate) / 100;
+      const itemSubtotalExcludingTax = itemTotalIncludingTax / taxMultiplier;
+      return sum + itemSubtotalExcludingTax;
+    } else {
+      return sum + itemTotalIncludingTax;
+    }
+  }, 0);
 
   const totalTax = cart.reduce((sum, item) => {
     const itemSubtotal = item.price * item.quantity;
     const optionsValue = item.optionsTotal || 0;
-    const taxableAmount = itemSubtotal + optionsValue;
+    const itemTotalIncludingTax = itemSubtotal + optionsValue;
     const itemTaxRate = item.valueAddedTax || tax;
 
     if (itemTaxRate === 0) {
@@ -3104,10 +3113,12 @@ export default function Home() {
     }
 
     if (item.isTaxInclusive) {
-      const itemTax = (taxableAmount * itemTaxRate) / (100 + itemTaxRate);
-      return sum + itemTax;
+      const taxMultiplier = (100 + itemTaxRate) / 100;
+      const itemSubtotalExcludingTax = itemTotalIncludingTax / taxMultiplier;
+      const itemTaxValue = itemTotalIncludingTax - itemSubtotalExcludingTax;
+      return sum + itemTaxValue;
     } else {
-      const itemTax = (taxableAmount * itemTaxRate) / 100;
+      const itemTax = (itemTotalIncludingTax * itemTaxRate) / 100;
       return sum + itemTax;
     }
   }, 0);
@@ -6180,7 +6191,7 @@ export default function Home() {
                   <span className="font-bold">{subtotal.toFixed(2)} ج.م</span>
                 </div>
 
-                <div className="flex justify-between items-center text-xs">
+                <div className="flex justify-between text-xs">
                   <span>إجمالي الضريبة:</span>
                   <span className="font-bold">{totalTax.toFixed(2)} ج.م</span>
                 </div>
@@ -6263,7 +6274,14 @@ export default function Home() {
                 <div className="flex justify-between border-t pt-1.5 mt-1.5 text-sm">
                   <span className="font-bold">الإجمالي:</span>
                   <span className="font-bold" style={{ color: "#193F94" }}>
-                    {total.toFixed(2)} ج.م
+                    {(
+                      totalWithTax -
+                      discountAmountCalc +
+                      (currentBillData.billType === "delivery" && deliveryFee
+                        ? parseFloat(deliveryFee)
+                        : 0)
+                    ).toFixed(2)}{" "}
+                    ج.م
                   </span>
                 </div>
               </div>
