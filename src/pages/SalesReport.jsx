@@ -337,6 +337,14 @@ export default function SalesReports() {
                   <td>{formatCurrency(reportData.totalSales || 0)} ج.م</td>
                 </tr>
                 <tr>
+                  <td className="label">إجمالي المدفوع</td>
+                  <td>{formatCurrency(reportData.totalPaid || 0)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">المبلغ المتبقي</td>
+                  <td>{formatCurrency(reportData.totalRemaining || 0)} ج.م</td>
+                </tr>
+                <tr>
                   <td className="label">
                     إجمالي الضريبة (
                     {reportData.totalSales > 0
@@ -357,6 +365,10 @@ export default function SalesReports() {
                 <tr>
                   <td className="label">الإجمالي الفرعي</td>
                   <td>{formatCurrency(reportData.totalSubTotal || 0)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">متوسط الفاتورة</td>
+                  <td>{formatAverage(reportData.averageInvoice || 0)} ج.م</td>
                 </tr>
                 <tr>
                   <td className="label">إجمالي المرتجعات</td>
@@ -539,6 +551,36 @@ export default function SalesReports() {
                     </div>
                   </div>
 
+                  <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-green-800">إجمالي المدفوع</p>
+                        <p className="text-2xl font-bold text-green-900 mt-1">
+                          {formatCurrency(reportData.totalPaid || 0)} ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
+                        <CreditCard className="h-6 w-6 text-green-700" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-orange-800">
+                          المبلغ المتبقي
+                        </p>
+                        <p className="text-2xl font-bold text-orange-900 mt-1">
+                          {formatCurrency(reportData.totalRemaining || 0)} ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-orange-200 rounded-full flex items-center justify-center">
+                        <Wallet className="h-6 w-6 text-orange-700" />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
                     <div className="flex items-center justify-between">
                       <div>
@@ -578,22 +620,36 @@ export default function SalesReports() {
                       </div>
                     </div>
                   </div>
+
+                  <div className="bg-gradient-to-r from-teal-50 to-teal-100 rounded-xl p-4 border border-teal-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-teal-800">متوسط الفاتورة</p>
+                        <p className="text-2xl font-bold text-teal-900 mt-1">
+                          {formatAverage(reportData.averageInvoice || 0)} ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-teal-200 rounded-full flex items-center justify-center">
+                        <Receipt className="h-6 w-6 text-teal-700" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* إحصائيات إضافية */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                  <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-xl p-4 border border-indigo-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-green-800">
+                        <p className="text-sm text-indigo-800">
                           الإجمالي الفرعي
                         </p>
-                        <p className="text-2xl font-bold text-green-900 mt-1">
+                        <p className="text-2xl font-bold text-indigo-900 mt-1">
                           {formatCurrency(reportData.totalSubTotal || 0)} ج.م
                         </p>
                       </div>
-                      <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                        <Wallet className="h-6 w-6 text-green-700" />
+                      <div className="w-12 h-12 bg-indigo-200 rounded-full flex items-center justify-center">
+                        <Wallet className="h-6 w-6 text-indigo-700" />
                       </div>
                     </div>
                   </div>
@@ -612,16 +668,16 @@ export default function SalesReports() {
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-teal-50 to-teal-100 rounded-xl p-4 border border-teal-200">
+                  <div className="bg-gradient-to-r from-pink-50 to-pink-100 rounded-xl p-4 border border-pink-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-teal-800">إجمالي الخصومات</p>
-                        <p className="text-2xl font-bold text-teal-900 mt-1">
+                        <p className="text-sm text-pink-800">إجمالي الخصومات</p>
+                        <p className="text-2xl font-bold text-pink-900 mt-1">
                           {formatCurrency(reportData.totalDiscount || 0)} ج.م
                         </p>
                       </div>
-                      <div className="w-12 h-12 bg-teal-200 rounded-full flex items-center justify-center">
-                        <Percent className="h-6 w-6 text-teal-700" />
+                      <div className="w-12 h-12 bg-pink-200 rounded-full flex items-center justify-center">
+                        <Percent className="h-6 w-6 text-pink-700" />
                       </div>
                     </div>
                   </div>
@@ -693,7 +749,7 @@ export default function SalesReports() {
                     <PieChart className="h-5 w-5 ml-2" />
                     ملخص التقرير
                   </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                     <div className="text-center">
                       <div
                         className="text-2xl font-bold"
@@ -717,12 +773,12 @@ export default function SalesReports() {
                     <div className="text-center">
                       <div
                         className="text-2xl font-bold"
-                        style={{ color: "#8B5CF6" }}
+                        style={{ color: "#3B82F6" }}
                       >
-                        {formatAverage(reportData.averageInvoice || 0)}
+                        {formatCurrency(reportData.totalPaid || 0)}
                       </div>
                       <div className="text-sm text-gray-600">
-                        متوسط الفاتورة
+                        إجمالي المدفوع
                       </div>
                     </div>
                     <div className="text-center">
@@ -730,10 +786,21 @@ export default function SalesReports() {
                         className="text-2xl font-bold"
                         style={{ color: "#F59E0B" }}
                       >
-                        {formatCurrency(reportData.totalTax || 0)}
+                        {formatCurrency(reportData.totalRemaining || 0)}
                       </div>
                       <div className="text-sm text-gray-600">
-                        إجمالي الضريبة
+                        المبلغ المتبقي
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div
+                        className="text-2xl font-bold"
+                        style={{ color: "#8B5CF6" }}
+                      >
+                        {formatAverage(reportData.averageInvoice || 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        متوسط الفاتورة
                       </div>
                     </div>
                     <div className="text-center">
