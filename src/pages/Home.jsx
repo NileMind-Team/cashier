@@ -32,6 +32,7 @@ import {
   Search,
 } from "lucide-react";
 import { FaSpinner } from "react-icons/fa";
+// import { printInvoice } from "../utils/qzPrinter";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -1512,6 +1513,66 @@ export default function Home() {
     }
   };
 
+  // const handlePrintInvoice = async (invoiceData) => {
+  //   try {
+  //     // Calculate taxable amount after discount
+  //     const taxableAmountAfterDiscount = subtotal - discountAmountCalc;
+  //     // Calculate tax based on taxable amount after discount
+  //     const calculatedTax = (taxableAmountAfterDiscount * tax) / 100;
+
+  //     const printData = {
+  //       invoiceNumber: invoiceData.invoiceNumber,
+  //       invoiceDate: invoiceData.invoiceDate || new Date(),
+  //       cashierName: currentShift?.cashierName || "كاشير",
+  //       billType: currentBillData.billType,
+  //       tableName: currentBillData.tableName,
+  //       deliveryCompanyName: currentBillData.deliveryCompanyName,
+  //       customerName: customerName,
+  //       customerPhone: customerPhone,
+  //       customerAddress: customerAddress,
+  //       items: cart.map((item) => ({
+  //         name: item.name,
+  //         quantity: item.quantity,
+  //         price: item.price,
+  //         selectedOptions: item.selectedOptions,
+  //         note: item.note, // ملاحظة المنتج
+  //       })),
+  //       generalNote: generalNote, // ✅ إضافة الملاحظة العامة للفاتورة
+  //       subtotal: subtotal,
+  //       tax: calculatedTax,
+  //       discount: discountAmountCalc,
+  //       discountPercent:
+  //         discountType === DiscountType.Percentage ? discount : null,
+  //       discountType: discountType,
+  //       deliveryFee:
+  //         currentBillData.billType === "delivery"
+  //           ? deliveryFee
+  //             ? parseFloat(deliveryFee)
+  //             : 0
+  //           : 0,
+  //       paidAmount: currentBillData.paidAmount,
+  //       remainingAmount: currentBillData.remainingAmount,
+  //       isPartialPaid: currentBillData.isPartialPaid,
+  //       isReturned: currentBillData.isReturned,
+  //       payments: payments.map((p) => ({
+  //         methodName:
+  //           paymentMethods.find((m) => m.id === p.paymentMethodId)?.name ||
+  //           "غير معروف",
+  //         amount: p.amount,
+  //       })),
+  //     };
+
+  //     const result = await printInvoice(printData);
+  //     if (result.success) {
+  //       console.log("🖨️ تمت الطباعة بنجاح");
+  //     } else {
+  //       console.warn("⚠️ فشلت الطباعة:", result.message);
+  //     }
+  //   } catch (error) {
+  //     console.error("❌ خطأ في الطباعة:", error);
+  //   }
+  // };
+
   useEffect(() => {
     if (!authChecked) return;
     if (!isAuthenticated) return;
@@ -2696,6 +2757,11 @@ export default function Home() {
             `تم استكمال دفع المبلغ المتبقي بنجاح للفاتورة رقم ${currentBillData.invoiceNumber}`,
           );
 
+          // await handlePrintInvoice({
+          //   invoiceNumber: currentBillData.invoiceNumber,
+          //   invoiceDate: new Date(),
+          // });
+
           setShowPaymentModal(false);
           setPayments([]);
           setRemainingAmount(0);
@@ -2775,6 +2841,13 @@ export default function Home() {
               );
             }
 
+            // if (!isPartialPaid) {
+            //   await handlePrintInvoice({
+            //     invoiceNumber: currentBillData.invoiceNumber,
+            //     invoiceDate: new Date(),
+            //   });
+            // }
+
             setShowPaymentModal(false);
             setPayments([]);
             setRemainingAmount(0);
@@ -2843,6 +2916,13 @@ export default function Home() {
                 `تم إتمام البيع للفاتورة رقم ${invoiceResponse.invoiceNumber}`,
               );
             }
+
+            // if (!isPartialPaid) {
+            //   await handlePrintInvoice({
+            //     invoiceNumber: invoiceResponse.invoiceNumber,
+            //     invoiceDate: new Date(),
+            //   });
+            // }
 
             setShowPaymentModal(false);
             setPayments([]);
@@ -2967,6 +3047,10 @@ export default function Home() {
           toast.success(
             `تم تعليق الفاتورة رقم ${invoiceResponse.invoiceNumber}`,
           );
+          // await handlePrintInvoice({
+          //   invoiceNumber: invoiceResponse.invoiceNumber,
+          //   invoiceDate: new Date(),
+          // });
 
           resetBillData();
 
@@ -3087,60 +3171,14 @@ export default function Home() {
     setIsGoingToNextBill(false);
   };
 
+  // Calculate subtotal (before tax and discount)
   const subtotal = cart.reduce((sum, item) => {
     const itemSubtotal = item.price * item.quantity;
     const optionsValue = item.optionsTotal || 0;
-    const itemTotalIncludingTax = itemSubtotal + optionsValue;
-    const itemTaxRate = item.valueAddedTax || tax;
-
-    if (item.isTaxInclusive && itemTaxRate > 0) {
-      const taxMultiplier = (100 + itemTaxRate) / 100;
-      const itemSubtotalExcludingTax = itemTotalIncludingTax / taxMultiplier;
-      return sum + itemSubtotalExcludingTax;
-    } else {
-      return sum + itemTotalIncludingTax;
-    }
+    return sum + itemSubtotal + optionsValue;
   }, 0);
 
-  const totalTax = cart.reduce((sum, item) => {
-    const itemSubtotal = item.price * item.quantity;
-    const optionsValue = item.optionsTotal || 0;
-    const itemTotalIncludingTax = itemSubtotal + optionsValue;
-    const itemTaxRate = item.valueAddedTax || tax;
-
-    if (itemTaxRate === 0) {
-      return sum;
-    }
-
-    if (item.isTaxInclusive) {
-      const taxMultiplier = (100 + itemTaxRate) / 100;
-      const itemSubtotalExcludingTax = itemTotalIncludingTax / taxMultiplier;
-      const itemTaxValue = itemTotalIncludingTax - itemSubtotalExcludingTax;
-      return sum + itemTaxValue;
-    } else {
-      const itemTax = (itemTotalIncludingTax * itemTaxRate) / 100;
-      return sum + itemTax;
-    }
-  }, 0);
-
-  const totalWithTax = cart.reduce((sum, item) => {
-    const itemSubtotal = item.price * item.quantity;
-    const optionsValue = item.optionsTotal || 0;
-    const itemTotal = itemSubtotal + optionsValue;
-    const itemTaxRate = item.valueAddedTax || tax;
-
-    if (itemTaxRate === 0) {
-      return sum + itemTotal;
-    }
-
-    if (item.isTaxInclusive) {
-      return sum + itemTotal;
-    } else {
-      const itemTax = (itemTotal * itemTaxRate) / 100;
-      return sum + itemTotal + itemTax;
-    }
-  }, 0);
-
+  // Calculate discount amount based on subtotal
   const discountAmountCalc =
     discount && discount !== ""
       ? discountType === DiscountType.Fixed
@@ -3148,10 +3186,44 @@ export default function Home() {
         : (subtotal * discount) / 100
       : 0;
 
+  // Calculate taxable amount after discount
+  const taxableAmountAfterDiscount = subtotal - discountAmountCalc;
+
+  // Calculate total tax based on taxable amount after discount
+  // Tax rate is applied to the taxable amount (subtotal - discount)
+  const totalTax = cart.reduce((sum, item) => {
+    const itemSubtotal = item.price * item.quantity;
+    const optionsValue = item.optionsTotal || 0;
+    const itemTotalIncludingTax = itemSubtotal + optionsValue;
+    const itemTaxRate = item.valueAddedTax || tax;
+
+    if (itemTaxRate === 0) return sum;
+
+    // Calculate what portion of the total taxable amount belongs to this item
+    const itemProportion = subtotal > 0 ? itemTotalIncludingTax / subtotal : 0;
+    // Apply the proportion to the taxable amount after discount
+    const itemTaxableAmount = taxableAmountAfterDiscount * itemProportion;
+
+    if (item.isTaxInclusive) {
+      const taxMultiplier = (100 + itemTaxRate) / 100;
+      const itemSubtotalExcludingTax = itemTaxableAmount / taxMultiplier;
+      const itemTaxValue = itemTaxableAmount - itemSubtotalExcludingTax;
+      return sum + itemTaxValue;
+    } else {
+      const itemTax = (itemTaxableAmount * itemTaxRate) / 100;
+      return sum + itemTax;
+    }
+  }, 0);
+
+  // Calculate total with tax (subtotal after discount + tax + delivery fee)
+  const totalWithTax = taxableAmountAfterDiscount + totalTax;
+
+  // Final total including delivery fee
   const total =
-    totalWithTax -
-    discountAmountCalc +
-    (currentBillData.billType === "delivery" && deliveryFee ? deliveryFee : 0);
+    totalWithTax +
+    (currentBillData.billType === "delivery" && deliveryFee
+      ? parseFloat(deliveryFee)
+      : 0);
 
   const handlePrepareOrder = async () => {
     if (isAdminMode) {
@@ -5207,10 +5279,6 @@ export default function Home() {
                       <span>{subtotal.toFixed(2)} ج.م</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>إجمالي الضريبة:</span>
-                      <span>{totalTax.toFixed(2)} ج.م</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
                       <span>الخصم:</span>
                       <span className="text-green-600">
                         {discountAmountCalc.toFixed(2)} ج.م{" "}
@@ -5219,6 +5287,11 @@ export default function Home() {
                           discount > 0 &&
                           `(${discount}%)`}
                       </span>
+                    </div>
+
+                    <div className="flex justify-between text-sm">
+                      <span>إجمالي الضريبة:</span>
+                      <span>{totalTax.toFixed(2)} ج.م</span>
                     </div>
                     {currentBillData.billType === "delivery" &&
                       deliveryFee &&
@@ -5902,9 +5975,30 @@ export default function Home() {
                       const optionsValue = item.optionsTotal || 0;
                       const taxableAmount = itemSubtotal + optionsValue;
                       const itemTaxRate = item.valueAddedTax || tax;
-                      const itemTax = item.isTaxInclusive
-                        ? (taxableAmount * itemTaxRate) / (100 + itemTaxRate)
-                        : (taxableAmount * itemTaxRate) / 100;
+
+                      // Calculate tax on the discounted amount
+                      // First, find what proportion of the total taxable amount this item represents
+                      const itemProportion =
+                        subtotal > 0 ? taxableAmount / subtotal : 0;
+                      const itemTaxableAmountAfterDiscount =
+                        (subtotal - discountAmountCalc) * itemProportion;
+
+                      let itemTax = 0;
+                      if (itemTaxRate > 0) {
+                        if (item.isTaxInclusive) {
+                          const taxMultiplier = (100 + itemTaxRate) / 100;
+                          const itemSubtotalExcludingTax =
+                            itemTaxableAmountAfterDiscount / taxMultiplier;
+                          itemTax =
+                            itemTaxableAmountAfterDiscount -
+                            itemSubtotalExcludingTax;
+                        } else {
+                          itemTax =
+                            (itemTaxableAmountAfterDiscount * itemTaxRate) /
+                            100;
+                        }
+                      }
+
                       const hasDiscount =
                         item.originalPrice && item.originalPrice > item.price;
 
@@ -6191,11 +6285,6 @@ export default function Home() {
                   <span className="font-bold">{subtotal.toFixed(2)} ج.م</span>
                 </div>
 
-                <div className="flex justify-between text-xs">
-                  <span>إجمالي الضريبة:</span>
-                  <span className="font-bold">{totalTax.toFixed(2)} ج.م</span>
-                </div>
-
                 <div className="flex justify-between items-center text-xs">
                   <span>الخصم:</span>
                   <div className="flex items-center">
@@ -6232,6 +6321,10 @@ export default function Home() {
                         ` (${discount}%)`}
                     </span>
                   </div>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span>إجمالي الضريبة:</span>
+                  <span className="font-bold">{totalTax.toFixed(2)} ج.م</span>
                 </div>
 
                 {currentBillData.billType === "delivery" && (
@@ -6275,8 +6368,7 @@ export default function Home() {
                   <span className="font-bold">الإجمالي:</span>
                   <span className="font-bold" style={{ color: "#193F94" }}>
                     {(
-                      totalWithTax -
-                      discountAmountCalc +
+                      totalWithTax +
                       (currentBillData.billType === "delivery" && deliveryFee
                         ? parseFloat(deliveryFee)
                         : 0)
