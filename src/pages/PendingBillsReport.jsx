@@ -50,10 +50,10 @@ export default function PendingBillsReport() {
     typeDistribution: [],
   });
 
-  const addTwoHours = (dateString) => {
+  const addThreeHours = (dateString) => {
     if (!dateString) return null;
     const date = new Date(dateString);
-    date.setHours(date.getHours() + 2);
+    date.setHours(date.getHours() + 3);
     return date;
   };
 
@@ -417,7 +417,7 @@ export default function PendingBillsReport() {
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
-    const adjustedDate = addTwoHours(dateString);
+    const adjustedDate = addThreeHours(dateString);
     return adjustedDate.toLocaleDateString("ar-EG", {
       year: "numeric",
       month: "short",
@@ -429,7 +429,7 @@ export default function PendingBillsReport() {
 
   const formatDateOnly = (dateString) => {
     if (!dateString) return "";
-    const adjustedDate = addTwoHours(dateString);
+    const adjustedDate = addThreeHours(dateString);
     return adjustedDate.toLocaleDateString("ar-EG", {
       year: "numeric",
       month: "long",

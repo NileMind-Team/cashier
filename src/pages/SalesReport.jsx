@@ -15,6 +15,7 @@ import {
   Wallet,
   PieChart,
   Printer,
+  Truck,
 } from "lucide-react";
 import { FaSpinner, FaChartLine } from "react-icons/fa";
 
@@ -50,10 +51,13 @@ export default function SalesReports() {
     setIsGeneratingReport(true);
 
     try {
+      let formattedStartDate = `${startDate}T21:00:00.000Z`;
+      let formattedEndDate = `${endDate}T20:59:59.999Z`;
+
       const response = await axiosInstance.get("/api/Reports/SalesReport", {
         params: {
-          from: startDate,
-          to: endDate,
+          from: formattedStartDate,
+          to: formattedEndDate,
         },
       });
 
@@ -346,7 +350,7 @@ export default function SalesReports() {
                 </tr>
                 <tr>
                   <td className="label">
-                    إجمالي الضريبة (
+                    إجمالي الضريبة {""}
                     {reportData.totalSales > 0
                       ? (
                           ((reportData.totalTax || 0) /
@@ -354,7 +358,7 @@ export default function SalesReports() {
                           100
                         ).toFixed(1)
                       : 0}
-                    %)
+                    %
                   </td>
                   <td>{formatCurrency(reportData.totalTax || 0)} ج.م</td>
                 </tr>
@@ -365,6 +369,12 @@ export default function SalesReports() {
                 <tr>
                   <td className="label">الإجمالي الفرعي</td>
                   <td>{formatCurrency(reportData.totalSubTotal || 0)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">إجمالي رسوم التوصيل</td>
+                  <td>
+                    {formatCurrency(reportData.totalDiliveryFee || 0)} ج.م
+                  </td>
                 </tr>
                 <tr>
                   <td className="label">متوسط الفاتورة</td>
@@ -637,7 +647,7 @@ export default function SalesReports() {
                 </div>
 
                 {/* إحصائيات إضافية */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                   <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-xl p-4 border border-indigo-200">
                     <div className="flex items-center justify-between">
                       <div>
@@ -650,6 +660,22 @@ export default function SalesReports() {
                       </div>
                       <div className="w-12 h-12 bg-indigo-200 rounded-full flex items-center justify-center">
                         <Wallet className="h-6 w-6 text-indigo-700" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-xl p-4 border border-cyan-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-cyan-800">
+                          إجمالي رسوم التوصيل
+                        </p>
+                        <p className="text-2xl font-bold text-cyan-900 mt-1">
+                          {formatCurrency(reportData.totalDiliveryFee || 0)} ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-cyan-200 rounded-full flex items-center justify-center">
+                        <Truck className="h-6 w-6 text-cyan-700" />
                       </div>
                     </div>
                   </div>
@@ -749,7 +775,7 @@ export default function SalesReports() {
                     <PieChart className="h-5 w-5 ml-2" />
                     ملخص التقرير
                   </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
                     <div className="text-center">
                       <div
                         className="text-2xl font-bold"
@@ -791,6 +817,15 @@ export default function SalesReports() {
                       <div className="text-sm text-gray-600">
                         المبلغ المتبقي
                       </div>
+                    </div>
+                    <div className="text-center">
+                      <div
+                        className="text-2xl font-bold"
+                        style={{ color: "#06B6D4" }}
+                      >
+                        {formatCurrency(reportData.totalDiliveryFee || 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">رسوم التوصيل</div>
                     </div>
                     <div className="text-center">
                       <div

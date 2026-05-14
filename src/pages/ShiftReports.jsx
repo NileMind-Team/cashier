@@ -35,10 +35,11 @@ export default function ShiftReports() {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
 
-  const addTwoHours = (dateString) => {
+  // Changed from 2 hours to 3 hours
+  const addThreeHours = (dateString) => {
     if (!dateString) return null;
     const date = new Date(dateString);
-    date.setHours(date.getHours() + 2);
+    date.setHours(date.getHours() + 3);
     return date;
   };
 
@@ -101,21 +102,56 @@ export default function ShiftReports() {
     setIsGeneratingReport(true);
     try {
       const shiftIdNumber = parseInt(selectedShift);
+      const shiftData = shifts.find((s) => s.id === shiftIdNumber);
 
-      const response = await axiosInstance.get(
-        `/api/Reports/ShiftReport/${shiftIdNumber}`,
-      );
+      if (!shiftData) {
+        toast.error("لم يتم العثور على بيانات الوردية");
+        return;
+      }
+
+      // Get start time from shift data
+      let startDateTime = shiftData.startTime;
+
+      // Get end time from shift data, or use current time if not available
+      let endDateTime = shiftData.endTime;
+      if (!endDateTime) {
+        const now = new Date();
+        endDateTime = now.toISOString();
+      }
+
+      // Format dates to ISO strings (they already include time from the API)
+      const formattedStartDate = startDateTime;
+      const formattedEndDate = endDateTime;
+
+      const response = await axiosInstance.get("/api/Reports/SalesReport", {
+        params: {
+          from: formattedStartDate,
+          to: formattedEndDate,
+        },
+      });
 
       if (response.status === 200 && response.data) {
-        setReportData(response.data);
+        const data = response.data;
+
+        setReportData({
+          ...data,
+          shiftId: shiftData.id,
+          startTime: shiftData.startTime,
+          endTime: shiftData.endTime,
+          shiftDuration: calculateShiftDuration(
+            shiftData.startTime,
+            shiftData.endTime,
+          ),
+        });
+
         toast.success("تم تحميل تقرير الوردية بنجاح");
       } else {
-        toast.error("لم يتم العثور على بيانات الوردية المحددة");
+        toast.error("لم يتم العثور على بيانات للفترة المحددة");
       }
     } catch (error) {
       console.error("خطأ في جلب تقرير الوردية:", error);
       if (error.response?.status === 404) {
-        toast.error("لم يتم العثور على بيانات الوردية المحددة");
+        toast.error("لا توجد بيانات للفترة المحددة");
       } else if (error.response?.status === 400) {
         toast.error("بيانات غير صالحة: تأكد من اختيار وردية صحيحة");
       } else {
@@ -128,7 +164,7 @@ export default function ShiftReports() {
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
-    const adjustedDate = addTwoHours(dateString);
+    const adjustedDate = addThreeHours(dateString);
     return adjustedDate.toLocaleDateString("ar-EG", {
       weekday: "long",
       year: "numeric",
@@ -141,30 +177,20 @@ export default function ShiftReports() {
 
   const formatTime = (dateString) => {
     if (!dateString) return "";
-    const adjustedDate = addTwoHours(dateString);
+    const adjustedDate = addThreeHours(dateString);
     return adjustedDate.toLocaleTimeString("ar-EG", {
       hour: "2-digit",
       minute: "2-digit",
     });
   };
 
-  const formatDateOnly = (dateString) => {
-    if (!dateString) return "";
-    const adjustedDate = addTwoHours(dateString);
-    return adjustedDate.toLocaleDateString("ar-EG", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
   const calculateShiftDuration = (startTime, endTime) => {
     if (!startTime) return "غير محدد";
 
-    const start = addTwoHours(startTime);
+    const start = addThreeHours(startTime);
     if (!endTime) return "قيد التشغيل";
 
-    const end = addTwoHours(endTime);
+    const end = addThreeHours(endTime);
     const diffMs = end - start;
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
     const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
@@ -359,16 +385,12 @@ export default function ShiftReports() {
             <div className="header">
               <h1>تقرير الوردية #{reportData.shiftId}</h1>
               <h3>
-                تاريخ البدء: {formatDateOnly(reportData.startTime)}
+                من: {formatDate(reportData.startTime)}
                 {reportData.endTime &&
-                  ` | تاريخ الانتهاء: ${formatDateOnly(reportData.endTime)}`}
+                  ` إلى: ${formatDate(reportData.endTime)}`}
               </h3>
               <h3>
-                المدة:{" "}
-                {calculateShiftDuration(
-                  reportData.startTime,
-                  reportData.endTime,
-                )}
+                المدة: {reportData.shiftDuration}
                 {" | "}
                 الحالة: {reportData.endTime ? "مغلقة" : "مفتوحة"}
               </h3>
@@ -582,11 +604,7 @@ export default function ShiftReports() {
                   <div className="flex items-center space-x-2 rtl:space-x-reverse flex-wrap gap-2">
                     <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium flex items-center">
                       <Clock className="h-3 w-3 ml-1" />
-                      مدة الوردية:{" "}
-                      {calculateShiftDuration(
-                        reportData.startTime,
-                        reportData.endTime,
-                      )}
+                      مدة الوردية: {reportData.shiftDuration}
                     </div>
                     <div
                       className={`px-3 py-1 text-xs rounded-full font-medium flex items-center ${
@@ -635,29 +653,6 @@ export default function ShiftReports() {
                         <p className="text-2xl font-bold text-green-900 mt-1">
                           {reportData.totalInvoicesCount || 0}
                         </p>
-                        <div className="flex text-xs mt-1 flex-wrap gap-1">
-                          <span className="text-green-600 ml-2 flex items-center">
-                            <CheckCircle className="h-3 w-3 ml-1" />
-                            {reportData.doneInvoicesCount || 0} مكتملة
-                          </span>
-                          <span className="text-amber-600 ml-2 flex items-center">
-                            <Clock className="h-3 w-3 ml-1" />
-                            {reportData.suspendedInvoicesCount || 0} معلقة
-                          </span>
-                          {reportData.partailPaidInvoicesCount > 0 && (
-                            <span className="text-orange-600 flex items-center">
-                              <Receipt className="h-3 w-3 ml-1" />
-                              {reportData.partailPaidInvoicesCount} مدفوعة
-                              جزئياً
-                            </span>
-                          )}
-                          {reportData.returnedInvoicesCount > 0 && (
-                            <span className="text-red-600 flex items-center">
-                              <RotateCcw className="h-3 w-3 ml-1" />
-                              {reportData.returnedInvoicesCount} مرتجعة
-                            </span>
-                          )}
-                        </div>
                       </div>
                       <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
                         <FileCheck className="h-6 w-6 text-green-700" />
@@ -686,10 +681,10 @@ export default function ShiftReports() {
                       <div>
                         <p className="text-sm text-amber-800">متوسط الفاتورة</p>
                         <p className="text-2xl font-bold text-amber-900 mt-1">
-                          {reportData.doneInvoicesCount > 0
+                          {reportData.totalInvoicesCount > 0
                             ? formatNumber(
                                 reportData.totalSales /
-                                  reportData.doneInvoicesCount,
+                                  reportData.totalInvoicesCount,
                               )
                             : "0.00"}{" "}
                           ج.م

@@ -84,10 +84,10 @@ export default function CustomersReports() {
   const hasFetchedPaymentMethods = useRef(false);
   const isFetchingPaymentMethods = useRef(false);
 
-  const addTwoHours = (dateString) => {
+  const addThreeHours = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
-    date.setHours(date.getHours() + 2);
+    date.setHours(date.getHours() + 3);
     return date;
   };
 
@@ -784,7 +784,7 @@ export default function CustomersReports() {
 
             if (dayData.invoices && Array.isArray(dayData.invoices)) {
               dayData.invoices.forEach((invoice) => {
-                const invoiceDate = addTwoHours(invoice.invoiceDate);
+                const invoiceDate = addThreeHours(invoice.invoiceDate);
                 const formattedDateTime = invoiceDate.toLocaleDateString(
                   "ar-EG",
                   {
@@ -815,7 +815,7 @@ export default function CustomersReports() {
                   Array.isArray(invoice.transactions)
                 ) {
                   invoice.transactions.forEach((transaction) => {
-                    const transactionDate = addTwoHours(
+                    const transactionDate = addThreeHours(
                       transaction.transactionDate,
                     );
                     const transactionFormattedDateTime =
@@ -1184,7 +1184,7 @@ export default function CustomersReports() {
 
   const formatDateTime = (dateString) => {
     if (!dateString) return "";
-    const date = addTwoHours(dateString);
+    const date = addThreeHours(dateString);
     return date.toLocaleDateString("ar-EG", {
       year: "numeric",
       month: "short",
