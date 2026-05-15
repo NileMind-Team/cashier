@@ -22,6 +22,10 @@ import {
   RotateCcw,
   Coins,
   Printer,
+  CreditCard,
+  Truck,
+  TrendingDown,
+  BarChart3,
 } from "lucide-react";
 import { FaSpinner } from "react-icons/fa";
 
@@ -198,8 +202,20 @@ export default function ShiftReports() {
     return `${diffHrs} ساعة ${diffMins} دقيقة`;
   };
 
-  const formatNumber = (value) => {
-    return (value || 0).toFixed(2);
+  const formatCurrency = (amount) => {
+    if (amount === undefined || amount === null) return "0.00";
+    return new Intl.NumberFormat("ar-EG", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  const formatAverage = (amount) => {
+    if (amount === undefined || amount === null) return "0.00";
+    return new Intl.NumberFormat("ar-EG", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
   };
 
   const stats = {
@@ -300,6 +316,55 @@ export default function ShiftReports() {
             background-color: #e2e3e5;
           }
           
+          .payment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          
+          .payment-table th {
+            background-color: #4a5568;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+          }
+          
+          .payment-table td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+          }
+          
+          .payment-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+          }
+          
+          .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+          }
+          
+          .card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+          }
+          
+          .card h4 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+          }
+          
+          .card .value {
+            font-size: 28px;
+            font-weight: bold;
+          }
+          
           .footer {
             margin-top: 30px;
             padding-top: 20px;
@@ -315,6 +380,12 @@ export default function ShiftReports() {
             }
             .report-table th {
               background-color: #193F94 !important;
+              color: white !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .payment-table th {
+              background-color: #4a5568 !important;
               color: white !important;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
@@ -406,58 +477,57 @@ export default function ShiftReports() {
               <tbody>
                 <tr>
                   <td className="label">عدد الفواتير</td>
-                  <td>{reportData.totalInvoicesCount || 0}</td>
-                </tr>
-                <tr>
-                  <td className="label">الإجمالي الفرعي</td>
-                  <td>{formatNumber(reportData.totalSubTotal)} ج.م</td>
+                  <td>{reportData.totalInvoicesCount || 0} فاتورة</td>
                 </tr>
                 <tr>
                   <td className="label">إجمالي المبيعات</td>
-                  <td>{formatNumber(reportData.totalSales)} ج.م</td>
+                  <td>{formatCurrency(reportData.totalSales || 0)} ج.م</td>
                 </tr>
                 <tr>
-                  <td className="label">
-                    إجمالي الضرائب (
-                    {reportData.totalSales > 0
-                      ? (
-                          (reportData.totalTax / reportData.totalSubTotal) *
-                          100
-                        ).toFixed(1)
-                      : 0}
-                    %)
-                  </td>
-                  <td>{formatNumber(reportData.totalTax)} ج.م</td>
+                  <td className="label">إجمالي المدفوع</td>
+                  <td>{formatCurrency(reportData.totalPaid || 0)} ج.م</td>
                 </tr>
                 <tr>
-                  <td className="label">
-                    إجمالي الخصومات (
-                    {reportData.totalSales > 0
-                      ? (
-                          (reportData.totalDiscount / reportData.totalSales) *
-                          100
-                        ).toFixed(1)
-                      : 0}
-                    %)
+                  <td className="label">المبلغ المتبقي</td>
+                  <td>{formatCurrency(reportData.totalRemaining || 0)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">إجمالي الضريبة</td>
+                  <td>{formatCurrency(reportData.totalTax || 0)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">صافي الإيرادات</td>
+                  <td>{formatCurrency(reportData.netRevenue || 0)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">الإجمالي الفرعي</td>
+                  <td>{formatCurrency(reportData.totalSubTotal || 0)} ج.م</td>
+                </tr>
+                <tr>
+                  <td className="label">إجمالي رسوم التوصيل</td>
+                  <td>
+                    {formatCurrency(reportData.totalDiliveryFee || 0)} ج.م
                   </td>
-                  <td style={{ color: "#dc2626" }}>
-                    {formatNumber(reportData.totalDiscount)} ج.م
-                  </td>
+                </tr>
+                <tr>
+                  <td className="label">متوسط الفاتورة</td>
+                  <td>{formatAverage(reportData.averageInvoice || 0)} ج.م</td>
                 </tr>
                 <tr>
                   <td className="label">إجمالي المرتجعات</td>
                   <td style={{ color: "#dc2626" }}>
-                    {formatNumber(reportData.totalReturns)} ج.م
+                    {formatCurrency(reportData.totalReturns || 0)} ج.م
                   </td>
                 </tr>
-                <tr className="total-row">
-                  <td className="label">صافي الإيرادات</td>
-                  <td style={{ color: "#10B981", fontWeight: "bold" }}>
-                    {formatNumber(reportData.netRevenue)} ج.م
+                <tr>
+                  <td className="label">إجمالي الخصومات</td>
+                  <td style={{ color: "#dc2626" }}>
+                    {formatCurrency(reportData.totalDiscount || 0)} ج.م
                   </td>
                 </tr>
               </tbody>
             </table>
+
           </>
         )}
       </div>
@@ -631,13 +701,13 @@ export default function ShiftReports() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-blue-800">إجمالي المبيعات</p>
                         <p className="text-2xl font-bold text-blue-900 mt-1">
-                          {formatNumber(reportData.totalSales)} ج.م
+                          {formatCurrency(reportData.totalSales || 0)} ج.م
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
@@ -649,13 +719,29 @@ export default function ShiftReports() {
                   <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-green-800">عدد الفواتير</p>
+                        <p className="text-sm text-green-800">إجمالي المدفوع</p>
                         <p className="text-2xl font-bold text-green-900 mt-1">
-                          {reportData.totalInvoicesCount || 0}
+                          {formatCurrency(reportData.totalPaid || 0)} ج.م
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
-                        <FileCheck className="h-6 w-6 text-green-700" />
+                        <CreditCard className="h-6 w-6 text-green-700" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-orange-800">
+                          المبلغ المتبقي
+                        </p>
+                        <p className="text-2xl font-bold text-orange-900 mt-1">
+                          {formatCurrency(reportData.totalRemaining || 0)} ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-orange-200 rounded-full flex items-center justify-center">
+                        <Wallet className="h-6 w-6 text-orange-700" />
                       </div>
                     </div>
                   </div>
@@ -664,14 +750,14 @@ export default function ShiftReports() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-purple-800">
-                          صافي الإيرادات
+                          إجمالي الضريبة
                         </p>
                         <p className="text-2xl font-bold text-purple-900 mt-1">
-                          {formatNumber(reportData.netRevenue)} ج.م
+                          {formatCurrency(reportData.totalTax || 0)} ج.م
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-                        <TrendingUp className="h-6 w-6 text-purple-700" />
+                        <Percent className="h-6 w-6 text-purple-700" />
                       </div>
                     </div>
                   </div>
@@ -679,19 +765,89 @@ export default function ShiftReports() {
                   <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-amber-800">متوسط الفاتورة</p>
+                        <p className="text-sm text-amber-800">صافي الإيرادات</p>
                         <p className="text-2xl font-bold text-amber-900 mt-1">
-                          {reportData.totalInvoicesCount > 0
-                            ? formatNumber(
-                                reportData.totalSales /
-                                  reportData.totalInvoicesCount,
-                              )
-                            : "0.00"}{" "}
-                          ج.م
+                          {formatCurrency(reportData.netRevenue || 0)} ج.م
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
-                        <PieChart className="h-6 w-6 text-amber-700" />
+                        <TrendingUp className="h-6 w-6 text-amber-700" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-teal-50 to-teal-100 rounded-xl p-4 border border-teal-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-teal-800">عدد الفواتير</p>
+                        <p className="text-2xl font-bold text-teal-900 mt-1">
+                          {reportData.totalInvoicesCount || 0}
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-teal-200 rounded-full flex items-center justify-center">
+                        <Receipt className="h-6 w-6 text-teal-700" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-xl p-4 border border-indigo-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-indigo-800">
+                          الإجمالي الفرعي
+                        </p>
+                        <p className="text-2xl font-bold text-indigo-900 mt-1">
+                          {formatCurrency(reportData.totalSubTotal || 0)} ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-indigo-200 rounded-full flex items-center justify-center">
+                        <Wallet className="h-6 w-6 text-indigo-700" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-xl p-4 border border-cyan-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-cyan-800">
+                          إجمالي رسوم التوصيل
+                        </p>
+                        <p className="text-2xl font-bold text-cyan-900 mt-1">
+                          {formatCurrency(reportData.totalDiliveryFee || 0)} ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-cyan-200 rounded-full flex items-center justify-center">
+                        <Truck className="h-6 w-6 text-cyan-700" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-red-800">إجمالي المرتجعات</p>
+                        <p className="text-2xl font-bold text-red-900 mt-1">
+                          {formatCurrency(reportData.totalReturns || 0)} ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-red-200 rounded-full flex items-center justify-center">
+                        <TrendingDown className="h-6 w-6 text-red-700" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-pink-50 to-pink-100 rounded-xl p-4 border border-pink-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-pink-800">متوسط الفاتورة</p>
+                        <p className="text-2xl font-bold text-pink-900 mt-1">
+                          {formatAverage(reportData.averageInvoice || 0)} ج.م
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-pink-200 rounded-full flex items-center justify-center">
+                        <BarChart3 className="h-6 w-6 text-pink-700" />
                       </div>
                     </div>
                   </div>
@@ -713,24 +869,25 @@ export default function ShiftReports() {
                         >
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center">
-                              <Wallet className="h-4 w-4 ml-2 text-gray-600" />
+                              <CreditCard className="h-4 w-4 ml-2 text-gray-600" />
                               <span className="font-medium">
                                 {payment.paymentMethodName}
                               </span>
                             </div>
                             <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full flex items-center">
-                              <FileText className="h-3 w-3 ml-1" />
+                              <Receipt className="h-3 w-3 ml-1" />
                               {payment.count || 0} فاتورة
                             </span>
                           </div>
                           <div className="text-right">
                             <p className="text-2xl font-bold">
-                              {formatNumber(payment.amount)} ج.م
+                              {formatCurrency(payment.amount || 0)} ج.م
                             </p>
                             <p className="text-sm text-gray-600 mt-1">
                               {reportData.totalSales > 0
                                 ? (
-                                    (payment.amount / reportData.totalSales) *
+                                    ((payment.amount || 0) /
+                                      reportData.totalSales) *
                                     100
                                   ).toFixed(1)
                                 : 0}
@@ -745,7 +902,7 @@ export default function ShiftReports() {
 
                 {(!reportData.payments || reportData.payments.length === 0) && (
                   <div className="mb-6 p-8 text-center bg-gray-50 rounded-xl border border-gray-200">
-                    <Wallet className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                    <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                     <p className="text-gray-500">
                       لا توجد مدفوعات في هذه الوردية
                     </p>
@@ -754,84 +911,95 @@ export default function ShiftReports() {
 
                 <div className="bg-gradient-to-r from-gray-50 to-white rounded-xl p-5 border border-gray-200">
                   <h4
-                    className="font-bold mb-3 text-gray-800"
+                    className="font-bold mb-4 text-gray-800 flex items-center"
                     style={{ color: "#193F94" }}
                   >
-                    ملخص الضرائب والخصومات
+                    <PieChart className="h-5 w-5 ml-2" />
+                    ملخص التقرير
                   </h4>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                      <span className="text-gray-600 flex items-center">
-                        <Coins className="h-4 w-4 ml-2 text-gray-500" />
-                        الإجمالي الفرعي:
-                      </span>
-                      <span className="font-bold">
-                        {formatNumber(reportData.totalSubTotal)} ج.م
-                      </span>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div
+                        className="text-2xl font-bold"
+                        style={{ color: "#193F94" }}
+                      >
+                        {reportData.totalInvoicesCount || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">عدد الفواتير</div>
                     </div>
-                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                      <span className="text-gray-600 flex items-center">
-                        <DollarSign className="h-4 w-4 ml-2 text-gray-500" />
-                        إجمالي المبيعات:
-                      </span>
-                      <span className="font-bold">
-                        {formatNumber(reportData.totalSales)} ج.م
-                      </span>
+                    <div className="text-center">
+                      <div
+                        className="text-2xl font-bold"
+                        style={{ color: "#10B981" }}
+                      >
+                        {formatCurrency(reportData.totalSales || 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        إجمالي المبيعات
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                      <span className="text-gray-600 flex items-center">
-                        <Percent className="h-4 w-4 ml-2 text-gray-500" />
-                        إجمالي الضرائب (
-                        {reportData.totalSales > 0
-                          ? (
-                              (reportData.totalTax / reportData.totalSubTotal) *
-                              100
-                            ).toFixed(1)
-                          : 0}
-                        %):
-                      </span>
-                      <span className="font-bold">
-                        {formatNumber(reportData.totalTax)} ج.م
-                      </span>
+                    <div className="text-center">
+                      <div
+                        className="text-2xl font-bold"
+                        style={{ color: "#3B82F6" }}
+                      >
+                        {formatCurrency(reportData.totalPaid || 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        إجمالي المدفوع
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                      <span className="text-gray-600 flex items-center">
-                        <AlertCircle className="h-4 w-4 ml-2 text-gray-500" />
-                        إجمالي الخصومات (
-                        {reportData.totalSales > 0
-                          ? (
-                              (reportData.totalDiscount /
-                                reportData.totalSales) *
-                              100
-                            ).toFixed(1)
-                          : 0}
-                        %):
-                      </span>
-                      <span className="font-bold text-red-600">
-                        {formatNumber(reportData.totalDiscount)} ج.م
-                      </span>
+                    <div className="text-center">
+                      <div
+                        className="text-2xl font-bold"
+                        style={{ color: "#F59E0B" }}
+                      >
+                        {formatCurrency(reportData.totalRemaining || 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        المبلغ المتبقي
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                      <span className="text-gray-600 flex items-center">
-                        <RotateCcw className="h-4 w-4 ml-2 text-gray-500" />
-                        إجمالي المرتجعات:
-                      </span>
-                      <span className="font-bold text-red-600">
-                        {formatNumber(reportData.totalReturns)} ج.م
-                      </span>
+                    <div className="text-center">
+                      <div
+                        className="text-2xl font-bold"
+                        style={{ color: "#06B6D4" }}
+                      >
+                        {formatCurrency(reportData.totalDiliveryFee || 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">رسوم التوصيل</div>
                     </div>
-                    <div className="pt-3 border-t border-gray-200">
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-gray-800 flex items-center">
-                          <TrendingUp className="h-5 w-5 ml-2 text-green-600" />
-                          صافي الإيرادات:
-                        </span>
-                        <span
-                          className="font-bold text-lg"
-                          style={{ color: "#10B981" }}
-                        >
-                          {formatNumber(reportData.netRevenue)} ج.م
-                        </span>
+                    <div className="text-center">
+                      <div
+                        className="text-2xl font-bold"
+                        style={{ color: "#8B5CF6" }}
+                      >
+                        {formatAverage(reportData.averageInvoice || 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        متوسط الفاتورة
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div
+                        className="text-2xl font-bold"
+                        style={{ color: "#EF4444" }}
+                      >
+                        {formatCurrency(reportData.totalDiscount || 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        إجمالي الخصومات
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div
+                        className="text-2xl font-bold"
+                        style={{ color: "#DC2626" }}
+                      >
+                        {formatCurrency(reportData.totalReturns || 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        إجمالي المرتجعات
                       </div>
                     </div>
                   </div>

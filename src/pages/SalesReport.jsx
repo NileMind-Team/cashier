@@ -349,17 +349,7 @@ export default function SalesReports() {
                   <td>{formatCurrency(reportData.totalRemaining || 0)} ج.م</td>
                 </tr>
                 <tr>
-                  <td className="label">
-                    إجمالي الضريبة {""}
-                    {reportData.totalSales > 0
-                      ? (
-                          ((reportData.totalTax || 0) /
-                            reportData.totalSubTotal) *
-                          100
-                        ).toFixed(1)
-                      : 0}
-                    %
-                  </td>
+                  <td className="label">إجمالي الضريبة</td>
                   <td>{formatCurrency(reportData.totalTax || 0)} ج.م</td>
                 </tr>
                 <tr>
@@ -599,16 +589,6 @@ export default function SalesReports() {
                         </p>
                         <p className="text-2xl font-bold text-purple-900 mt-1">
                           {formatCurrency(reportData.totalTax || 0)} ج.م
-                        </p>
-                        <p className="text-xs text-purple-600 mt-1">
-                          {reportData.totalSales > 0
-                            ? (
-                                ((reportData.totalTax || 0) /
-                                  reportData.totalSubTotal) *
-                                100
-                              ).toFixed(1)
-                            : 0}
-                          % من المبيعات
                         </p>
                       </div>
                       <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
