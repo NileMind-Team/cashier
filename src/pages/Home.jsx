@@ -196,8 +196,6 @@ export default function Home() {
     useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-
-  // New states for admin mode (no shift)
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [isShiftAvailable, setIsShiftAvailable] = useState(true);
 
@@ -232,7 +230,6 @@ export default function Home() {
     PartialPaid: 4,
   };
 
-  // Check authentication first - no API calls until authenticated
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -1515,9 +1512,7 @@ export default function Home() {
 
   // const handlePrintInvoice = async (invoiceData) => {
   //   try {
-  //     // Calculate taxable amount after discount
   //     const taxableAmountAfterDiscount = subtotal - discountAmountCalc;
-  //     // Calculate tax based on taxable amount after discount
   //     const calculatedTax = (taxableAmountAfterDiscount * tax) / 100;
 
   //     const printData = {
@@ -1535,9 +1530,9 @@ export default function Home() {
   //         quantity: item.quantity,
   //         price: item.price,
   //         selectedOptions: item.selectedOptions,
-  //         note: item.note, // ملاحظة المنتج
+  //         note: item.note,
   //       })),
-  //       generalNote: generalNote, // ✅ إضافة الملاحظة العامة للفاتورة
+  //       generalNote: generalNote,
   //       subtotal: subtotal,
   //       tax: calculatedTax,
   //       discount: discountAmountCalc,
@@ -3171,14 +3166,12 @@ export default function Home() {
     setIsGoingToNextBill(false);
   };
 
-  // Calculate subtotal (before tax and discount)
   const subtotal = cart.reduce((sum, item) => {
     const itemSubtotal = item.price * item.quantity;
     const optionsValue = item.optionsTotal || 0;
     return sum + itemSubtotal + optionsValue;
   }, 0);
 
-  // Calculate discount amount based on subtotal
   const discountAmountCalc =
     discount && discount !== ""
       ? discountType === DiscountType.Fixed
@@ -3186,11 +3179,8 @@ export default function Home() {
         : (subtotal * discount) / 100
       : 0;
 
-  // Calculate taxable amount after discount
   const taxableAmountAfterDiscount = subtotal - discountAmountCalc;
 
-  // Calculate total tax based on taxable amount after discount
-  // Tax rate is applied to the taxable amount (subtotal - discount)
   const totalTax = cart.reduce((sum, item) => {
     const itemSubtotal = item.price * item.quantity;
     const optionsValue = item.optionsTotal || 0;
@@ -3199,9 +3189,7 @@ export default function Home() {
 
     if (itemTaxRate === 0) return sum;
 
-    // Calculate what portion of the total taxable amount belongs to this item
     const itemProportion = subtotal > 0 ? itemTotalIncludingTax / subtotal : 0;
-    // Apply the proportion to the taxable amount after discount
     const itemTaxableAmount = taxableAmountAfterDiscount * itemProportion;
 
     if (item.isTaxInclusive) {
@@ -3215,10 +3203,8 @@ export default function Home() {
     }
   }, 0);
 
-  // Calculate total with tax (subtotal after discount + tax + delivery fee)
   const totalWithTax = taxableAmountAfterDiscount + totalTax;
 
-  // Final total including delivery fee
   const total =
     totalWithTax +
     (currentBillData.billType === "delivery" && deliveryFee
@@ -3729,7 +3715,6 @@ export default function Home() {
     return "إتمام البيع";
   };
 
-  // Show loading while checking authentication
   if (!authChecked) {
     return (
       <div
@@ -5976,8 +5961,6 @@ export default function Home() {
                       const taxableAmount = itemSubtotal + optionsValue;
                       const itemTaxRate = item.valueAddedTax || tax;
 
-                      // Calculate tax on the discounted amount
-                      // First, find what proportion of the total taxable amount this item represents
                       const itemProportion =
                         subtotal > 0 ? taxableAmount / subtotal : 0;
                       const itemTaxableAmountAfterDiscount =

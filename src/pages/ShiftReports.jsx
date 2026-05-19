@@ -38,8 +38,9 @@ export default function ShiftReports() {
   const [fetchingShifts, setFetchingShifts] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [activeShift, setActiveShift] = useState(null);
+  const [loadingActiveShift, setLoadingActiveShift] = useState(true);
 
-  // Changed from 2 hours to 3 hours
   const addThreeHours = (dateString) => {
     if (!dateString) return null;
     const date = new Date(dateString);
@@ -48,15 +49,53 @@ export default function ShiftReports() {
   };
 
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-    setSelectedDate(today);
+    const fetchActiveShift = async () => {
+      setLoadingActiveShift(true);
+      try {
+        const response = await axiosInstance.post(
+          "/api/Shifts/GetDetails",
+        );
+
+        if (response.status === 200 && response.data && response.data.shiftId) {
+          setActiveShift(response.data);
+
+          const shiftDate = response.data.startTime?.split("T")[0];
+          if (shiftDate) {
+            setSelectedDate(shiftDate);
+          }
+        } else {
+          const today = new Date().toISOString().split("T")[0];
+          setSelectedDate(today);
+        }
+      } catch (error) {
+        console.error("خطأ في جلب الوردية النشطة:", error);
+        const today = new Date().toISOString().split("T")[0];
+        setSelectedDate(today);
+      } finally {
+        setLoadingActiveShift(false);
+      }
+    };
+
+    fetchActiveShift();
   }, []);
 
   useEffect(() => {
-    if (selectedDate) {
+    if (selectedDate && !loadingActiveShift) {
       fetchShiftsByDate(selectedDate);
     }
-  }, [selectedDate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, loadingActiveShift]);
+
+  useEffect(() => {
+    if (shifts.length > 0 && activeShift && activeShift.shiftId) {
+      const activeShiftInList = shifts.find(
+        (s) => s.id === activeShift.shiftId,
+      );
+      if (activeShiftInList) {
+        setSelectedShift(activeShiftInList.id.toString());
+      }
+    }
+  }, [shifts, activeShift]);
 
   const fetchShiftsByDate = async (date) => {
     if (!date) return;
@@ -70,8 +109,10 @@ export default function ShiftReports() {
       if (response.status === 200 && Array.isArray(response.data)) {
         setShifts(response.data);
         if (response.data.length > 0) {
-          const firstShiftId = response.data[0].id;
-          setSelectedShift(firstShiftId ? firstShiftId.toString() : "");
+          if (!activeShift || !activeShift.shiftId) {
+            const firstShiftId = response.data[0].id;
+            setSelectedShift(firstShiftId ? firstShiftId.toString() : "");
+          }
         } else {
           setSelectedShift("");
           setReportData(null);
@@ -113,17 +154,12 @@ export default function ShiftReports() {
         return;
       }
 
-      // Get start time from shift data
       let startDateTime = shiftData.startTime;
-
-      // Get end time from shift data, or use current time if not available
       let endDateTime = shiftData.endTime;
-      if (!endDateTime) {
+      if (!endDateTime || endDateTime === "0001-01-01T00:00:00") {
         const now = new Date();
         endDateTime = now.toISOString();
       }
-
-      // Format dates to ISO strings (they already include time from the API)
       const formattedStartDate = startDateTime;
       const formattedEndDate = endDateTime;
 
@@ -167,7 +203,7 @@ export default function ShiftReports() {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return "";
+    if (!dateString || dateString === "0001-01-01T00:00:00") return "";
     const adjustedDate = addThreeHours(dateString);
     return adjustedDate.toLocaleDateString("ar-EG", {
       weekday: "long",
@@ -180,7 +216,7 @@ export default function ShiftReports() {
   };
 
   const formatTime = (dateString) => {
-    if (!dateString) return "";
+    if (!dateString || dateString === "0001-01-01T00:00:00") return "";
     const adjustedDate = addThreeHours(dateString);
     return adjustedDate.toLocaleTimeString("ar-EG", {
       hour: "2-digit",
@@ -192,7 +228,7 @@ export default function ShiftReports() {
     if (!startTime) return "غير محدد";
 
     const start = addThreeHours(startTime);
-    if (!endTime) return "قيد التشغيل";
+    if (!endTime || endTime === "0001-01-01T00:00:00") return "قيد التشغيل";
 
     const end = addThreeHours(endTime);
     const diffMs = end - start;
@@ -220,8 +256,12 @@ export default function ShiftReports() {
 
   const stats = {
     totalShifts: shifts.length,
-    openShifts: shifts.filter((s) => !s.endTime).length,
-    closedShifts: shifts.filter((s) => s.endTime).length,
+    openShifts: shifts.filter(
+      (s) => !s.endTime || s.endTime === "0001-01-01T00:00:00",
+    ).length,
+    closedShifts: shifts.filter(
+      (s) => s.endTime && s.endTime !== "0001-01-01T00:00:00",
+    ).length,
   };
 
   const handlePrint = () => {
@@ -458,12 +498,17 @@ export default function ShiftReports() {
               <h3>
                 من: {formatDate(reportData.startTime)}
                 {reportData.endTime &&
+                  reportData.endTime !== "0001-01-01T00:00:00" &&
                   ` إلى: ${formatDate(reportData.endTime)}`}
               </h3>
               <h3>
                 المدة: {reportData.shiftDuration}
                 {" | "}
-                الحالة: {reportData.endTime ? "مغلقة" : "مفتوحة"}
+                الحالة:{" "}
+                {reportData.endTime &&
+                reportData.endTime !== "0001-01-01T00:00:00"
+                  ? "مغلقة"
+                  : "مفتوحة"}
               </h3>
             </div>
 
@@ -527,7 +572,6 @@ export default function ShiftReports() {
                 </tr>
               </tbody>
             </table>
-
           </>
         )}
       </div>
@@ -543,111 +587,131 @@ export default function ShiftReports() {
                 فلترة التقارير
               </h3>
 
-              <div className="space-y-4">
-                <div className="relative">
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
-                    max={new Date().toISOString().split("T")[0]}
-                    dir="rtl"
-                  />
-                  <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
-                    <span className="flex items-center">
-                      <Calendar className="w-4 h-4 ml-1" />
-                      التاريخ
-                    </span>
-                  </label>
+              {loadingActiveShift ? (
+                <div className="flex items-center justify-center py-8">
+                  <FaSpinner className="w-6 h-6 animate-spin text-blue-600 ml-2" />
+                  <span>جاري تحميل الوردية النشطة...</span>
                 </div>
-
-                <div className="relative">
-                  <select
-                    value={selectedShift}
-                    onChange={(e) => setSelectedShift(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white appearance-none"
-                    disabled={fetchingShifts || shifts.length === 0}
-                    dir="rtl"
-                  >
-                    {fetchingShifts ? (
-                      <option value="">جاري تحميل الورديات...</option>
-                    ) : shifts.length === 0 ? (
-                      <option value="">لا توجد ورديات</option>
-                    ) : (
-                      <>
-                        <option value="">اختر وردية</option>
-                        {shifts.map((shift) => (
-                          <option key={shift.id} value={shift.id?.toString()}>
-                            {formatDate(shift.startTime)} -{" "}
-                            {shift.endTime
-                              ? `حتى ${formatTime(shift.endTime)}`
-                              : "مستمرة"}
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
-                  <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
-                    <span className="flex items-center">
-                      <Clock className="w-4 h-4 ml-1" />
-                      اختيار الوردية
-                    </span>
-                  </label>
-                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
+              ) : (
+                <div className="space-y-4">
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white"
+                      max={new Date().toISOString().split("T")[0]}
+                      dir="rtl"
+                    />
+                    <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
+                      <span className="flex items-center">
+                        <Calendar className="w-4 h-4 ml-1" />
+                        التاريخ
+                      </span>
+                    </label>
                   </div>
-                </div>
 
-                <div className="pt-4 space-y-3">
-                  <button
-                    onClick={generateReport}
-                    disabled={
-                      isGeneratingReport || !selectedShift || fetchingShifts
-                    }
-                    className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
-                      isGeneratingReport || !selectedShift || fetchingShifts
-                        ? "opacity-50 cursor-not-allowed bg-gray-400"
-                        : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-                    }`}
-                  >
-                    {isGeneratingReport ? (
-                      <>
-                        <FaSpinner className="w-5 h-5 ml-2 animate-spin" />
-                        جاري التحميل...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="h-5 w-5 ml-2" />
-                        عرض التقرير
-                      </>
-                    )}
-                  </button>
+                  <div className="relative">
+                    <select
+                      value={selectedShift}
+                      onChange={(e) => setSelectedShift(e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm bg-white appearance-none"
+                      disabled={fetchingShifts || shifts.length === 0}
+                      dir="rtl"
+                    >
+                      {fetchingShifts ? (
+                        <option value="">جاري تحميل الورديات...</option>
+                      ) : shifts.length === 0 ? (
+                        <option value="">لا توجد ورديات</option>
+                      ) : (
+                        <>
+                          <option value="">اختر وردية</option>
+                          {shifts.map((shift) => (
+                            <option key={shift.id} value={shift.id?.toString()}>
+                              {formatDate(shift.startTime)} -{" "}
+                              {shift.endTime &&
+                              shift.endTime !== "0001-01-01T00:00:00"
+                                ? `حتى ${formatTime(shift.endTime)}`
+                                : "مستمرة"}
+                            </option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                    <label className="absolute -top-2.5 right-3 px-2 text-xs text-blue-500 font-medium bg-white">
+                      <span className="flex items-center">
+                        <Clock className="w-4 h-4 ml-1" />
+                        اختيار الوردية
+                      </span>
+                    </label>
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                    </div>
+                  </div>
 
-                  {reportData && (
+                  {activeShift && activeShift.shiftId && (
+                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                      <p className="text-xs text-blue-700 font-medium mb-1">
+                        الوردية النشطة حالياً
+                      </p>
+                      <p className="text-sm text-blue-900">
+                        #{activeShift.shiftId} -{" "}
+                        {formatDate(activeShift.startTime)}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="pt-4 space-y-3">
                     <button
-                      onClick={handlePrint}
-                      disabled={isPrinting}
+                      onClick={generateReport}
+                      disabled={
+                        isGeneratingReport || !selectedShift || fetchingShifts
+                      }
                       className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
-                        isPrinting
+                        isGeneratingReport || !selectedShift || fetchingShifts
                           ? "opacity-50 cursor-not-allowed bg-gray-400"
-                          : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                          : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                       }`}
                     >
-                      {isPrinting ? (
+                      {isGeneratingReport ? (
                         <>
-                          <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
-                          جاري الطباعة...
+                          <FaSpinner className="w-5 h-5 ml-2 animate-spin" />
+                          جاري التحميل...
                         </>
                       ) : (
                         <>
-                          <Printer className="h-5 w-5 ml-2" />
-                          طباعة التقرير PDF
+                          <FileText className="h-5 w-5 ml-2" />
+                          عرض التقرير
                         </>
                       )}
                     </button>
-                  )}
+
+                    {reportData && (
+                      <button
+                        onClick={handlePrint}
+                        disabled={isPrinting}
+                        className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md ${
+                          isPrinting
+                            ? "opacity-50 cursor-not-allowed bg-gray-400"
+                            : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                        }`}
+                      >
+                        {isPrinting ? (
+                          <>
+                            <FaSpinner className="h-5 w-5 ml-2 animate-spin" />
+                            جاري الطباعة...
+                          </>
+                        ) : (
+                          <>
+                            <Printer className="h-5 w-5 ml-2" />
+                            طباعة التقرير PDF
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -665,11 +729,12 @@ export default function ShiftReports() {
                     <p className="text-gray-600 mt-1">
                       {formatDate(reportData.startTime)}
                     </p>
-                    {reportData.endTime && (
-                      <p className="text-sm text-gray-500 mt-1">
-                        انتهت في: {formatDate(reportData.endTime)}
-                      </p>
-                    )}
+                    {reportData.endTime &&
+                      reportData.endTime !== "0001-01-01T00:00:00" && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          انتهت في: {formatDate(reportData.endTime)}
+                        </p>
+                      )}
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse flex-wrap gap-2">
                     <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium flex items-center">
@@ -678,17 +743,22 @@ export default function ShiftReports() {
                     </div>
                     <div
                       className={`px-3 py-1 text-xs rounded-full font-medium flex items-center ${
-                        reportData.endTime
+                        reportData.endTime &&
+                        reportData.endTime !== "0001-01-01T00:00:00"
                           ? "bg-red-100 text-red-800"
                           : "bg-green-100 text-green-800"
                       }`}
                     >
-                      {reportData.endTime ? (
+                      {reportData.endTime &&
+                      reportData.endTime !== "0001-01-01T00:00:00" ? (
                         <PowerOff className="h-3 w-3 ml-1" />
                       ) : (
                         <Power className="h-3 w-3 ml-1" />
                       )}
-                      {reportData.endTime ? "مغلقة" : "مفتوحة"}
+                      {reportData.endTime &&
+                      reportData.endTime !== "0001-01-01T00:00:00"
+                        ? "مغلقة"
+                        : "مفتوحة"}
                     </div>
                     <button
                       onClick={handlePrint}
