@@ -230,6 +230,16 @@ export default function Home() {
     PartialPaid: 4,
   };
 
+  const getPriceExcludingTax = (priceIncludingTax, taxRate) => {
+    if (taxRate === 0) return priceIncludingTax;
+    return priceIncludingTax / (1 + taxRate / 100);
+  };
+
+  const applyTaxToPrice = (priceExcludingTax, taxRate) => {
+    if (taxRate === 0) return priceExcludingTax;
+    return priceExcludingTax * (1 + taxRate / 100);
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -1023,6 +1033,16 @@ export default function Home() {
         if (finalPrice > (item.itemPriceSnapShoot || 0))
           finalPrice = item.itemPriceSnapShoot || 0;
 
+        // Ensure priceExcludingTax is calculated correctly for existing invoices
+        const taxRate = item.valueAddedTax || 0;
+        const isTaxInclusive = item.isTaxInclusive || false;
+        let priceExcludingTax;
+        if (isTaxInclusive) {
+          priceExcludingTax = getPriceExcludingTax(finalPrice, taxRate);
+        } else {
+          priceExcludingTax = finalPrice;
+        }
+
         return {
           id: item.itemId,
           name: item.itemName,
@@ -1043,11 +1063,12 @@ export default function Home() {
               0,
             ) * item.quantity || 0,
           note: item.notesItem || "",
-          isTaxInclusive: item.isTaxInclusive || false,
-          valueAddedTax: item.valueAddedTax || 0,
+          isTaxInclusive: isTaxInclusive,
+          valueAddedTax: taxRate,
           discount: discountAmount,
           isPercentage: item.isPercentage || false,
           discountPercentage: discountPercentage,
+          priceExcludingTax: priceExcludingTax,
         };
       }) || [];
 
@@ -2105,11 +2126,58 @@ export default function Home() {
       0,
     );
 
-    const productPrice = selectedProduct.finalPrice || selectedProduct.price;
-    const discountAmount = selectedProduct.originalPrice
-      ? selectedProduct.originalPrice - productPrice
-      : 0;
+    const taxRate = selectedProduct.valueAddedTax || 0;
+    const originalPriceIncludingTax = selectedProduct.price;
     const discountPercentage = selectedProduct.percentageDiscount || 0;
+    const isTaxInclusive = selectedProduct.isTaxInclusive || false;
+
+    let priceExcludingTaxBeforeDiscount;
+    let priceExcludingTaxAfterDiscount;
+    let finalPriceIncludingTax;
+    let calculatedDiscountAmount = 0;
+
+    if (isTaxInclusive) {
+      priceExcludingTaxBeforeDiscount = getPriceExcludingTax(
+        originalPriceIncludingTax,
+        taxRate,
+      );
+
+      if (discountPercentage > 0) {
+        calculatedDiscountAmount =
+          (priceExcludingTaxBeforeDiscount * discountPercentage) / 100;
+        priceExcludingTaxAfterDiscount =
+          priceExcludingTaxBeforeDiscount - calculatedDiscountAmount;
+      } else if (selectedProduct.discount > 0) {
+        calculatedDiscountAmount = selectedProduct.discount;
+        priceExcludingTaxAfterDiscount =
+          priceExcludingTaxBeforeDiscount - calculatedDiscountAmount;
+      } else {
+        priceExcludingTaxAfterDiscount = priceExcludingTaxBeforeDiscount;
+      }
+
+      finalPriceIncludingTax = applyTaxToPrice(
+        priceExcludingTaxAfterDiscount,
+        taxRate,
+      );
+    } else {
+      priceExcludingTaxBeforeDiscount = originalPriceIncludingTax;
+      if (discountPercentage > 0) {
+        calculatedDiscountAmount =
+          (priceExcludingTaxBeforeDiscount * discountPercentage) / 100;
+        priceExcludingTaxAfterDiscount =
+          priceExcludingTaxBeforeDiscount - calculatedDiscountAmount;
+      } else if (selectedProduct.discount > 0) {
+        calculatedDiscountAmount = selectedProduct.discount;
+        priceExcludingTaxAfterDiscount =
+          priceExcludingTaxBeforeDiscount - calculatedDiscountAmount;
+      } else {
+        priceExcludingTaxAfterDiscount = priceExcludingTaxBeforeDiscount;
+      }
+      finalPriceIncludingTax = priceExcludingTaxAfterDiscount;
+    }
+
+    const itemUnitPriceIncludingTax = finalPriceIncludingTax;
+    const itemUnitPriceExcludingTax = priceExcludingTaxAfterDiscount;
 
     const existingItem = cart.find((item) => item.id === selectedProduct.id);
 
@@ -2135,40 +2203,40 @@ export default function Home() {
       } else {
         const newItem = {
           ...selectedProduct,
-          price: productPrice,
-          originalPrice: selectedProduct.price,
+          price: itemUnitPriceIncludingTax,
+          originalPrice: originalPriceIncludingTax,
           uniqueId: `${selectedProduct.id}_${Date.now()}`,
           quantity: productQuantity,
           selectedOptions: selectedOptions,
           optionsTotal: optionsTotal * productQuantity,
           note: "",
-          discount: discountAmount,
+          discount: calculatedDiscountAmount,
           isPercentage: discountPercentage > 0,
           discountPercentage: discountPercentage,
+          priceExcludingTax: itemUnitPriceExcludingTax,
         };
         setCart([...cart, newItem]);
       }
     } else {
       const newItem = {
         ...selectedProduct,
-        price: productPrice,
-        originalPrice: selectedProduct.price,
+        price: itemUnitPriceIncludingTax,
+        originalPrice: originalPriceIncludingTax,
         uniqueId: `${selectedProduct.id}_${Date.now()}`,
         quantity: productQuantity,
         selectedOptions: selectedOptions,
         optionsTotal: optionsTotal * productQuantity,
         note: "",
-        discount: discountAmount,
+        discount: calculatedDiscountAmount,
         isPercentage: discountPercentage > 0,
         discountPercentage: discountPercentage,
+        priceExcludingTax: itemUnitPriceExcludingTax,
       };
       setCart([...cart, newItem]);
     }
 
     const productName = selectedProduct.name;
-    const hasDiscount =
-      selectedProduct.finalPrice &&
-      selectedProduct.finalPrice < selectedProduct.price;
+    const hasDiscount = calculatedDiscountAmount > 0;
 
     toast.success(
       <div>
@@ -2177,12 +2245,10 @@ export default function Home() {
         </p>
         {hasDiscount && (
           <p className="text-xs mt-1 text-green-600">
-            السعر بعد الخصم: {productPrice} ج.م (الأصلي: {selectedProduct.price}{" "}
-            ج.م)
-            {selectedProduct.percentageDiscount && (
-              <span className="text-xs mr-1">
-                (خصم {selectedProduct.percentageDiscount}%)
-              </span>
+            السعر بعد الخصم: {itemUnitPriceIncludingTax.toFixed(2)} ج.م (الأصلي:{" "}
+            {originalPriceIncludingTax.toFixed(2)} ج.م)
+            {discountPercentage > 0 && (
+              <span className="text-xs mr-1">(خصم {discountPercentage}%)</span>
             )}
           </p>
         )}
@@ -2583,7 +2649,10 @@ export default function Home() {
       return;
     }
 
-    if (discountType === DiscountType.Fixed && discountNum > subtotal) {
+    if (
+      discountType === DiscountType.Fixed &&
+      discountNum > subtotalBeforeTax
+    ) {
       toast.error("قيمة الخصم لا يمكن أن تزيد عن إجمالي الفاتورة");
       return;
     }
@@ -3166,44 +3235,60 @@ export default function Home() {
     setIsGoingToNextBill(false);
   };
 
-  const subtotal = cart.reduce((sum, item) => {
-    const itemSubtotal = item.price * item.quantity;
-    const optionsValue = item.optionsTotal || 0;
-    return sum + itemSubtotal + optionsValue;
+  const subtotalBeforeTax = cart.reduce((sum, item) => {
+    const itemPriceExcludingTax =
+      item.priceExcludingTax !== undefined
+        ? item.priceExcludingTax
+        : getPriceExcludingTax(item.price, item.valueAddedTax || 0);
+    const itemSubtotalExcludingTax = itemPriceExcludingTax * item.quantity;
+    const optionsTotalExcludingTax = item.selectedOptions
+      ? item.selectedOptions.reduce((sum, opt) => sum + opt.price, 0) *
+        item.quantity
+      : 0;
+    return sum + itemSubtotalExcludingTax + optionsTotalExcludingTax;
   }, 0);
 
   const discountAmountCalc =
     discount && discount !== ""
       ? discountType === DiscountType.Fixed
-        ? discount
-        : (subtotal * discount) / 100
+        ? parseFloat(discount)
+        : (subtotalBeforeTax * parseFloat(discount)) / 100
       : 0;
 
-  const taxableAmountAfterDiscount = subtotal - discountAmountCalc;
+  const taxableAmountAfterDiscount = subtotalBeforeTax - discountAmountCalc;
 
   const totalTax = cart.reduce((sum, item) => {
-    const itemSubtotal = item.price * item.quantity;
-    const optionsValue = item.optionsTotal || 0;
-    const itemTotalIncludingTax = itemSubtotal + optionsValue;
-    const itemTaxRate = item.valueAddedTax || tax;
+    const taxRate = item.valueAddedTax || 0;
+    const isTaxInclusive = item.isTaxInclusive || false;
 
-    if (itemTaxRate === 0) return sum;
+    if (!isTaxInclusive) return sum;
+    if (taxRate === 0) return sum;
 
-    const itemProportion = subtotal > 0 ? itemTotalIncludingTax / subtotal : 0;
-    const itemTaxableAmount = taxableAmountAfterDiscount * itemProportion;
+    const itemPriceExcludingTax =
+      item.priceExcludingTax !== undefined
+        ? item.priceExcludingTax
+        : getPriceExcludingTax(item.price, taxRate);
+    const itemSubtotalExcludingTax = itemPriceExcludingTax * item.quantity;
+    const optionsTotalExcludingTax = item.selectedOptions
+      ? item.selectedOptions.reduce((sum, opt) => sum + opt.price, 0) *
+        item.quantity
+      : 0;
+    const itemTotalExcludingTax =
+      itemSubtotalExcludingTax + optionsTotalExcludingTax;
 
-    if (item.isTaxInclusive) {
-      const taxMultiplier = (100 + itemTaxRate) / 100;
-      const itemSubtotalExcludingTax = itemTaxableAmount / taxMultiplier;
-      const itemTaxValue = itemTaxableAmount - itemSubtotalExcludingTax;
-      return sum + itemTaxValue;
-    } else {
-      const itemTax = (itemTaxableAmount * itemTaxRate) / 100;
-      return sum + itemTax;
-    }
+    const itemProportion =
+      subtotalBeforeTax > 0 ? itemTotalExcludingTax / subtotalBeforeTax : 0;
+    const itemTaxableAmountAfterDiscount =
+      taxableAmountAfterDiscount * itemProportion;
+
+    const calculatedTax = (itemTaxableAmountAfterDiscount * taxRate) / 100;
+
+    return sum + calculatedTax;
   }, 0);
 
   const totalWithTax = taxableAmountAfterDiscount + totalTax;
+
+  const subtotalDisplayForUI = subtotalBeforeTax;
 
   const total =
     totalWithTax +
@@ -4122,7 +4207,7 @@ export default function Home() {
                         className="text-xl font-bold"
                         style={{ color: "#193F94" }}
                       >
-                        {subtotal.toFixed(2)} ج.م
+                        {subtotalDisplayForUI.toFixed(2)} ج.م
                       </p>
                     </div>
                     <div className="text-right">
@@ -4178,7 +4263,7 @@ export default function Home() {
                       max={
                         discountType === DiscountType.Percentage
                           ? 100
-                          : subtotal
+                          : subtotalDisplayForUI
                       }
                       step={discountType === DiscountType.Percentage ? 1 : 0.01}
                       dir="ltr"
@@ -4192,7 +4277,7 @@ export default function Home() {
                       <span className="font-bold text-blue-600">
                         {discountType === DiscountType.Percentage &&
                         discountValue
-                          ? `${((subtotal * parseFloat(discountValue)) / 100).toFixed(2)} ج.م (${discountValue}%)`
+                          ? `${((subtotalBeforeTax * parseFloat(discountValue)) / 100).toFixed(2)} ج.م (${discountValue}%)`
                           : discountType === DiscountType.Fixed && discountValue
                             ? `${parseFloat(discountValue).toFixed(2)} ج.م`
                             : "0.00 ج.م"}
@@ -4205,14 +4290,11 @@ export default function Home() {
                       <span className="font-bold text-green-600">
                         {discountType === DiscountType.Percentage &&
                         discountValue
-                          ? (
-                              subtotal -
-                              (subtotal * parseFloat(discountValue)) / 100
-                            ).toFixed(2)
+                          ? taxableAmountAfterDiscount.toFixed(2)
                           : discountType === DiscountType.Fixed && discountValue
-                            ? (subtotal - parseFloat(discountValue)).toFixed(2)
-                            : subtotal.toFixed(2)}{" "}
-                        ج.م
+                            ? taxableAmountAfterDiscount.toFixed(2)
+                            : taxableAmountAfterDiscount.toFixed(2)}{" "}
+                        ج.م (قبل الضريبة)
                       </span>
                     </div>
                   </div>
@@ -5203,7 +5285,7 @@ export default function Home() {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">
-                          المنتج
+                          المنتج{" "}
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">
                           الكمية
@@ -5260,8 +5342,8 @@ export default function Home() {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span>المجموع الفرعي:</span>
-                      <span>{subtotal.toFixed(2)} ج.م</span>
+                      <span>المجموع الفرعي (قبل الضريبة):</span>
+                      <span>{subtotalDisplayForUI.toFixed(2)} ج.م</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>الخصم:</span>
@@ -5273,7 +5355,6 @@ export default function Home() {
                           `(${discount}%)`}
                       </span>
                     </div>
-
                     <div className="flex justify-between text-sm">
                       <span>إجمالي الضريبة:</span>
                       <span>{totalTax.toFixed(2)} ج.م</span>
@@ -5956,30 +6037,26 @@ export default function Home() {
                 ) : (
                   <div className="space-y-2">
                     {cart.map((item) => {
-                      const itemSubtotal = item.price * item.quantity;
-                      const optionsValue = item.optionsTotal || 0;
-                      const taxableAmount = itemSubtotal + optionsValue;
-                      const itemTaxRate = item.valueAddedTax || tax;
-
-                      const itemProportion =
-                        subtotal > 0 ? taxableAmount / subtotal : 0;
-                      const itemTaxableAmountAfterDiscount =
-                        (subtotal - discountAmountCalc) * itemProportion;
+                      const itemSubtotalIncludingTax =
+                        item.price * item.quantity;
+                      const optionsTotalIncludingTax = item.optionsTotal || 0;
+                      const taxRate = item.valueAddedTax || 0;
+                      const isTaxInclusive = item.isTaxInclusive || false;
 
                       let itemTax = 0;
-                      if (itemTaxRate > 0) {
-                        if (item.isTaxInclusive) {
-                          const taxMultiplier = (100 + itemTaxRate) / 100;
-                          const itemSubtotalExcludingTax =
-                            itemTaxableAmountAfterDiscount / taxMultiplier;
-                          itemTax =
-                            itemTaxableAmountAfterDiscount -
-                            itemSubtotalExcludingTax;
-                        } else {
-                          itemTax =
-                            (itemTaxableAmountAfterDiscount * itemTaxRate) /
-                            100;
-                        }
+                      if (isTaxInclusive && taxRate > 0) {
+                        const itemProportion =
+                          subtotalBeforeTax > 0
+                            ? ((item.priceExcludingTax ||
+                                getPriceExcludingTax(item.price, taxRate)) *
+                                item.quantity) /
+                              subtotalBeforeTax
+                            : 0;
+                        const itemTaxableAmountAfterDiscount =
+                          (subtotalBeforeTax - discountAmountCalc) *
+                          itemProportion;
+                        itemTax =
+                          (itemTaxableAmountAfterDiscount * taxRate) / 100;
                       }
 
                       const hasDiscount =
@@ -6024,28 +6101,32 @@ export default function Home() {
                                         <span>{item.price} ج.م</span>
                                       )}
                                       <span className="mr-1 text-[10px] text-gray-600">
-                                        ({itemTaxRate}%{" "}
-                                        {item.isTaxInclusive
+                                        ({taxRate}%{" "}
+                                        {isTaxInclusive
                                           ? "شامل الضريبة"
                                           : "غير شامل الضريبة"}
                                         )
                                       </span>
                                     </div>
-                                    <div className="text-[10px] text-blue-600 mt-0.5">
-                                      قيمة الضريبة: {itemTax.toFixed(2)} ج.م
-                                    </div>
+                                    {isTaxInclusive && (
+                                      <div className="text-[10px] text-blue-600 mt-0.5">
+                                        قيمة الضريبة: {itemTax.toFixed(2)} ج.م
+                                      </div>
+                                    )}
                                   </div>
                                   <div className="text-left">
                                     <p
                                       className="font-bold text-sm"
                                       style={{ color: "#193F94" }}
                                     >
-                                      {item.price * item.quantity +
-                                        (item.optionsTotal || 0)}{" "}
+                                      {(
+                                        itemSubtotalIncludingTax +
+                                        optionsTotalIncludingTax
+                                      ).toFixed(2)}{" "}
                                       ج.م
-                                      {!item.isTaxInclusive && (
+                                      {isTaxInclusive && (
                                         <span className="text-[8px] text-gray-500 block">
-                                          +{itemTax.toFixed(2)} ضريبة
+                                          شامل ضريبة
                                         </span>
                                       )}
                                     </p>
@@ -6264,8 +6345,10 @@ export default function Home() {
 
               <div className="border-t pt-3 space-y-1.5 mt-auto">
                 <div className="flex justify-between text-xs">
-                  <span>المجموع الفرعي:</span>
-                  <span className="font-bold">{subtotal.toFixed(2)} ج.م</span>
+                  <span>المجموع الفرعي (قبل الضريبة):</span>
+                  <span className="font-bold">
+                    {subtotalDisplayForUI.toFixed(2)} ج.م
+                  </span>
                 </div>
 
                 <div className="flex justify-between items-center text-xs">
@@ -6350,13 +6433,7 @@ export default function Home() {
                 <div className="flex justify-between border-t pt-1.5 mt-1.5 text-sm">
                   <span className="font-bold">الإجمالي:</span>
                   <span className="font-bold" style={{ color: "#193F94" }}>
-                    {(
-                      totalWithTax +
-                      (currentBillData.billType === "delivery" && deliveryFee
-                        ? parseFloat(deliveryFee)
-                        : 0)
-                    ).toFixed(2)}{" "}
-                    ج.م
+                    {total.toFixed(2)} ج.م
                   </span>
                 </div>
               </div>
