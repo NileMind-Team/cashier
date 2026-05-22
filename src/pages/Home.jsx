@@ -3257,17 +3257,16 @@ export default function Home() {
 
   const taxableAmountAfterDiscount = subtotalBeforeTax - discountAmountCalc;
 
+  // اصلاح حساب الضريبة: حساب الضريبة للمنتجات سواء كان السعر شامل الضريبة أو غير شامل
   const totalTax = cart.reduce((sum, item) => {
     const taxRate = item.valueAddedTax || 0;
-    const isTaxInclusive = item.isTaxInclusive || false;
-
-    if (!isTaxInclusive) return sum;
     if (taxRate === 0) return sum;
 
     const itemPriceExcludingTax =
       item.priceExcludingTax !== undefined
         ? item.priceExcludingTax
         : getPriceExcludingTax(item.price, taxRate);
+
     const itemSubtotalExcludingTax = itemPriceExcludingTax * item.quantity;
     const optionsTotalExcludingTax = item.selectedOptions
       ? item.selectedOptions.reduce((sum, opt) => sum + opt.price, 0) *
@@ -3276,11 +3275,15 @@ export default function Home() {
     const itemTotalExcludingTax =
       itemSubtotalExcludingTax + optionsTotalExcludingTax;
 
+    // حساب نسبة المنتج من الإجمالي قبل الخصم
     const itemProportion =
       subtotalBeforeTax > 0 ? itemTotalExcludingTax / subtotalBeforeTax : 0;
+
+    // توزيع الخصم على المنتج
     const itemTaxableAmountAfterDiscount =
       taxableAmountAfterDiscount * itemProportion;
 
+    // حساب الضريبة المطبقة على المنتج
     const calculatedTax = (itemTaxableAmountAfterDiscount * taxRate) / 100;
 
     return sum + calculatedTax;
@@ -6044,17 +6047,27 @@ export default function Home() {
                       const isTaxInclusive = item.isTaxInclusive || false;
 
                       let itemTax = 0;
-                      if (isTaxInclusive && taxRate > 0) {
+                      if (taxRate > 0) {
+                        const itemPriceExcludingTax =
+                          item.priceExcludingTax !== undefined
+                            ? item.priceExcludingTax
+                            : getPriceExcludingTax(item.price, taxRate);
+                        const itemOptionsExcludingTax = item.selectedOptions
+                          ? item.selectedOptions.reduce(
+                              (sum, opt) => sum + opt.price,
+                              0,
+                            ) * item.quantity
+                          : 0;
+                        const itemTotalExcludingTax =
+                          itemPriceExcludingTax * item.quantity +
+                          itemOptionsExcludingTax;
+
                         const itemProportion =
                           subtotalBeforeTax > 0
-                            ? ((item.priceExcludingTax ||
-                                getPriceExcludingTax(item.price, taxRate)) *
-                                item.quantity) /
-                              subtotalBeforeTax
+                            ? itemTotalExcludingTax / subtotalBeforeTax
                             : 0;
                         const itemTaxableAmountAfterDiscount =
-                          (subtotalBeforeTax - discountAmountCalc) *
-                          itemProportion;
+                          taxableAmountAfterDiscount * itemProportion;
                         itemTax =
                           (itemTaxableAmountAfterDiscount * taxRate) / 100;
                       }
@@ -6108,7 +6121,7 @@ export default function Home() {
                                         )
                                       </span>
                                     </div>
-                                    {isTaxInclusive && (
+                                    {taxRate > 0 && (
                                       <div className="text-[10px] text-blue-600 mt-0.5">
                                         قيمة الضريبة: {itemTax.toFixed(2)} ج.م
                                       </div>
