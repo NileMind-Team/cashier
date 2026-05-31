@@ -13,6 +13,7 @@
     "@reduxjs/toolkit": "^2.11.2",
     "axios": "^1.13.5",
     "date-fns": "^4.1.0",
+    "html2pdf.js": "^0.14.0",
     "lucide-react": "^1.7.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",

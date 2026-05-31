@@ -32,7 +32,12 @@ import {
   Search,
 } from "lucide-react";
 import { FaSpinner } from "react-icons/fa";
-// import { printInvoice } from "../utils/qzPrinter";
+import { printInvoice } from "../utils/qzPrinter";
+
+const roundToTwoDecimals = (num) => {
+  if (isNaN(num)) return 0;
+  return Math.round((num + Number.EPSILON) * 100) / 100;
+};
 
 export default function Home() {
   const navigate = useNavigate();
@@ -1531,63 +1536,74 @@ export default function Home() {
     }
   };
 
-  // const handlePrintInvoice = async (invoiceData) => {
-  //   try {
-  //     const taxableAmountAfterDiscount = subtotal - discountAmountCalc;
-  //     const calculatedTax = (taxableAmountAfterDiscount * tax) / 100;
+  const handlePrintInvoice = async (invoiceData) => {
+    try {
+      const discountPercentValue =
+        discountType === DiscountType.Percentage && discount
+          ? parseFloat(discount)
+          : null;
 
-  //     const printData = {
-  //       invoiceNumber: invoiceData.invoiceNumber,
-  //       invoiceDate: invoiceData.invoiceDate || new Date(),
-  //       cashierName: currentShift?.cashierName || "كاشير",
-  //       billType: currentBillData.billType,
-  //       tableName: currentBillData.tableName,
-  //       deliveryCompanyName: currentBillData.deliveryCompanyName,
-  //       customerName: customerName,
-  //       customerPhone: customerPhone,
-  //       customerAddress: customerAddress,
-  //       items: cart.map((item) => ({
-  //         name: item.name,
-  //         quantity: item.quantity,
-  //         price: item.price,
-  //         selectedOptions: item.selectedOptions,
-  //         note: item.note,
-  //       })),
-  //       generalNote: generalNote,
-  //       subtotal: subtotal,
-  //       tax: calculatedTax,
-  //       discount: discountAmountCalc,
-  //       discountPercent:
-  //         discountType === DiscountType.Percentage ? discount : null,
-  //       discountType: discountType,
-  //       deliveryFee:
-  //         currentBillData.billType === "delivery"
-  //           ? deliveryFee
-  //             ? parseFloat(deliveryFee)
-  //             : 0
-  //           : 0,
-  //       paidAmount: currentBillData.paidAmount,
-  //       remainingAmount: currentBillData.remainingAmount,
-  //       isPartialPaid: currentBillData.isPartialPaid,
-  //       isReturned: currentBillData.isReturned,
-  //       payments: payments.map((p) => ({
-  //         methodName:
-  //           paymentMethods.find((m) => m.id === p.paymentMethodId)?.name ||
-  //           "غير معروف",
-  //         amount: p.amount,
-  //       })),
-  //     };
+      const subtotalWithTax = subtotalBeforeTax + totalTax;
 
-  //     const result = await printInvoice(printData);
-  //     if (result.success) {
-  //       console.log("🖨️ تمت الطباعة بنجاح");
-  //     } else {
-  //       console.warn("⚠️ فشلت الطباعة:", result.message);
-  //     }
-  //   } catch (error) {
-  //     console.error("❌ خطأ في الطباعة:", error);
-  //   }
-  // };
+      const printData = {
+        invoiceNumber: invoiceData.invoiceNumber,
+        invoiceDate: invoiceData.invoiceDate || new Date(),
+        cashierName: currentShift?.cashierName || "كاشير",
+        billType: currentBillData.billType,
+        tableName: currentBillData.tableName,
+        deliveryCompanyName: currentBillData.deliveryCompanyName,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerAddress: customerAddress,
+        items: cart.map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          selectedOptions: item.selectedOptions || [],
+          note: item.note || "",
+          originalPrice: item.originalPrice,
+          discount: item.discount,
+          isPercentage: item.isPercentage,
+          discountPercentage: item.discountPercentage,
+          valueAddedTax: item.valueAddedTax || 0,
+          isTaxInclusive: item.isTaxInclusive || false,
+        })),
+        generalNote: generalNote,
+        subtotal: subtotalBeforeTax,
+        subtotalWithTax: subtotalWithTax,
+        tax: totalTax,
+        discount: discountAmountCalc,
+        discountPercent: discountPercentValue,
+        discountType: discountType,
+        deliveryFee:
+          currentBillData.billType === "delivery" && deliveryFee
+            ? parseFloat(deliveryFee)
+            : 0,
+        total: total,
+        paidAmount: currentBillData.paidAmount,
+        remainingAmount: currentBillData.remainingAmount,
+        isPartialPaid: currentBillData.isPartialPaid,
+        isReturned: currentBillData.isReturned,
+        invoiceStatus: currentBillData.invoiceStatus,
+        payments: payments.map((p) => ({
+          methodName:
+            paymentMethods.find((m) => m.id === p.paymentMethodId)?.name ||
+            "غير معروف",
+          amount: p.amount,
+        })),
+      };
+
+      const result = await printInvoice(printData);
+
+      if (result.success) {
+        console.log("🖨️ تم إرسال الطباعة للسيرفر");
+      } else {
+        console.warn("⚠️ فشلت الطباعة:", result.message);
+      }
+    } catch (error) {
+      console.error("❌ خطأ في الطباعة:", error);
+    }
+  };
 
   useEffect(() => {
     if (!authChecked) return;
@@ -2466,9 +2482,9 @@ export default function Home() {
     setPayments([]);
 
     if (currentBillData.isPartialPaid && currentBillData.remainingAmount) {
-      setRemainingAmount(currentBillData.remainingAmount);
+      setRemainingAmount(roundToTwoDecimals(currentBillData.remainingAmount));
     } else {
-      setRemainingAmount(total);
+      setRemainingAmount(roundToTwoDecimals(total));
     }
 
     setExcessAmount(0);
@@ -2492,9 +2508,9 @@ export default function Home() {
     setIsPartialPayment(true);
     setPayments([]);
     if (currentBillData.isPartialPaid && currentBillData.remainingAmount) {
-      setRemainingAmount(currentBillData.remainingAmount);
+      setRemainingAmount(roundToTwoDecimals(currentBillData.remainingAmount));
     } else {
-      setRemainingAmount(total);
+      setRemainingAmount(roundToTwoDecimals(total));
     }
     setExcessAmount(0);
   };
@@ -2522,17 +2538,23 @@ export default function Home() {
       const totalPaid = newPayments.reduce((sum, p) => sum + p.amount, 0);
       const invoiceTotal =
         currentBillData.isPartialPaid && currentBillData.remainingAmount
-          ? currentBillData.remainingAmount
-          : total;
-      setRemainingAmount(invoiceTotal - totalPaid);
-      setExcessAmount(totalPaid > invoiceTotal ? totalPaid - invoiceTotal : 0);
+          ? roundToTwoDecimals(currentBillData.remainingAmount)
+          : roundToTwoDecimals(total);
+      setRemainingAmount(roundToTwoDecimals(invoiceTotal - totalPaid));
+      setExcessAmount(
+        totalPaid > invoiceTotal
+          ? roundToTwoDecimals(totalPaid - invoiceTotal)
+          : 0,
+      );
     } else {
       const totalPaidSoFar = payments.reduce((sum, p) => sum + p.amount, 0);
       const invoiceTotal =
         currentBillData.isPartialPaid && currentBillData.remainingAmount
-          ? currentBillData.remainingAmount
-          : total;
-      const currentRemaining = invoiceTotal - totalPaidSoFar;
+          ? roundToTwoDecimals(currentBillData.remainingAmount)
+          : roundToTwoDecimals(total);
+      const currentRemaining = roundToTwoDecimals(
+        invoiceTotal - totalPaidSoFar,
+      );
 
       const newPaymentAmount = currentRemaining > 0 ? currentRemaining : 0;
 
@@ -2541,7 +2563,9 @@ export default function Home() {
         { paymentMethodId, amount: newPaymentAmount },
       ];
       setPayments(newPayments);
-      setRemainingAmount(currentRemaining - newPaymentAmount);
+      setRemainingAmount(
+        roundToTwoDecimals(currentRemaining - newPaymentAmount),
+      );
       setExcessAmount(0);
     }
   };
@@ -2556,7 +2580,7 @@ export default function Home() {
       setIsPartialPayment(false);
     }
 
-    const newAmount = parseFloat(amount) || 0;
+    const newAmount = roundToTwoDecimals(parseFloat(amount) || 0);
 
     const updatedPayments = payments.map((payment) =>
       payment.paymentMethodId === paymentMethodId
@@ -2565,15 +2589,21 @@ export default function Home() {
     );
     setPayments(updatedPayments);
 
-    const totalPaid = updatedPayments.reduce((sum, p) => sum + p.amount, 0);
+    const totalPaid = roundToTwoDecimals(
+      updatedPayments.reduce((sum, p) => sum + p.amount, 0),
+    );
     const invoiceTotal =
       currentBillData.isPartialPaid && currentBillData.remainingAmount
-        ? currentBillData.remainingAmount
-        : total;
+        ? roundToTwoDecimals(currentBillData.remainingAmount)
+        : roundToTwoDecimals(total);
 
-    const newRemaining = invoiceTotal - totalPaid;
+    const newRemaining = roundToTwoDecimals(invoiceTotal - totalPaid);
     setRemainingAmount(newRemaining);
-    setExcessAmount(totalPaid > invoiceTotal ? totalPaid - invoiceTotal : 0);
+    setExcessAmount(
+      totalPaid > invoiceTotal
+        ? roundToTwoDecimals(totalPaid - invoiceTotal)
+        : 0,
+    );
   };
 
   const handleRemovePayment = (paymentMethodId) => {
@@ -2591,13 +2621,19 @@ export default function Home() {
     );
     setPayments(newPayments);
 
-    const totalPaid = newPayments.reduce((sum, p) => sum + p.amount, 0);
+    const totalPaid = roundToTwoDecimals(
+      newPayments.reduce((sum, p) => sum + p.amount, 0),
+    );
     const invoiceTotal =
       currentBillData.isPartialPaid && currentBillData.remainingAmount
-        ? currentBillData.remainingAmount
-        : total;
-    setRemainingAmount(invoiceTotal - totalPaid);
-    setExcessAmount(totalPaid > invoiceTotal ? totalPaid - invoiceTotal : 0);
+        ? roundToTwoDecimals(currentBillData.remainingAmount)
+        : roundToTwoDecimals(total);
+    setRemainingAmount(roundToTwoDecimals(invoiceTotal - totalPaid));
+    setExcessAmount(
+      totalPaid > invoiceTotal
+        ? roundToTwoDecimals(totalPaid - invoiceTotal)
+        : 0,
+    );
   };
 
   const openDiscountModal = () => {
@@ -2720,7 +2756,7 @@ export default function Home() {
               invoiceNumber: currentBillData.invoiceNumber,
               invoiceStatus: InvoiceStatus.PartialPaid,
               isPending: false,
-              remainingAmount: total,
+              remainingAmount: roundToTwoDecimals(total),
               paidAmount: 0,
             });
           }
@@ -2737,7 +2773,7 @@ export default function Home() {
               invoiceNumber: invoiceResponse.invoiceNumber,
               invoiceStatus: InvoiceStatus.PartialPaid,
               isPending: false,
-              remainingAmount: total,
+              remainingAmount: roundToTwoDecimals(total),
               paidAmount: 0,
             });
           }
@@ -2780,11 +2816,13 @@ export default function Home() {
 
     setIsProcessingPayment(true);
 
-    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+    const totalPaid = roundToTwoDecimals(
+      payments.reduce((sum, p) => sum + p.amount, 0),
+    );
     const invoiceTotal =
       currentBillData.isPartialPaid && currentBillData.remainingAmount
-        ? currentBillData.remainingAmount
-        : total;
+        ? roundToTwoDecimals(currentBillData.remainingAmount)
+        : roundToTwoDecimals(total);
 
     try {
       if (currentBillData.isPartialPaid && currentBillData.customerId) {
@@ -2806,7 +2844,9 @@ export default function Home() {
             invoiceStatus: InvoiceStatus.Done,
             isPending: false,
             remainingAmount: 0,
-            paidAmount: (currentBillData.paidAmount || 0) + totalPaid,
+            paidAmount: roundToTwoDecimals(
+              (currentBillData.paidAmount || 0) + totalPaid,
+            ),
           });
 
           if (selectedTable && selectedHall) {
@@ -2821,10 +2861,10 @@ export default function Home() {
             `تم استكمال دفع المبلغ المتبقي بنجاح للفاتورة رقم ${currentBillData.invoiceNumber}`,
           );
 
-          // await handlePrintInvoice({
-          //   invoiceNumber: currentBillData.invoiceNumber,
-          //   invoiceDate: new Date(),
-          // });
+          await handlePrintInvoice({
+            invoiceNumber: currentBillData.invoiceNumber,
+            invoiceDate: new Date(),
+          });
 
           setShowPaymentModal(false);
           setPayments([]);
@@ -2875,7 +2915,9 @@ export default function Home() {
               invoiceNumber: currentBillData.invoiceNumber,
               invoiceStatus: updatedInvoiceStatus,
               isPending: false,
-              remainingAmount: isPartialPaid ? invoiceTotal - totalPaid : null,
+              remainingAmount: isPartialPaid
+                ? roundToTwoDecimals(invoiceTotal - totalPaid)
+                : null,
               paidAmount: totalPaid,
             });
 
@@ -2905,12 +2947,12 @@ export default function Home() {
               );
             }
 
-            // if (!isPartialPaid) {
-            //   await handlePrintInvoice({
-            //     invoiceNumber: currentBillData.invoiceNumber,
-            //     invoiceDate: new Date(),
-            //   });
-            // }
+            if (!isPartialPaid) {
+              await handlePrintInvoice({
+                invoiceNumber: currentBillData.invoiceNumber,
+                invoiceDate: new Date(),
+              });
+            }
 
             setShowPaymentModal(false);
             setPayments([]);
@@ -2951,7 +2993,9 @@ export default function Home() {
               invoiceNumber: invoiceResponse.invoiceNumber,
               invoiceStatus: updatedInvoiceStatus,
               isPending: false,
-              remainingAmount: isPartialPaid ? invoiceTotal - totalPaid : null,
+              remainingAmount: isPartialPaid
+                ? roundToTwoDecimals(invoiceTotal - totalPaid)
+                : null,
               paidAmount: totalPaid,
             });
 
@@ -2981,12 +3025,12 @@ export default function Home() {
               );
             }
 
-            // if (!isPartialPaid) {
-            //   await handlePrintInvoice({
-            //     invoiceNumber: invoiceResponse.invoiceNumber,
-            //     invoiceDate: new Date(),
-            //   });
-            // }
+            if (!isPartialPaid) {
+              await handlePrintInvoice({
+                invoiceNumber: invoiceResponse.invoiceNumber,
+                invoiceDate: new Date(),
+              });
+            }
 
             setShowPaymentModal(false);
             setPayments([]);
@@ -3111,10 +3155,10 @@ export default function Home() {
           toast.success(
             `تم تعليق الفاتورة رقم ${invoiceResponse.invoiceNumber}`,
           );
-          // await handlePrintInvoice({
-          //   invoiceNumber: invoiceResponse.invoiceNumber,
-          //   invoiceDate: new Date(),
-          // });
+          await handlePrintInvoice({
+            invoiceNumber: invoiceResponse.invoiceNumber,
+            invoiceDate: new Date(),
+          });
 
           resetBillData();
 
@@ -3235,69 +3279,79 @@ export default function Home() {
     setIsGoingToNextBill(false);
   };
 
-  const subtotalBeforeTax = cart.reduce((sum, item) => {
-    const itemPriceExcludingTax =
-      item.priceExcludingTax !== undefined
-        ? item.priceExcludingTax
-        : getPriceExcludingTax(item.price, item.valueAddedTax || 0);
-    const itemSubtotalExcludingTax = itemPriceExcludingTax * item.quantity;
-    const optionsTotalExcludingTax = item.selectedOptions
-      ? item.selectedOptions.reduce((sum, opt) => sum + opt.price, 0) *
-        item.quantity
-      : 0;
-    return sum + itemSubtotalExcludingTax + optionsTotalExcludingTax;
-  }, 0);
+  const subtotalBeforeTax = roundToTwoDecimals(
+    cart.reduce((sum, item) => {
+      const itemPriceExcludingTax =
+        item.priceExcludingTax !== undefined
+          ? item.priceExcludingTax
+          : getPriceExcludingTax(item.price, item.valueAddedTax || 0);
+      const itemSubtotalExcludingTax = itemPriceExcludingTax * item.quantity;
+      const optionsTotalExcludingTax = item.selectedOptions
+        ? item.selectedOptions.reduce((sum, opt) => sum + opt.price, 0) *
+          item.quantity
+        : 0;
+      return sum + itemSubtotalExcludingTax + optionsTotalExcludingTax;
+    }, 0),
+  );
 
-  const discountAmountCalc =
+  const discountAmountCalc = roundToTwoDecimals(
     discount && discount !== ""
       ? discountType === DiscountType.Fixed
         ? parseFloat(discount)
         : (subtotalBeforeTax * parseFloat(discount)) / 100
-      : 0;
+      : 0,
+  );
 
-  const taxableAmountAfterDiscount = subtotalBeforeTax - discountAmountCalc;
+  const taxableAmountAfterDiscount = roundToTwoDecimals(
+    subtotalBeforeTax - discountAmountCalc,
+  );
 
   // اصلاح حساب الضريبة: حساب الضريبة للمنتجات سواء كان السعر شامل الضريبة أو غير شامل
-  const totalTax = cart.reduce((sum, item) => {
-    const taxRate = item.valueAddedTax || 0;
-    if (taxRate === 0) return sum;
+  const totalTax = roundToTwoDecimals(
+    cart.reduce((sum, item) => {
+      const taxRate = item.valueAddedTax || 0;
+      if (taxRate === 0) return sum;
 
-    const itemPriceExcludingTax =
-      item.priceExcludingTax !== undefined
-        ? item.priceExcludingTax
-        : getPriceExcludingTax(item.price, taxRate);
+      const itemPriceExcludingTax =
+        item.priceExcludingTax !== undefined
+          ? item.priceExcludingTax
+          : getPriceExcludingTax(item.price, taxRate);
 
-    const itemSubtotalExcludingTax = itemPriceExcludingTax * item.quantity;
-    const optionsTotalExcludingTax = item.selectedOptions
-      ? item.selectedOptions.reduce((sum, opt) => sum + opt.price, 0) *
-        item.quantity
-      : 0;
-    const itemTotalExcludingTax =
-      itemSubtotalExcludingTax + optionsTotalExcludingTax;
+      const itemSubtotalExcludingTax = itemPriceExcludingTax * item.quantity;
+      const optionsTotalExcludingTax = item.selectedOptions
+        ? item.selectedOptions.reduce((sum, opt) => sum + opt.price, 0) *
+          item.quantity
+        : 0;
+      const itemTotalExcludingTax =
+        itemSubtotalExcludingTax + optionsTotalExcludingTax;
 
-    // حساب نسبة المنتج من الإجمالي قبل الخصم
-    const itemProportion =
-      subtotalBeforeTax > 0 ? itemTotalExcludingTax / subtotalBeforeTax : 0;
+      // حساب نسبة المنتج من الإجمالي قبل الخصم
+      const itemProportion =
+        subtotalBeforeTax > 0 ? itemTotalExcludingTax / subtotalBeforeTax : 0;
 
-    // توزيع الخصم على المنتج
-    const itemTaxableAmountAfterDiscount =
-      taxableAmountAfterDiscount * itemProportion;
+      // توزيع الخصم على المنتج
+      const itemTaxableAmountAfterDiscount =
+        taxableAmountAfterDiscount * itemProportion;
 
-    // حساب الضريبة المطبقة على المنتج
-    const calculatedTax = (itemTaxableAmountAfterDiscount * taxRate) / 100;
+      // حساب الضريبة المطبقة على المنتج
+      const calculatedTax = (itemTaxableAmountAfterDiscount * taxRate) / 100;
 
-    return sum + calculatedTax;
-  }, 0);
+      return sum + calculatedTax;
+    }, 0),
+  );
 
-  const totalWithTax = taxableAmountAfterDiscount + totalTax;
+  const totalWithTax = roundToTwoDecimals(
+    taxableAmountAfterDiscount + totalTax,
+  );
 
   const subtotalDisplayForUI = subtotalBeforeTax;
 
-  const total =
+  const total = roundToTwoDecimals(
     totalWithTax +
-    (currentBillData.billType === "delivery" && deliveryFee
-      ? parseFloat(deliveryFee)
-      : 0);
+      (currentBillData.billType === "delivery" && deliveryFee
+        ? parseFloat(deliveryFee)
+        : 0),
+  );
 
   const handlePrepareOrder = async () => {
     if (isAdminMode) {
