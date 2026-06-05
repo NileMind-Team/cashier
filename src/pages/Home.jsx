@@ -3308,22 +3308,40 @@ export default function Home() {
     setIsGoingToNextBill(false);
   };
 
+  // ==================== تعديل الجزء الخاص بحساب الضريبة ====================
   const subtotalBeforeTax = roundToTwoDecimals(
     cart.reduce((sum, item) => {
-      const itemPriceExcludingTax =
-        item.priceExcludingTax !== undefined
-          ? item.priceExcludingTax
-          : getPriceExcludingTax(item.price, item.valueAddedTax || 0);
-      const itemSubtotalExcludingTax = roundToTwoDecimals(
-        itemPriceExcludingTax * item.quantity,
-      );
-      const optionsTotalExcludingTax = item.selectedOptions
-        ? roundToTwoDecimals(
-            item.selectedOptions.reduce((sum, opt) => sum + opt.price, 0) *
-              item.quantity,
-          )
-        : 0;
-      return sum + itemSubtotalExcludingTax + optionsTotalExcludingTax;
+      const taxRate = item.valueAddedTax || 0;
+      const isTaxInclusive = item.isTaxInclusive || false;
+
+      // حساب سعر المنتج الواحد قبل الضريبة
+      let itemPriceExcludingTax;
+      if (isTaxInclusive && taxRate > 0) {
+        // إذا كان السعر شامل الضريبة، نستخرج السعر قبل الضريبة
+        itemPriceExcludingTax = getPriceExcludingTax(item.price, taxRate);
+      } else {
+        // إذا كان السعر غير شامل الضريبة، السعر قبل الضريبة = السعر الحالي
+        itemPriceExcludingTax = item.price;
+      }
+
+      // حساب سعر الإضافات للوحدة قبل الضريبة
+      let optionsPriceExcludingTax = 0;
+      if (item.selectedOptions && item.selectedOptions.length > 0) {
+        optionsPriceExcludingTax = item.selectedOptions.reduce((sum, opt) => {
+          // الإضافات تأتي بسعر شامل الضريبة بنفس النسبة
+          if (isTaxInclusive && taxRate > 0) {
+            return sum + getPriceExcludingTax(opt.price, taxRate);
+          }
+          return sum + opt.price;
+        }, 0);
+      }
+
+      // إجمالي السعر قبل الضريبة للمنتج الواحد
+      const itemTotalExcludingTax =
+        itemPriceExcludingTax + optionsPriceExcludingTax;
+
+      // ضرب في الكمية
+      return sum + itemTotalExcludingTax * item.quantity;
     }, 0),
   );
 
@@ -3344,31 +3362,41 @@ export default function Home() {
       const taxRate = item.valueAddedTax || 0;
       if (taxRate === 0) return sum;
 
-      const itemPriceExcludingTax =
-        item.priceExcludingTax !== undefined
-          ? item.priceExcludingTax
-          : getPriceExcludingTax(item.price, taxRate);
+      const isTaxInclusive = item.isTaxInclusive || false;
 
-      const itemSubtotalExcludingTax = roundToTwoDecimals(
-        itemPriceExcludingTax * item.quantity,
-      );
-      const optionsTotalExcludingTax = item.selectedOptions
-        ? roundToTwoDecimals(
-            item.selectedOptions.reduce((sum, opt) => sum + opt.price, 0) *
-              item.quantity,
-          )
-        : 0;
-      const itemTotalExcludingTax = roundToTwoDecimals(
-        itemSubtotalExcludingTax + optionsTotalExcludingTax,
-      );
+      // حساب سعر المنتج الواحد قبل الضريبة
+      let itemPriceExcludingTax;
+      if (isTaxInclusive && taxRate > 0) {
+        itemPriceExcludingTax = getPriceExcludingTax(item.price, taxRate);
+      } else {
+        itemPriceExcludingTax = item.price;
+      }
 
+      // حساب سعر الإضافات للوحدة قبل الضريبة
+      let optionsPriceExcludingTax = 0;
+      if (item.selectedOptions && item.selectedOptions.length > 0) {
+        optionsPriceExcludingTax = item.selectedOptions.reduce((sum, opt) => {
+          if (isTaxInclusive && taxRate > 0) {
+            return sum + getPriceExcludingTax(opt.price, taxRate);
+          }
+          return sum + opt.price;
+        }, 0);
+      }
+
+      // إجمالي السعر قبل الضريبة للمنتج الواحد
+      const itemTotalExcludingTax =
+        (itemPriceExcludingTax + optionsPriceExcludingTax) * item.quantity;
+
+      // حساب نسبة هذا المنتج من إجمالي المبلغ قبل الضريبة (لتوزيع الخصم)
       const itemProportion =
         subtotalBeforeTax > 0 ? itemTotalExcludingTax / subtotalBeforeTax : 0;
 
+      // نصيب المنتج من المبلغ الخاضع للضريبة بعد الخصم
       const itemTaxableAmountAfterDiscount = roundToTwoDecimals(
         taxableAmountAfterDiscount * itemProportion,
       );
 
+      // حساب الضريبة
       const calculatedTax = roundToTwoDecimals(
         (itemTaxableAmountAfterDiscount * taxRate) / 100,
       );
@@ -3376,6 +3404,7 @@ export default function Home() {
       return sum + calculatedTax;
     }, 0),
   );
+  // ==================== نهاية تعديل حساب الضريبة ====================
 
   const totalWithTax = roundToTwoDecimals(
     taxableAmountAfterDiscount + totalTax,
