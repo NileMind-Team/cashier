@@ -34,9 +34,17 @@ import {
 import { FaSpinner } from "react-icons/fa";
 import { printInvoice } from "../utils/qzPrinter";
 
+// دالة التقريب المحسنة والأكثر دقة
 const roundToTwoDecimals = (num) => {
   if (isNaN(num)) return 0;
+  // استخدام Math.round مع ضرب وقسمة 100 لتجنب أخطاء الفاصلة العائمة
   return Math.round((num + Number.EPSILON) * 100) / 100;
+};
+
+// دالة لتنسيق الرقم إلى رقمين عشريين دائماً
+const formatToTwoDecimals = (num) => {
+  if (isNaN(num)) return "0.00";
+  return roundToTwoDecimals(num).toFixed(2);
 };
 
 export default function Home() {
@@ -236,13 +244,15 @@ export default function Home() {
   };
 
   const getPriceExcludingTax = (priceIncludingTax, taxRate) => {
-    if (taxRate === 0) return priceIncludingTax;
-    return priceIncludingTax / (1 + taxRate / 100);
+    if (taxRate === 0) return roundToTwoDecimals(priceIncludingTax);
+    const priceExcludingTax = priceIncludingTax / (1 + taxRate / 100);
+    return roundToTwoDecimals(priceExcludingTax);
   };
 
   const applyTaxToPrice = (priceExcludingTax, taxRate) => {
-    if (taxRate === 0) return priceExcludingTax;
-    return priceExcludingTax * (1 + taxRate / 100);
+    if (taxRate === 0) return roundToTwoDecimals(priceExcludingTax);
+    const priceIncludingTax = priceExcludingTax * (1 + taxRate / 100);
+    return roundToTwoDecimals(priceIncludingTax);
   };
 
   useEffect(() => {
@@ -793,19 +803,20 @@ export default function Home() {
                 if (subCategory.items && subCategory.items.length > 0) {
                   subCategory.items.forEach((item) => {
                     if (item.isAvailable) {
-                      const finalPrice =
-                        item.finalPrice ||
-                        (item.percentageDiscount
-                          ? item.price -
-                            (item.price * item.percentageDiscount) / 100
-                          : item.discount
-                            ? item.price - item.discount
-                            : item.price);
+                      let finalPrice = item.finalPrice || item.price;
+                      if (item.percentageDiscount) {
+                        finalPrice =
+                          item.price -
+                          (item.price * item.percentageDiscount) / 100;
+                      } else if (item.discount) {
+                        finalPrice = item.price - item.discount;
+                      }
+                      finalPrice = roundToTwoDecimals(finalPrice);
 
                       allProductsList.push({
                         id: item.id,
                         name: item.name,
-                        price: item.price,
+                        price: roundToTwoDecimals(item.price),
                         finalPrice: finalPrice,
                         discount: item.discount || 0,
                         percentageDiscount: item.percentageDiscount || 0,
@@ -854,7 +865,11 @@ export default function Home() {
       if (response.status === 200 && response.data) {
         const items = response.data.items || [];
         const activeOptions = items.filter((option) => option.isActive);
-        setOptions(activeOptions);
+        const optionsWithRoundedPrices = activeOptions.map((opt) => ({
+          ...opt,
+          price: roundToTwoDecimals(opt.price),
+        }));
+        setOptions(optionsWithRoundedPrices);
         setOptionsTotalPages(response.data.totalPages || 1);
         setOptionsTotalCount(response.data.totalCount || 0);
         setOptionsCurrentPage(response.data.pageNumber || 1);
@@ -1013,13 +1028,13 @@ export default function Home() {
     }
 
     const taxPercentage = (taxAmount / taxableAmount) * 100;
-    return Math.max(0, taxPercentage);
+    return roundToTwoDecimals(Math.max(0, taxPercentage));
   };
 
   const convertInvoiceToBill = (invoice) => {
     const cartItems =
       invoice.items?.map((item) => {
-        let finalPrice = item.itemPriceSnapShoot || 0;
+        let finalPrice = roundToTwoDecimals(item.itemPriceSnapShoot || 0);
         let discountAmount = 0;
         let discountPercentage = 0;
 
@@ -1038,7 +1053,9 @@ export default function Home() {
         if (finalPrice > (item.itemPriceSnapShoot || 0))
           finalPrice = item.itemPriceSnapShoot || 0;
 
-        // Ensure priceExcludingTax is calculated correctly for existing invoices
+        finalPrice = roundToTwoDecimals(finalPrice);
+        discountAmount = roundToTwoDecimals(discountAmount);
+
         const taxRate = item.valueAddedTax || 0;
         const isTaxInclusive = item.isTaxInclusive || false;
         let priceExcludingTax;
@@ -1052,7 +1069,7 @@ export default function Home() {
           id: item.itemId,
           name: item.itemName,
           price: finalPrice,
-          originalPrice: item.itemPriceSnapShoot || 0,
+          originalPrice: roundToTwoDecimals(item.itemPriceSnapShoot || 0),
           quantity: item.quantity,
           image: item.imageUrl || "",
           uniqueId: `${item.itemId}_${Date.now()}_${Math.random()}`,
@@ -1060,13 +1077,16 @@ export default function Home() {
             item.invoiceItemOptions?.map((opt) => ({
               id: opt.optionId,
               name: opt.optionNameSnapShoot,
-              price: opt.optionPriceSnapShoot || 0,
+              price: roundToTwoDecimals(opt.optionPriceSnapShoot || 0),
             })) || [],
           optionsTotal:
-            item.invoiceItemOptions?.reduce(
-              (sum, opt) => sum + (opt.optionPriceSnapShoot || 0),
-              0,
-            ) * item.quantity || 0,
+            roundToTwoDecimals(
+              item.invoiceItemOptions?.reduce(
+                (sum, opt) =>
+                  sum + roundToTwoDecimals(opt.optionPriceSnapShoot || 0),
+                0,
+              ) * item.quantity,
+            ) || 0,
           note: item.notesItem || "",
           isTaxInclusive: isTaxInclusive,
           valueAddedTax: taxRate,
@@ -1989,14 +2009,14 @@ export default function Home() {
 
     setSelectedDeliveryCompany(company);
     setDeliveryType(DeliveryType.Company);
-    setDeliveryFee(company.deliveryCost || 0);
+    setDeliveryFee(roundToTwoDecimals(company.deliveryCost || 0));
     setShowDeliveryCompanyModal(false);
     setShowDeliveryTypeModal(false);
 
     setCurrentBillData({
       ...currentBillData,
       billType: "delivery",
-      deliveryFee: company.deliveryCost || 0,
+      deliveryFee: roundToTwoDecimals(company.deliveryCost || 0),
       deliveryType: DeliveryType.Company,
       deliveryCompanyId: company.id,
       deliveryCompanyName: company.name,
@@ -2007,7 +2027,7 @@ export default function Home() {
     });
 
     toast.success(
-      `تم اختيار شركة ${company.name} (رسوم التوصيل: ${company.deliveryCost || 0} ج.م)`,
+      `تم اختيار شركة ${company.name} (رسوم التوصيل: ${roundToTwoDecimals(company.deliveryCost || 0)} ج.م)`,
     );
   };
 
@@ -2137,9 +2157,8 @@ export default function Home() {
 
     if (!selectedProduct) return;
 
-    const optionsTotal = selectedOptions.reduce(
-      (sum, option) => sum + option.price,
-      0,
+    const optionsTotal = roundToTwoDecimals(
+      selectedOptions.reduce((sum, option) => sum + option.price, 0),
     );
 
     const taxRate = selectedProduct.valueAddedTax || 0;
@@ -2159,14 +2178,17 @@ export default function Home() {
       );
 
       if (discountPercentage > 0) {
-        calculatedDiscountAmount =
-          (priceExcludingTaxBeforeDiscount * discountPercentage) / 100;
-        priceExcludingTaxAfterDiscount =
-          priceExcludingTaxBeforeDiscount - calculatedDiscountAmount;
+        calculatedDiscountAmount = roundToTwoDecimals(
+          (priceExcludingTaxBeforeDiscount * discountPercentage) / 100,
+        );
+        priceExcludingTaxAfterDiscount = roundToTwoDecimals(
+          priceExcludingTaxBeforeDiscount - calculatedDiscountAmount,
+        );
       } else if (selectedProduct.discount > 0) {
-        calculatedDiscountAmount = selectedProduct.discount;
-        priceExcludingTaxAfterDiscount =
-          priceExcludingTaxBeforeDiscount - calculatedDiscountAmount;
+        calculatedDiscountAmount = roundToTwoDecimals(selectedProduct.discount);
+        priceExcludingTaxAfterDiscount = roundToTwoDecimals(
+          priceExcludingTaxBeforeDiscount - calculatedDiscountAmount,
+        );
       } else {
         priceExcludingTaxAfterDiscount = priceExcludingTaxBeforeDiscount;
       }
@@ -2178,14 +2200,17 @@ export default function Home() {
     } else {
       priceExcludingTaxBeforeDiscount = originalPriceIncludingTax;
       if (discountPercentage > 0) {
-        calculatedDiscountAmount =
-          (priceExcludingTaxBeforeDiscount * discountPercentage) / 100;
-        priceExcludingTaxAfterDiscount =
-          priceExcludingTaxBeforeDiscount - calculatedDiscountAmount;
+        calculatedDiscountAmount = roundToTwoDecimals(
+          (priceExcludingTaxBeforeDiscount * discountPercentage) / 100,
+        );
+        priceExcludingTaxAfterDiscount = roundToTwoDecimals(
+          priceExcludingTaxBeforeDiscount - calculatedDiscountAmount,
+        );
       } else if (selectedProduct.discount > 0) {
-        calculatedDiscountAmount = selectedProduct.discount;
-        priceExcludingTaxAfterDiscount =
-          priceExcludingTaxBeforeDiscount - calculatedDiscountAmount;
+        calculatedDiscountAmount = roundToTwoDecimals(selectedProduct.discount);
+        priceExcludingTaxAfterDiscount = roundToTwoDecimals(
+          priceExcludingTaxBeforeDiscount - calculatedDiscountAmount,
+        );
       } else {
         priceExcludingTaxAfterDiscount = priceExcludingTaxBeforeDiscount;
       }
@@ -2210,8 +2235,9 @@ export default function Home() {
               ? {
                   ...item,
                   quantity: item.quantity + productQuantity,
-                  optionsTotal:
+                  optionsTotal: roundToTwoDecimals(
                     (item.optionsTotal || 0) + optionsTotal * productQuantity,
+                  ),
                 }
               : item,
           ),
@@ -2224,7 +2250,7 @@ export default function Home() {
           uniqueId: `${selectedProduct.id}_${Date.now()}`,
           quantity: productQuantity,
           selectedOptions: selectedOptions,
-          optionsTotal: optionsTotal * productQuantity,
+          optionsTotal: roundToTwoDecimals(optionsTotal * productQuantity),
           note: "",
           discount: calculatedDiscountAmount,
           isPercentage: discountPercentage > 0,
@@ -2241,7 +2267,7 @@ export default function Home() {
         uniqueId: `${selectedProduct.id}_${Date.now()}`,
         quantity: productQuantity,
         selectedOptions: selectedOptions,
-        optionsTotal: optionsTotal * productQuantity,
+        optionsTotal: roundToTwoDecimals(optionsTotal * productQuantity),
         note: "",
         discount: calculatedDiscountAmount,
         isPercentage: discountPercentage > 0,
@@ -2556,7 +2582,10 @@ export default function Home() {
         invoiceTotal - totalPaidSoFar,
       );
 
-      const newPaymentAmount = currentRemaining > 0 ? currentRemaining : 0;
+      // تأكد من أن المبلغ المطلوب يكون بنفس تنسيق المبلغ الأصلي (رقمين عشريين)
+      const newPaymentAmount = roundToTwoDecimals(
+        currentRemaining > 0 ? currentRemaining : 0,
+      );
 
       const newPayments = [
         ...payments,
@@ -3285,10 +3314,14 @@ export default function Home() {
         item.priceExcludingTax !== undefined
           ? item.priceExcludingTax
           : getPriceExcludingTax(item.price, item.valueAddedTax || 0);
-      const itemSubtotalExcludingTax = itemPriceExcludingTax * item.quantity;
+      const itemSubtotalExcludingTax = roundToTwoDecimals(
+        itemPriceExcludingTax * item.quantity,
+      );
       const optionsTotalExcludingTax = item.selectedOptions
-        ? item.selectedOptions.reduce((sum, opt) => sum + opt.price, 0) *
-          item.quantity
+        ? roundToTwoDecimals(
+            item.selectedOptions.reduce((sum, opt) => sum + opt.price, 0) *
+              item.quantity,
+          )
         : 0;
       return sum + itemSubtotalExcludingTax + optionsTotalExcludingTax;
     }, 0),
@@ -3306,7 +3339,6 @@ export default function Home() {
     subtotalBeforeTax - discountAmountCalc,
   );
 
-  // اصلاح حساب الضريبة: حساب الضريبة للمنتجات سواء كان السعر شامل الضريبة أو غير شامل
   const totalTax = roundToTwoDecimals(
     cart.reduce((sum, item) => {
       const taxRate = item.valueAddedTax || 0;
@@ -3317,24 +3349,29 @@ export default function Home() {
           ? item.priceExcludingTax
           : getPriceExcludingTax(item.price, taxRate);
 
-      const itemSubtotalExcludingTax = itemPriceExcludingTax * item.quantity;
+      const itemSubtotalExcludingTax = roundToTwoDecimals(
+        itemPriceExcludingTax * item.quantity,
+      );
       const optionsTotalExcludingTax = item.selectedOptions
-        ? item.selectedOptions.reduce((sum, opt) => sum + opt.price, 0) *
-          item.quantity
+        ? roundToTwoDecimals(
+            item.selectedOptions.reduce((sum, opt) => sum + opt.price, 0) *
+              item.quantity,
+          )
         : 0;
-      const itemTotalExcludingTax =
-        itemSubtotalExcludingTax + optionsTotalExcludingTax;
+      const itemTotalExcludingTax = roundToTwoDecimals(
+        itemSubtotalExcludingTax + optionsTotalExcludingTax,
+      );
 
-      // حساب نسبة المنتج من الإجمالي قبل الخصم
       const itemProportion =
         subtotalBeforeTax > 0 ? itemTotalExcludingTax / subtotalBeforeTax : 0;
 
-      // توزيع الخصم على المنتج
-      const itemTaxableAmountAfterDiscount =
-        taxableAmountAfterDiscount * itemProportion;
+      const itemTaxableAmountAfterDiscount = roundToTwoDecimals(
+        taxableAmountAfterDiscount * itemProportion,
+      );
 
-      // حساب الضريبة المطبقة على المنتج
-      const calculatedTax = (itemTaxableAmountAfterDiscount * taxRate) / 100;
+      const calculatedTax = roundToTwoDecimals(
+        (itemTaxableAmountAfterDiscount * taxRate) / 100,
+      );
 
       return sum + calculatedTax;
     }, 0),
@@ -4180,11 +4217,11 @@ export default function Home() {
                     className="font-bold text-lg"
                     style={{ color: "#193F94" }}
                   >
-                    {(
+                    {roundToTwoDecimals(
                       (selectedProduct.finalPrice || selectedProduct.price) *
                         productQuantity +
-                      selectedOptions.reduce((sum, o) => sum + o.price, 0) *
-                        productQuantity
+                        selectedOptions.reduce((sum, o) => sum + o.price, 0) *
+                          productQuantity,
                     ).toFixed(2)}{" "}
                     ج.م
                   </span>
@@ -4198,8 +4235,10 @@ export default function Home() {
                     selectedProduct.finalPrice < selectedProduct.price && (
                       <div className="text-green-600">
                         توفير:{" "}
-                        {(selectedProduct.price - selectedProduct.finalPrice) *
-                          productQuantity}{" "}
+                        {roundToTwoDecimals(
+                          (selectedProduct.price - selectedProduct.finalPrice) *
+                            productQuantity,
+                        )}{" "}
                         ج.م
                       </div>
                     )}
@@ -4334,7 +4373,7 @@ export default function Home() {
                       <span className="font-bold text-blue-600">
                         {discountType === DiscountType.Percentage &&
                         discountValue
-                          ? `${((subtotalBeforeTax * parseFloat(discountValue)) / 100).toFixed(2)} ج.م (${discountValue}%)`
+                          ? `${roundToTwoDecimals((subtotalBeforeTax * parseFloat(discountValue)) / 100).toFixed(2)} ج.م (${discountValue}%)`
                           : discountType === DiscountType.Fixed && discountValue
                             ? `${parseFloat(discountValue).toFixed(2)} ج.م`
                             : "0.00 ج.م"}
@@ -4708,7 +4747,9 @@ export default function Home() {
                             </h4>
                             <div className="flex flex-col items-start mt-1">
                               <p className="text-xs text-gray-600">
-                                رسوم: {company.deliveryCost || 0} ج.م
+                                رسوم:{" "}
+                                {roundToTwoDecimals(company.deliveryCost || 0)}{" "}
+                                ج.م
                               </p>
                               {company.contactNumber && (
                                 <p className="text-[10px] text-blue-600">
@@ -5008,7 +5049,7 @@ export default function Home() {
                             </p>
                             <input
                               type="text"
-                              value={payment.amount}
+                              value={formatToTwoDecimals(payment.amount)}
                               onChange={(e) =>
                                 handlePaymentAmountChange(
                                   payment.paymentMethodId,
@@ -5072,7 +5113,7 @@ export default function Home() {
                       <span
                         className={`font-bold text-sm ${remainingAmount < 0 ? "text-green-600" : remainingAmount > 0 ? "text-red-600" : "text-green-600"}`}
                       >
-                        {Math.abs(remainingAmount).toFixed(2)} ج.م
+                        {formatToTwoDecimals(Math.abs(remainingAmount))} ج.م
                         {remainingAmount < 0 && (
                           <span className="text-[10px] mr-1 text-green-600">
                             (زيادة)
@@ -5088,13 +5129,13 @@ export default function Home() {
                     {remainingAmount < 0 && payments.length > 0 && (
                       <p className="text-[10px] text-green-600 mt-0.5">
                         ✓ تم دفع مبلغ إضافي قدره{" "}
-                        {Math.abs(remainingAmount).toFixed(2)} ج.م
+                        {formatToTwoDecimals(Math.abs(remainingAmount))} ج.م
                       </p>
                     )}
                     {remainingAmount > 0 && payments.length > 0 && (
                       <p className="text-[10px] text-yellow-600 mt-0.5">
                         ✓ سيتم حفظ الفاتورة كـ "آجل" (باقي{" "}
-                        {remainingAmount.toFixed(2)} ج.م)
+                        {formatToTwoDecimals(remainingAmount)} ج.م)
                       </p>
                     )}
                     {Math.abs(remainingAmount) < 0.01 &&
@@ -5311,7 +5352,10 @@ export default function Home() {
                             <p className="text-sm text-gray-600">
                               رسوم التوصيل
                             </p>
-                            <p className="font-bold">{deliveryFee} ج.م</p>
+                            <p className="font-bold">
+                              {roundToTwoDecimals(parseFloat(deliveryFee) || 0)}{" "}
+                              ج.م
+                            </p>
                           </div>
                         </>
                       )}
@@ -5387,7 +5431,7 @@ export default function Home() {
                               {item.price} ج.م
                             </td>
                             <td className="px-4 py-3 text-left font-medium">
-                              {itemTotal} ج.م
+                              {itemTotal.toFixed(2)} ج.م
                             </td>
                           </tr>
                         );
@@ -5421,7 +5465,12 @@ export default function Home() {
                       deliveryFee > 0 && (
                         <div className="flex justify-between text-sm">
                           <span>رسوم التوصيل:</span>
-                          <span>{deliveryFee.toFixed(2)} ج.م</span>
+                          <span>
+                            {roundToTwoDecimals(
+                              parseFloat(deliveryFee) || 0,
+                            ).toFixed(2)}{" "}
+                            ج.م
+                          </span>
                         </div>
                       )}
                     <div className="flex justify-between font-bold text-lg pt-2 border-t">
@@ -5879,7 +5928,7 @@ export default function Home() {
                             : selectedDeliveryCompany?.name}
                         </span>
                         <span className="mr-1 px-1 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-medium">
-                          {deliveryFee} ج.م
+                          {roundToTwoDecimals(parseFloat(deliveryFee) || 0)} ج.م
                         </span>
                       </div>
                       {!currentBillData.completed &&
@@ -6177,7 +6226,9 @@ export default function Home() {
                                     </div>
                                     {taxRate > 0 && (
                                       <div className="text-[10px] text-blue-600 mt-0.5">
-                                        قيمة الضريبة: {itemTax.toFixed(2)} ج.م
+                                        قيمة الضريبة:{" "}
+                                        {roundToTwoDecimals(itemTax).toFixed(2)}{" "}
+                                        ج.م
                                       </div>
                                     )}
                                   </div>
@@ -6186,9 +6237,9 @@ export default function Home() {
                                       className="font-bold text-sm"
                                       style={{ color: "#193F94" }}
                                     >
-                                      {(
+                                      {roundToTwoDecimals(
                                         itemSubtotalIncludingTax +
-                                        optionsTotalIncludingTax
+                                          optionsTotalIncludingTax,
                                       ).toFixed(2)}{" "}
                                       ج.م
                                       {isTaxInclusive && (
@@ -6480,7 +6531,9 @@ export default function Home() {
                           />
                           <span className="font-bold">
                             {deliveryFee
-                              ? parseFloat(deliveryFee).toFixed(2)
+                              ? roundToTwoDecimals(
+                                  parseFloat(deliveryFee),
+                                ).toFixed(2)
                               : "0.00"}{" "}
                             ج.م
                           </span>
@@ -6488,7 +6541,9 @@ export default function Home() {
                       ) : (
                         <span className="font-bold ml-1">
                           {deliveryFee
-                            ? parseFloat(deliveryFee).toFixed(2)
+                            ? roundToTwoDecimals(
+                                parseFloat(deliveryFee),
+                              ).toFixed(2)
                             : "0.00"}{" "}
                           ج.م
                         </span>
