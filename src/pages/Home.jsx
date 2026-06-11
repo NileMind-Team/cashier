@@ -208,6 +208,9 @@ export default function Home() {
   const [authChecked, setAuthChecked] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [isShiftAvailable, setIsShiftAvailable] = useState(true);
+  const [organizationData, setOrganizationData] = useState(null);
+  // eslint-disable-next-line no-unused-vars
+  const [isLoadingOrganization, setIsLoadingOrganization] = useState(true);
 
   const DeliveryType = {
     Store: "store",
@@ -1553,6 +1556,24 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    const fetchOrganizationData = async () => {
+      setIsLoadingOrganization(true);
+      try {
+        const response = await axiosInstance.get("/api/Organization/Get");
+        if (response.status === 200 && response.data) {
+          setOrganizationData(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch organization data:", error);
+      } finally {
+        setIsLoadingOrganization(false);
+      }
+    };
+
+    fetchOrganizationData();
+  }, []);
+
   const handlePrintInvoice = async (invoiceData) => {
     try {
       const discountPercentValue =
@@ -1563,6 +1584,11 @@ export default function Home() {
       const subtotalWithTax = subtotalBeforeTax + totalTax;
 
       const printData = {
+        organizationName: organizationData?.name || "المطعم",
+        taxNumber: organizationData?.taxNumber || "",
+        commercialRegister: organizationData?.commercialRegister || "",
+        address: organizationData?.address || "",
+        logoUrl: organizationData?.logoUrl || "",
         invoiceNumber: invoiceData.invoiceNumber,
         invoiceDate: invoiceData.invoiceDate || new Date(),
         cashierName: currentShift?.cashierName || "كاشير",
