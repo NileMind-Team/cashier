@@ -34,14 +34,11 @@ import {
 import { FaSpinner } from "react-icons/fa";
 import { printInvoice } from "../utils/qzPrinter";
 
-// دالة التقريب المحسنة والأكثر دقة
 const roundToTwoDecimals = (num) => {
   if (isNaN(num)) return 0;
-  // استخدام Math.round مع ضرب وقسمة 100 لتجنب أخطاء الفاصلة العائمة
   return Math.round((num + Number.EPSILON) * 100) / 100;
 };
 
-// دالة لتنسيق الرقم إلى رقمين عشريين دائماً
 const formatToTwoDecimals = (num) => {
   if (isNaN(num)) return "0.00";
   return roundToTwoDecimals(num).toFixed(2);
@@ -2582,7 +2579,6 @@ export default function Home() {
         invoiceTotal - totalPaidSoFar,
       );
 
-      // تأكد من أن المبلغ المطلوب يكون بنفس تنسيق المبلغ الأصلي (رقمين عشريين)
       const newPaymentAmount = roundToTwoDecimals(
         currentRemaining > 0 ? currentRemaining : 0,
       );
@@ -3308,27 +3304,21 @@ export default function Home() {
     setIsGoingToNextBill(false);
   };
 
-  // ==================== تعديل الجزء الخاص بحساب الضريبة ====================
   const subtotalBeforeTax = roundToTwoDecimals(
     cart.reduce((sum, item) => {
       const taxRate = item.valueAddedTax || 0;
       const isTaxInclusive = item.isTaxInclusive || false;
 
-      // حساب سعر المنتج الواحد قبل الضريبة
       let itemPriceExcludingTax;
       if (isTaxInclusive && taxRate > 0) {
-        // إذا كان السعر شامل الضريبة، نستخرج السعر قبل الضريبة
         itemPriceExcludingTax = getPriceExcludingTax(item.price, taxRate);
       } else {
-        // إذا كان السعر غير شامل الضريبة، السعر قبل الضريبة = السعر الحالي
         itemPriceExcludingTax = item.price;
       }
 
-      // حساب سعر الإضافات للوحدة قبل الضريبة
       let optionsPriceExcludingTax = 0;
       if (item.selectedOptions && item.selectedOptions.length > 0) {
         optionsPriceExcludingTax = item.selectedOptions.reduce((sum, opt) => {
-          // الإضافات تأتي بسعر شامل الضريبة بنفس النسبة
           if (isTaxInclusive && taxRate > 0) {
             return sum + getPriceExcludingTax(opt.price, taxRate);
           }
@@ -3336,11 +3326,9 @@ export default function Home() {
         }, 0);
       }
 
-      // إجمالي السعر قبل الضريبة للمنتج الواحد
       const itemTotalExcludingTax =
         itemPriceExcludingTax + optionsPriceExcludingTax;
 
-      // ضرب في الكمية
       return sum + itemTotalExcludingTax * item.quantity;
     }, 0),
   );
@@ -3364,7 +3352,6 @@ export default function Home() {
 
       const isTaxInclusive = item.isTaxInclusive || false;
 
-      // حساب سعر المنتج الواحد قبل الضريبة
       let itemPriceExcludingTax;
       if (isTaxInclusive && taxRate > 0) {
         itemPriceExcludingTax = getPriceExcludingTax(item.price, taxRate);
@@ -3372,7 +3359,6 @@ export default function Home() {
         itemPriceExcludingTax = item.price;
       }
 
-      // حساب سعر الإضافات للوحدة قبل الضريبة
       let optionsPriceExcludingTax = 0;
       if (item.selectedOptions && item.selectedOptions.length > 0) {
         optionsPriceExcludingTax = item.selectedOptions.reduce((sum, opt) => {
@@ -3383,20 +3369,16 @@ export default function Home() {
         }, 0);
       }
 
-      // إجمالي السعر قبل الضريبة للمنتج الواحد
       const itemTotalExcludingTax =
         (itemPriceExcludingTax + optionsPriceExcludingTax) * item.quantity;
 
-      // حساب نسبة هذا المنتج من إجمالي المبلغ قبل الضريبة (لتوزيع الخصم)
       const itemProportion =
         subtotalBeforeTax > 0 ? itemTotalExcludingTax / subtotalBeforeTax : 0;
 
-      // نصيب المنتج من المبلغ الخاضع للضريبة بعد الخصم
       const itemTaxableAmountAfterDiscount = roundToTwoDecimals(
         taxableAmountAfterDiscount * itemProportion,
       );
 
-      // حساب الضريبة
       const calculatedTax = roundToTwoDecimals(
         (itemTaxableAmountAfterDiscount * taxRate) / 100,
       );
@@ -3404,7 +3386,6 @@ export default function Home() {
       return sum + calculatedTax;
     }, 0),
   );
-  // ==================== نهاية تعديل حساب الضريبة ====================
 
   const totalWithTax = roundToTwoDecimals(
     taxableAmountAfterDiscount + totalTax,
